@@ -31,6 +31,28 @@ const SignupForm = ({ onSuccess }: SignupFormProps) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const fetchAddressByZipCode = async (zipCode: string) => {
+    // Remove caracteres não numéricos
+    const cleanZipCode = zipCode.replace(/\D/g, '');
+    
+    if (cleanZipCode.length === 8) {
+      try {
+        const response = await fetch(`https://viacep.com.br/ws/${cleanZipCode}/json/`);
+        const data = await response.json();
+        
+        if (!data.erro) {
+          setFormData(prev => ({
+            ...prev,
+            city: data.localidade,
+            address: `${data.logradouro}, ${data.bairro}`
+          }));
+        }
+      } catch (error) {
+        console.error('Erro ao buscar CEP:', error);
+      }
+    }
+  };
+
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -177,12 +199,18 @@ const SignupForm = ({ onSuccess }: SignupFormProps) => {
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="zip-code">CEP</Label>
+          <Label htmlFor="zip-code">CEP *</Label>
           <Input
             id="zip-code"
             value={formData.zipCode}
-            onChange={(e) => handleInputChange("zipCode", e.target.value)}
+            onChange={(e) => {
+              const value = e.target.value;
+              handleInputChange("zipCode", value);
+              fetchAddressByZipCode(value);
+            }}
             placeholder="00000-000"
+            maxLength={9}
+            required
           />
         </div>
       </div>
