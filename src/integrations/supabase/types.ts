@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      consultation_fields: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          field_label: string
+          field_name: string
+          field_options: Json | null
+          field_order: number
+          field_type: Database["public"]["Enums"]["field_type"]
+          id: string
+          is_active: boolean
+          required_for_levels: string[]
+          updated_at: string
+          visible_for_levels: string[]
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          field_label: string
+          field_name: string
+          field_options?: Json | null
+          field_order?: number
+          field_type?: Database["public"]["Enums"]["field_type"]
+          id?: string
+          is_active?: boolean
+          required_for_levels?: string[]
+          updated_at?: string
+          visible_for_levels?: string[]
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          field_label?: string
+          field_name?: string
+          field_options?: Json | null
+          field_order?: number
+          field_type?: Database["public"]["Enums"]["field_type"]
+          id?: string
+          is_active?: boolean
+          required_for_levels?: string[]
+          updated_at?: string
+          visible_for_levels?: string[]
+        }
+        Relationships: []
+      }
       consultation_history: {
         Row: {
           ai_response: string | null
@@ -129,6 +174,13 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      field_type:
+        | "text"
+        | "textarea"
+        | "select"
+        | "checkbox"
+        | "number"
+        | "date"
       user_profile_type: "patient" | "academic" | "health_professional"
     }
     CompositeTypes: {
@@ -258,6 +310,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],
+      field_type: ["text", "textarea", "select", "checkbox", "number", "date"],
       user_profile_type: ["patient", "academic", "health_professional"],
     },
   },
