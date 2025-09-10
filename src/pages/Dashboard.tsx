@@ -21,6 +21,7 @@ const Dashboard = () => {
         title: "Logout realizado com sucesso",
         description: "Até logo!",
       });
+      navigate("/");
     } catch (error) {
       toast({
         title: "Erro ao fazer logout",
