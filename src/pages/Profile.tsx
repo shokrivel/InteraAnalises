@@ -101,11 +101,17 @@ const Profile = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    console.log('Form submitted', { user, formData });
+    
+    if (!user) {
+      console.log('No user found');
+      return;
+    }
 
     setLoading(true);
     try {
-      const { error } = await supabase
+      console.log('Updating profile for user:', user.id);
+      const { data, error } = await supabase
         .from('profiles')
         .update({
           name: formData.name,
@@ -116,21 +122,27 @@ const Profile = () => {
           profile_type: formData.profile_type,
           updated_at: new Date().toISOString()
         })
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .select();
+
+      console.log('Supabase response:', { data, error });
 
       if (error) {
+        console.error('Supabase error:', error);
         toast({
           title: "Erro ao atualizar perfil",
           description: error.message,
           variant: "destructive",
         });
       } else {
+        console.log('Profile updated successfully:', data);
         toast({
           title: "Perfil atualizado com sucesso",
           description: "Suas informações foram salvas.",
         });
       }
     } catch (error) {
+      console.error('Catch error:', error);
       toast({
         title: "Erro ao atualizar perfil",
         description: "Tente novamente",
