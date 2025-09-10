@@ -14,7 +14,81 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      consultation_history: {
+        Row: {
+          ai_response: string | null
+          created_at: string | null
+          epidemiological_info: Json | null
+          exam_results: Json | null
+          family_symptoms: boolean | null
+          id: string
+          symptom_duration: number | null
+          symptoms: string[] | null
+          user_id: string
+        }
+        Insert: {
+          ai_response?: string | null
+          created_at?: string | null
+          epidemiological_info?: Json | null
+          exam_results?: Json | null
+          family_symptoms?: boolean | null
+          id?: string
+          symptom_duration?: number | null
+          symptoms?: string[] | null
+          user_id: string
+        }
+        Update: {
+          ai_response?: string | null
+          created_at?: string | null
+          epidemiological_info?: Json | null
+          exam_results?: Json | null
+          family_symptoms?: boolean | null
+          id?: string
+          symptom_duration?: number | null
+          symptoms?: string[] | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          address: string
+          birth_date: string
+          city: string
+          created_at: string | null
+          id: string
+          name: string
+          profile_type: Database["public"]["Enums"]["user_profile_type"]
+          updated_at: string | null
+          user_id: string
+          zip_code: string | null
+        }
+        Insert: {
+          address: string
+          birth_date: string
+          city: string
+          created_at?: string | null
+          id?: string
+          name: string
+          profile_type?: Database["public"]["Enums"]["user_profile_type"]
+          updated_at?: string | null
+          user_id: string
+          zip_code?: string | null
+        }
+        Update: {
+          address?: string
+          birth_date?: string
+          city?: string
+          created_at?: string | null
+          id?: string
+          name?: string
+          profile_type?: Database["public"]["Enums"]["user_profile_type"]
+          updated_at?: string | null
+          user_id?: string
+          zip_code?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +97,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      user_profile_type: "patient" | "academic" | "health_professional"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +224,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      user_profile_type: ["patient", "academic", "health_professional"],
+    },
   },
 } as const
