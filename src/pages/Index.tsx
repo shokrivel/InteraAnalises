@@ -13,7 +13,9 @@ const Index = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    console.log('Index: checking auth state', { user: !!user, loading });
     if (!loading && user) {
+      console.log('Index: redirecting to dashboard');
       navigate("/dashboard");
     }
   }, [user, loading, navigate]);
