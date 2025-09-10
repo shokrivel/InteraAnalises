@@ -387,13 +387,13 @@ const Profile = () => {
                   <div className="grid md:grid-cols-2 gap-6">
                     <div>
                       <Label className="text-sm font-medium text-muted-foreground">Nome Completo</Label>
-                      <p className="mt-1 text-sm">{profile?.name || "Não informado"}</p>
+                      <p className="mt-1 text-sm">{formData.name || "Não informado"}</p>
                     </div>
                     <div>
                       <Label className="text-sm font-medium text-muted-foreground">Data de Nascimento</Label>
                       <p className="mt-1 text-sm">
-                        {profile?.birth_date 
-                          ? new Date(profile.birth_date).toLocaleDateString('pt-BR')
+                        {formData.birth_date 
+                          ? new Date(formData.birth_date).toLocaleDateString('pt-BR')
                           : "Não informado"
                         }
                       </p>
@@ -401,22 +401,22 @@ const Profile = () => {
                     <div>
                       <Label className="text-sm font-medium text-muted-foreground">Tipo de Perfil</Label>
                       <p className="mt-1 text-sm">
-                        {profile?.profile_type === 'patient' && "Paciente"}
-                        {profile?.profile_type === 'academic' && "Acadêmico"}
-                        {profile?.profile_type === 'health_professional' && "Profissional de Saúde"}
+                        {formData.profile_type === 'patient' && "Paciente"}
+                        {formData.profile_type === 'academic' && "Acadêmico"}
+                        {formData.profile_type === 'health_professional' && "Profissional de Saúde"}
                       </p>
                     </div>
                     <div>
                       <Label className="text-sm font-medium text-muted-foreground">CEP</Label>
-                      <p className="mt-1 text-sm">{profile?.zip_code || "Não informado"}</p>
+                      <p className="mt-1 text-sm">{formData.zip_code || "Não informado"}</p>
                     </div>
                     <div>
                       <Label className="text-sm font-medium text-muted-foreground">Endereço</Label>
-                      <p className="mt-1 text-sm">{profile?.address || "Não informado"}</p>
+                      <p className="mt-1 text-sm">{formData.address || "Não informado"}</p>
                     </div>
                     <div>
                       <Label className="text-sm font-medium text-muted-foreground">Cidade</Label>
-                      <p className="mt-1 text-sm">{profile?.city || "Não informado"}</p>
+                      <p className="mt-1 text-sm">{formData.city || "Não informado"}</p>
                     </div>
                   </div>
                 </div>
