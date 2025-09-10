@@ -127,7 +127,11 @@ const Dashboard = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Button variant="outline" className="w-full">
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={() => navigate("/profile")}
+                >
                   Editar Perfil
                 </Button>
               </CardContent>
