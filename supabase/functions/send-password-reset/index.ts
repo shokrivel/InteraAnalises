@@ -98,7 +98,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Enviar email via Resend
     const emailResponse = await resend.emails.send({
-      from: "InteraSaúde <noreply@interasaude.com>",
+      from: "InteraSaúde <onboarding@resend.dev>",
       to: [email],
       subject: "Redefinir senha - InteraSaúde",
       html: emailHtml,
