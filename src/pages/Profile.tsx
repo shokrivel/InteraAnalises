@@ -135,7 +135,10 @@ const Profile = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Form submitted', { user, formData });
+    console.log('=== FORM SUBMISSION STARTED ===');
+    console.log('User ID:', user?.id);
+    console.log('Form Data:', formData);
+    console.log('Profile exists:', !!profile);
     
     if (!user) {
       console.log('No user found');
@@ -145,46 +148,69 @@ const Profile = () => {
     setLoading(true);
     try {
       console.log('Updating profile for user:', user.id);
-      const { data, error } = await supabase
-        .from('profiles')
-        .update({
-          name: formData.name,
-          birth_date: formData.birth_date,
-          address: formData.address,
-          city: formData.city,
-          zip_code: formData.zip_code,
-          profile_type: formData.profile_type,
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', user.id)
-        .select();
-
-      console.log('Supabase response:', { data, error });
-
-      if (error) {
-        console.error('Supabase error:', error);
-        toast({
-          title: "Erro ao atualizar perfil",
-          description: error.message,
-          variant: "destructive",
-        });
+      
+      // Check if profile exists, if not create it first
+      if (!profile) {
+        console.log('Profile does not exist, creating new profile...');
+        const { data: newProfile, error: createError } = await supabase
+          .from('profiles')
+          .insert({
+            user_id: user.id,
+            name: formData.name,
+            birth_date: formData.birth_date,
+            address: formData.address,
+            city: formData.city,
+            zip_code: formData.zip_code,
+            profile_type: formData.profile_type
+          })
+          .select()
+          .single();
+          
+        console.log('Create result:', { newProfile, createError });
+        
+        if (createError) {
+          throw createError;
+        }
       } else {
-        console.log('Profile updated successfully:', data);
-        toast({
-          title: "Perfil atualizado com sucesso",
-          description: "Suas informações foram salvas.",
-        });
-        setIsEditing(false);
+        console.log('Profile exists, updating...');
+        const { data, error } = await supabase
+          .from('profiles')
+          .update({
+            name: formData.name,
+            birth_date: formData.birth_date,
+            address: formData.address,
+            city: formData.city,
+            zip_code: formData.zip_code,
+            profile_type: formData.profile_type,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', user.id)
+          .select();
+
+        console.log('Update result:', { data, error });
+
+        if (error) {
+          throw error;
+        }
       }
-    } catch (error) {
-      console.error('Catch error:', error);
+
+      console.log('Profile saved successfully');
+      toast({
+        title: "Perfil atualizado com sucesso",
+        description: "Suas informações foram salvas.",
+      });
+      setIsEditing(false);
+    } catch (error: any) {
+      console.error('=== ERROR SAVING PROFILE ===');
+      console.error('Error details:', error);
       toast({
         title: "Erro ao atualizar perfil",
-        description: "Tente novamente",
+        description: error.message || "Tente novamente",
         variant: "destructive",
       });
     } finally {
       setLoading(false);
+      console.log('=== FORM SUBMISSION ENDED ===');
     }
   };
 
