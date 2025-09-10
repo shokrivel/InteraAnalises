@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Heart, Save, User } from "lucide-react";
+import { ArrowLeft, Heart, Save, User, Edit } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,6 +27,7 @@ const Profile = () => {
     profile_type: "patient" as "patient" | "academic" | "health_professional"
   });
   const [loading, setLoading] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   // Debug logs
   console.log('Auth state:', { user, authLoading });
@@ -173,6 +174,7 @@ const Profile = () => {
           title: "Perfil atualizado com sucesso",
           description: "Suas informações foram salvas.",
         });
+        setIsEditing(false);
       }
     } catch (error) {
       console.error('Catch error:', error);
@@ -184,6 +186,25 @@ const Profile = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleEdit = () => {
+    setIsEditing(true);
+  };
+
+  const handleCancel = () => {
+    // Reset form data to original profile data
+    if (profile) {
+      setFormData({
+        name: profile.name || "",
+        birth_date: profile.birth_date || "",
+        address: profile.address || "",
+        city: profile.city || "",
+        zip_code: profile.zip_code || "",
+        profile_type: profile.profile_type || "patient"
+      });
+    }
+    setIsEditing(false);
   };
 
   if (profileLoading) {
@@ -210,7 +231,9 @@ const Profile = () => {
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
               <Heart className="w-5 h-5 text-primary-foreground" />
             </div>
-            <h1 className="text-xl font-bold text-foreground">Editar Perfil</h1>
+            <h1 className="text-xl font-bold text-foreground">
+              {isEditing ? "Editar Perfil" : "Meu Perfil"}
+            </h1>
           </div>
           <Badge variant="secondary" className="flex items-center gap-2">
             <User className="w-4 h-4" />
@@ -224,96 +247,154 @@ const Profile = () => {
         <div className="container mx-auto max-w-2xl">
           <Card>
             <CardHeader>
-              <CardTitle>Informações Pessoais</CardTitle>
-              <CardDescription>
-                Mantenha suas informações atualizadas para uma melhor experiência
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Informações Pessoais</CardTitle>
+                  <CardDescription>
+                    {isEditing 
+                      ? "Mantenha suas informações atualizadas para uma melhor experiência"
+                      : "Visualize suas informações pessoais"
+                    }
+                  </CardDescription>
+                </div>
+                {!isEditing && (
+                  <Button onClick={handleEdit} variant="outline">
+                    <Edit className="w-4 h-4 mr-2" />
+                    Editar
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nome Completo</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => handleInputChange("name", e.target.value)}
-                    required
-                  />
-                </div>
+              {isEditing ? (
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Nome Completo</Label>
+                    <Input
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) => handleInputChange("name", e.target.value)}
+                      required
+                    />
+                  </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="birth_date">Data de Nascimento</Label>
-                  <Input
-                    id="birth_date"
-                    type="date"
-                    value={formData.birth_date}
-                    onChange={(e) => handleInputChange("birth_date", e.target.value)}
-                    required
-                  />
-                </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="birth_date">Data de Nascimento</Label>
+                    <Input
+                      id="birth_date"
+                      type="date"
+                      value={formData.birth_date}
+                      onChange={(e) => handleInputChange("birth_date", e.target.value)}
+                      required
+                    />
+                  </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="profile_type">Tipo de Perfil</Label>
-                  <Select value={formData.profile_type} onValueChange={(value) => handleInputChange("profile_type", value)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="patient">Paciente</SelectItem>
-                      <SelectItem value="academic">Acadêmico</SelectItem>
-                      <SelectItem value="health_professional">Profissional de Saúde</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="profile_type">Tipo de Perfil</Label>
+                    <Select value={formData.profile_type} onValueChange={(value) => handleInputChange("profile_type", value)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="patient">Paciente</SelectItem>
+                        <SelectItem value="academic">Acadêmico</SelectItem>
+                        <SelectItem value="health_professional">Profissional de Saúde</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="zip_code">CEP</Label>
-                  <Input
-                    id="zip_code"
-                    value={formData.zip_code}
-                    onChange={(e) => handleZipCodeChange(e.target.value)}
-                    placeholder="00000-000"
-                    maxLength={9}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    O endereço será preenchido automaticamente
-                  </p>
-                </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="zip_code">CEP</Label>
+                    <Input
+                      id="zip_code"
+                      value={formData.zip_code}
+                      onChange={(e) => handleZipCodeChange(e.target.value)}
+                      placeholder="00000-000"
+                      maxLength={9}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      O endereço será preenchido automaticamente
+                    </p>
+                  </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="address">Endereço</Label>
-                  <Input
-                    id="address"
-                    value={formData.address}
-                    onChange={(e) => handleInputChange("address", e.target.value)}
-                    required
-                  />
-                </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="address">Endereço</Label>
+                    <Input
+                      id="address"
+                      value={formData.address}
+                      onChange={(e) => handleInputChange("address", e.target.value)}
+                      required
+                    />
+                  </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="city">Cidade</Label>
-                  <Input
-                    id="city"
-                    value={formData.city}
-                    onChange={(e) => handleInputChange("city", e.target.value)}
-                    required
-                  />
-                </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="city">Cidade</Label>
+                    <Input
+                      id="city"
+                      value={formData.city}
+                      onChange={(e) => handleInputChange("city", e.target.value)}
+                      required
+                    />
+                  </div>
 
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground mr-2"></div>
-                      Salvando...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-4 h-4 mr-2" />
-                      Salvar Alterações
-                    </>
-                  )}
-                </Button>
-              </form>
+                  <div className="flex gap-3">
+                    <Button type="submit" className="flex-1" disabled={loading}>
+                      {loading ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground mr-2"></div>
+                          Salvando...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-4 h-4 mr-2" />
+                          Salvar Alterações
+                        </>
+                      )}
+                    </Button>
+                    <Button type="button" variant="outline" onClick={handleCancel}>
+                      Cancelar
+                    </Button>
+                  </div>
+                </form>
+              ) : (
+                <div className="space-y-6">
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div>
+                      <Label className="text-sm font-medium text-muted-foreground">Nome Completo</Label>
+                      <p className="mt-1 text-sm">{profile?.name || "Não informado"}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-muted-foreground">Data de Nascimento</Label>
+                      <p className="mt-1 text-sm">
+                        {profile?.birth_date 
+                          ? new Date(profile.birth_date).toLocaleDateString('pt-BR')
+                          : "Não informado"
+                        }
+                      </p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-muted-foreground">Tipo de Perfil</Label>
+                      <p className="mt-1 text-sm">
+                        {profile?.profile_type === 'patient' && "Paciente"}
+                        {profile?.profile_type === 'academic' && "Acadêmico"}
+                        {profile?.profile_type === 'health_professional' && "Profissional de Saúde"}
+                      </p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-muted-foreground">CEP</Label>
+                      <p className="mt-1 text-sm">{profile?.zip_code || "Não informado"}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-muted-foreground">Endereço</Label>
+                      <p className="mt-1 text-sm">{profile?.address || "Não informado"}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-muted-foreground">Cidade</Label>
+                      <p className="mt-1 text-sm">{profile?.city || "Não informado"}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

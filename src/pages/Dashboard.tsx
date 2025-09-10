@@ -132,7 +132,7 @@ const Dashboard = () => {
                   className="w-full"
                   onClick={() => navigate("/profile")}
                 >
-                  Editar Perfil
+                  Ver Perfil
                 </Button>
               </CardContent>
             </Card>
