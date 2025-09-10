@@ -48,6 +48,57 @@ const Profile = () => {
     }));
   };
 
+  const fetchAddressByZipCode = async (zipCode: string) => {
+    const cleanZipCode = zipCode.replace(/\D/g, '');
+    if (cleanZipCode.length !== 8) return;
+
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cleanZipCode}/json/`);
+      const data = await response.json();
+      
+      if (!data.erro) {
+        setFormData(prev => ({
+          ...prev,
+          address: data.logradouro || prev.address,
+          city: data.localidade || prev.city
+        }));
+        
+        toast({
+          title: "Endereço encontrado",
+          description: `${data.logradouro}, ${data.localidade}`,
+        });
+      } else {
+        toast({
+          title: "CEP não encontrado",
+          description: "Verifique o CEP informado",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Erro ao buscar CEP",
+        description: "Tente novamente",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleZipCodeChange = (value: string) => {
+    // Format CEP as user types
+    const formatted = value
+      .replace(/\D/g, '')
+      .replace(/(\d{5})(\d)/, '$1-$2')
+      .slice(0, 9);
+    
+    handleInputChange("zip_code", formatted);
+    
+    // Auto-fetch address when CEP is complete
+    const cleanValue = formatted.replace(/\D/g, '');
+    if (cleanValue.length === 8) {
+      fetchAddressByZipCode(cleanValue);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -175,9 +226,13 @@ const Profile = () => {
                   <Input
                     id="zip_code"
                     value={formData.zip_code}
-                    onChange={(e) => handleInputChange("zip_code", e.target.value)}
+                    onChange={(e) => handleZipCodeChange(e.target.value)}
                     placeholder="00000-000"
+                    maxLength={9}
                   />
+                  <p className="text-xs text-muted-foreground">
+                    O endereço será preenchido automaticamente
+                  </p>
                 </div>
 
                 <div className="space-y-2">
