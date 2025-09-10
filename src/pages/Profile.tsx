@@ -13,7 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 const Profile = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { profile, loading: profileLoading } = useProfile();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -28,6 +28,13 @@ const Profile = () => {
   });
   const [loading, setLoading] = useState(false);
 
+  // Debug logs
+  console.log('Auth state:', { user, authLoading });
+
+  useEffect(() => {
+    console.log('User changed:', user);
+  }, [user]);
+
   useEffect(() => {
     if (profile) {
       setFormData({
@@ -40,6 +47,32 @@ const Profile = () => {
       });
     }
   }, [profile]);
+
+  // If still loading auth, show loading
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-2 text-muted-foreground">Verificando autenticação...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If no user after loading, redirect to login
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-muted-foreground">Você precisa estar logado para acessar esta página.</p>
+          <Button onClick={() => navigate("/")} className="mt-4">
+            Ir para Login
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
