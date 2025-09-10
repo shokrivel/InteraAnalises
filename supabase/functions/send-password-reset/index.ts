@@ -72,7 +72,7 @@ const handler = async (req: Request): Promise<Response> => {
       type: 'recovery',
       email: email,
       options: {
-        redirectTo: `${Deno.env.get('SUPABASE_URL')}/auth/v1/verify?redirect_to=${encodeURIComponent(origin + '/reset-password')}`
+        redirectTo: `${origin}/reset-password`
       }
     });
 
