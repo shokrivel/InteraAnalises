@@ -21,35 +21,41 @@ export const useProfile = () => {
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
 
-  useEffect(() => {
+  const fetchProfile = async () => {
     if (!user) {
       setProfile(null);
       setLoading(false);
       return;
     }
 
-    const fetchProfile = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('user_id', user.id)
-          .maybeSingle();
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
 
-        if (error) {
-          setError(error.message);
-        } else {
-          setProfile(data);
-        }
-      } catch (err) {
-        setError('Erro ao buscar perfil');
-      } finally {
-        setLoading(false);
+      if (error) {
+        setError(error.message);
+      } else {
+        setProfile(data);
+        setError(null);
       }
-    };
+    } catch (err) {
+      setError('Erro ao buscar perfil');
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchProfile();
   }, [user]);
 
-  return { profile, loading, error };
+  const refetch = () => {
+    fetchProfile();
+  };
+
+  return { profile, loading, error, refetch };
 };

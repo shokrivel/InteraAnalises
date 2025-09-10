@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 
 const Profile = () => {
   const { user, loading: authLoading } = useAuth();
-  const { profile, loading: profileLoading } = useProfile();
+  const { profile, loading: profileLoading, refetch } = useProfile();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -200,6 +200,8 @@ const Profile = () => {
         description: "Suas informações foram salvas.",
       });
       setIsEditing(false);
+      // Refetch profile data to show updated information
+      refetch();
     } catch (error: any) {
       console.error('=== ERROR SAVING PROFILE ===');
       console.error('Error details:', error);
