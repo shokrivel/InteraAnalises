@@ -38,9 +38,9 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
           title: "Login realizado com sucesso!",
           description: "Bem-vindo ao InteraSaúde",
         });
+        // Navegar para o dashboard antes de fechar o modal
+        navigate("/dashboard", { replace: true });
         onSuccess();
-        // Navegar para o dashboard após login bem-sucedido
-        navigate("/dashboard");
       }
     } catch (err) {
       setError("Erro inesperado. Tente novamente.");
