@@ -64,12 +64,15 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Obter origem da requisição ou usar valor padrão
+    const origin = req.headers.get('origin') || req.headers.get('referer')?.split('/').slice(0, 3).join('/') || 'https://37217826-4f0d-4f8d-967e-c6060e63a013.lovableproject.com';
+    
     // Gerar link de reset usando Supabase
     const { data: resetData, error: resetError } = await supabase.auth.admin.generateLink({
       type: 'recovery',
       email: email,
       options: {
-        redirectTo: `${Deno.env.get('SUPABASE_URL')}/auth/v1/verify?redirect_to=${encodeURIComponent(window.location.origin + '/reset-password')}`
+        redirectTo: `${Deno.env.get('SUPABASE_URL')}/auth/v1/verify?redirect_to=${encodeURIComponent(origin + '/reset-password')}`
       }
     });
 
