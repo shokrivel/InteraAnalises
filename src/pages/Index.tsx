@@ -1,12 +1,22 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Heart, Microscope, Droplet, Users, Shield, BookOpen } from "lucide-react";
 import AuthDialog from "@/components/auth/AuthDialog";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Index = () => {
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading && user) {
+      navigate("/dashboard");
+    }
+  }, [user, loading, navigate]);
 
   return (
     <div className="min-h-screen bg-background">
