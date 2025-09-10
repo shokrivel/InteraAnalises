@@ -14,6 +14,7 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
   const [error, setError] = useState("");
   const { toast } = useToast();
 
@@ -41,6 +42,35 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
       setError("Erro inesperado. Tente novamente.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePasswordReset = async () => {
+    if (!email) {
+      setError("Por favor, insira seu e-mail antes de solicitar a redefinição de senha.");
+      return;
+    }
+
+    setResetLoading(true);
+    setError("");
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/`,
+      });
+
+      if (error) {
+        setError(error.message);
+      } else {
+        toast({
+          title: "E-mail enviado!",
+          description: "Verifique sua caixa de entrada para redefinir sua senha.",
+        });
+      }
+    } catch (err) {
+      setError("Erro inesperado. Tente novamente.");
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -79,6 +109,17 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
       <Button type="submit" className="w-full" disabled={loading}>
         {loading ? "Entrando..." : "Entrar"}
       </Button>
+      
+      <div className="text-center">
+        <button
+          type="button"
+          onClick={handlePasswordReset}
+          disabled={resetLoading}
+          className="text-sm text-primary hover:underline disabled:opacity-50"
+        >
+          {resetLoading ? "Enviando..." : "Esqueci minha senha"}
+        </button>
+      </div>
     </form>
   );
 };
