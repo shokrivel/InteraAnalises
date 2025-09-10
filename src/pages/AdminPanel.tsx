@@ -5,104 +5,143 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Heart, ArrowLeft, Users, FileText, Shield, Eye } from "lucide-react";
+import { Heart, ArrowLeft, Users, MessageSquare, Shield, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useUserRole } from "@/hooks/useUserRole";
-import { supabase } from "@/integrations/supabase/client";
+import { useRole } from "@/hooks/useRole";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
-interface ProfileData {
+interface Profile {
   id: string;
   user_id: string;
   name: string;
   profile_type: string;
-  birth_date: string;
-  address: string;
   city: string;
-  zip_code?: string;
   created_at: string;
-  updated_at: string;
 }
 
-interface ConsultationData {
+interface ConsultationHistory {
   id: string;
   user_id: string;
   symptoms: string[];
-  symptom_duration?: number;
-  family_symptoms: boolean;
-  exam_results?: any;
-  epidemiological_info?: any;
-  ai_response?: string;
+  ai_response: string;
   created_at: string;
+  symptom_duration: number;
 }
 
-interface UserRoleData {
+interface UserWithRole {
   id: string;
-  user_id: string;
-  role: string;
+  email: string;
   created_at: string;
+  user_roles: {
+    role: string;
+  }[];
+  profiles: Profile[];
 }
 
 const AdminPanel = () => {
-  const [profiles, setProfiles] = useState<ProfileData[]>([]);
-  const [consultations, setConsultations] = useState<ConsultationData[]>([]);
-  const [userRoles, setUserRoles] = useState<UserRoleData[]>([]);
+  const [users, setUsers] = useState<UserWithRole[]>([]);
+  const [consultations, setConsultations] = useState<ConsultationHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
-  const { isAdmin, loading: roleLoading } = useUserRole();
+  const { isAdmin, loading: roleLoading } = useRole();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!roleLoading && (!user || !isAdmin())) {
+    if (!roleLoading && !isAdmin) {
       navigate("/dashboard");
+      toast({
+        title: "Acesso negado",
+        description: "Você não tem permissão para acessar esta área",
+        variant: "destructive",
+      });
     }
-  }, [user, isAdmin, roleLoading, navigate]);
+  }, [isAdmin, roleLoading, navigate, toast]);
 
   useEffect(() => {
-    if (isAdmin()) {
-      fetchAllData();
+    if (isAdmin) {
+      fetchUsers();
+      fetchConsultations();
     }
   }, [isAdmin]);
 
-  const fetchAllData = async () => {
-    setLoading(true);
+  const fetchUsers = async () => {
     try {
-      // Fetch all profiles
+      // Buscar usuários com roles e perfis
+      const { data: usersData, error: usersError } = await supabase
+        .from('user_roles')
+        .select(`
+          user_id,
+          role,
+          created_at
+        `);
+
+      if (usersError) throw usersError;
+
+      // Buscar perfis dos usuários
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select('*');
 
       if (profilesError) throw profilesError;
-      setProfiles(profilesData || []);
 
-      // Fetch all consultations
-      const { data: consultationsData, error: consultationsError } = await supabase
-        .from('consultation_history')
-        .select('*')
-        .order('created_at', { ascending: false });
+      // Combinar dados dos usuários
+      const processedUsers = usersData.map(userRole => {
+        const profile = profilesData.find(p => p.user_id === userRole.user_id);
+        return {
+          id: userRole.user_id,
+          email: profile?.name || 'Nome não disponível',
+          created_at: userRole.created_at,
+          user_roles: [{ role: userRole.role }],
+          profiles: profile ? [profile] : []
+        };
+      });
 
-      if (consultationsError) throw consultationsError;
-      setConsultations(consultationsData || []);
-
-      // Fetch all user roles
-      const { data: rolesData, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (rolesError) throw rolesError;
-      setUserRoles(rolesData || []);
-
+      setUsers(processedUsers);
     } catch (error) {
       toast({
-        title: "Erro ao carregar dados",
-        description: "Não foi possível carregar os dados administrativos",
+        title: "Erro ao buscar usuários",
+        description: "Tente novamente",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const fetchConsultations = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('consultation_history')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+      setConsultations(data || []);
+    } catch (error) {
+      toast({
+        title: "Erro ao buscar consultas",
+        description: "Tente novamente",
         variant: "destructive",
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      toast({
+        title: "Logout realizado com sucesso",
+        description: "Até logo!",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao fazer logout",
+        description: "Tente novamente",
+        variant: "destructive",
+      });
     }
   };
 
@@ -117,24 +156,8 @@ const AdminPanel = () => {
     );
   }
 
-  if (!isAdmin()) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Card className="max-w-md">
-          <CardHeader>
-            <CardTitle>Acesso Negado</CardTitle>
-            <CardDescription>
-              Você não tem permissão para acessar o painel administrativo.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={() => navigate("/dashboard")}>
-              Voltar ao Dashboard
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
+  if (!isAdmin) {
+    return null;
   }
 
   return (
@@ -152,193 +175,159 @@ const AdminPanel = () => {
               <ArrowLeft className="w-4 h-4" />
             </Button>
             <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-              <Heart className="w-6 h-6 text-primary-foreground" />
+              <Shield className="w-6 h-6 text-primary-foreground" />
             </div>
             <h1 className="text-2xl font-bold text-foreground">Painel Administrativo</h1>
           </div>
-          <Badge variant="secondary" className="flex items-center gap-2">
-            <Shield className="w-4 h-4" />
-            Administrador
-          </Badge>
+          <div className="flex items-center gap-4">
+            <Badge variant="secondary" className="flex items-center gap-2">
+              <Shield className="w-4 h-4" />
+              Administrador
+            </Badge>
+            <Button variant="outline" size="sm" onClick={handleLogout}>
+              <LogOut className="w-4 h-4 mr-2" />
+              Sair
+            </Button>
+          </div>
         </div>
       </header>
 
       {/* Admin Content */}
       <div className="container mx-auto px-4 py-8">
-        {/* Statistics Cards */}
-        <div className="grid md:grid-cols-3 gap-6 mb-8">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Users className="w-5 h-5 text-primary" />
-                Total de Usuários
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-primary">{profiles.length}</p>
-            </CardContent>
-          </Card>
+        <div className="max-w-7xl mx-auto">
+          {/* Statistics Cards */}
+          <div className="grid md:grid-cols-3 gap-6 mb-8">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total de Usuários</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{users.length}</div>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <FileText className="w-5 h-5 text-primary" />
-                Consultas Realizadas
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-primary">{consultations.length}</p>
-            </CardContent>
-          </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total de Consultas</CardTitle>
+                <MessageSquare className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{consultations.length}</div>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Shield className="w-5 h-5 text-primary" />
-                Administradores
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-primary">
-                {userRoles.filter(role => role.role === 'admin').length}
-              </p>
-            </CardContent>
-          </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Administradores</CardTitle>
+                <Shield className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {users.filter(u => u.user_roles[0]?.role === 'admin').length}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Tabs */}
+          <Tabs defaultValue="users" className="space-y-4">
+            <TabsList>
+              <TabsTrigger value="users">Usuários</TabsTrigger>
+              <TabsTrigger value="consultations">Consultas</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="users" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Usuários Registrados</CardTitle>
+                  <CardDescription>
+                    Lista de todos os usuários da plataforma
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nome/Email</TableHead>
+                        <TableHead>Tipo de Perfil</TableHead>
+                        <TableHead>Cidade</TableHead>
+                        <TableHead>Role</TableHead>
+                        <TableHead>Data de Cadastro</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {users.map((user) => (
+                        <TableRow key={user.id}>
+                          <TableCell className="font-medium">
+                            {user.profiles[0]?.name || user.email}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline">
+                              {user.profiles[0]?.profile_type || 'N/A'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{user.profiles[0]?.city || 'N/A'}</TableCell>
+                          <TableCell>
+                            <Badge 
+                              variant={user.user_roles[0]?.role === 'admin' ? 'destructive' : 'secondary'}
+                            >
+                              {user.user_roles[0]?.role || 'user'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {new Date(user.created_at).toLocaleDateString('pt-BR')}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="consultations" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Histórico de Consultas</CardTitle>
+                  <CardDescription>
+                    Últimas 50 consultas realizadas na plataforma
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>ID da Consulta</TableHead>
+                        <TableHead>Sintomas</TableHead>
+                        <TableHead>Duração dos Sintomas</TableHead>
+                        <TableHead>Data da Consulta</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {consultations.map((consultation) => (
+                        <TableRow key={consultation.id}>
+                          <TableCell className="font-medium">
+                            {consultation.id.slice(0, 8)}...
+                          </TableCell>
+                          <TableCell className="max-w-xs truncate">
+                            {consultation.symptoms?.join(', ') || 'N/A'}
+                          </TableCell>
+                          <TableCell>
+                            {consultation.symptom_duration ? `${consultation.symptom_duration} dias` : 'N/A'}
+                          </TableCell>
+                          <TableCell>
+                            {new Date(consultation.created_at).toLocaleDateString('pt-BR')}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </div>
-
-        {/* Tabs for different sections */}
-        <Tabs defaultValue="users" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="users">Usuários</TabsTrigger>
-            <TabsTrigger value="consultations">Consultas</TabsTrigger>
-            <TabsTrigger value="roles">Roles</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="users" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Usuários Cadastrados</CardTitle>
-                <CardDescription>
-                  Lista de todos os usuários registrados na plataforma
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Nome</TableHead>
-                      <TableHead>Tipo de Perfil</TableHead>
-                      <TableHead>Cidade</TableHead>
-                      <TableHead>Data de Cadastro</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {profiles.map((profile) => (
-                      <TableRow key={profile.id}>
-                        <TableCell className="font-medium">{profile.name}</TableCell>
-                        <TableCell>
-                          <Badge variant="secondary">
-                            {profile.profile_type === 'patient' && 'Paciente'}
-                            {profile.profile_type === 'academic' && 'Acadêmico'}
-                            {profile.profile_type === 'health_professional' && 'Profissional'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{profile.city}</TableCell>
-                        <TableCell>{new Date(profile.created_at).toLocaleDateString('pt-BR')}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="consultations" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Histórico de Consultas</CardTitle>
-                <CardDescription>
-                  Todas as consultas realizadas na plataforma
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>ID da Consulta</TableHead>
-                      <TableHead>Sintomas</TableHead>
-                      <TableHead>Duração (dias)</TableHead>
-                      <TableHead>Data</TableHead>
-                      <TableHead>Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {consultations.map((consultation) => (
-                      <TableRow key={consultation.id}>
-                        <TableCell className="font-mono text-sm">
-                          {consultation.id.substring(0, 8)}...
-                        </TableCell>
-                        <TableCell>
-                          {consultation.symptoms ? consultation.symptoms.slice(0, 2).join(', ') : 'N/A'}
-                          {consultation.symptoms && consultation.symptoms.length > 2 && '...'}
-                        </TableCell>
-                        <TableCell>{consultation.symptom_duration || 'N/A'}</TableCell>
-                        <TableCell>{new Date(consultation.created_at).toLocaleDateString('pt-BR')}</TableCell>
-                        <TableCell>
-                          <Button variant="ghost" size="sm">
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="roles" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Roles de Usuários</CardTitle>
-                <CardDescription>
-                  Gerenciamento de permissões e roles dos usuários
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>ID do Usuário</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead>Data de Atribuição</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {userRoles.map((roleData) => (
-                      <TableRow key={roleData.id}>
-                        <TableCell className="font-mono text-sm">
-                          {roleData.user_id.substring(0, 8)}...
-                        </TableCell>
-                        <TableCell>
-                          <Badge 
-                            variant={roleData.role === 'admin' ? 'default' : 'secondary'}
-                            className={roleData.role === 'admin' ? 'bg-primary' : ''}
-                          >
-                            {roleData.role === 'admin' && 'Administrador'}
-                            {roleData.role === 'moderator' && 'Moderador'}
-                            {roleData.role === 'user' && 'Usuário'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{new Date(roleData.created_at).toLocaleDateString('pt-BR')}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
       </div>
     </div>
   );

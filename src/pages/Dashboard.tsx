@@ -4,13 +4,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Heart, LogOut, MessageCircle, User, History, Shield } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useUserRole } from "@/hooks/useUserRole";
+import { useRole } from "@/hooks/useRole";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 const Dashboard = () => {
   const { user } = useAuth();
-  const { isAdmin } = useUserRole();
+  const { isAdmin } = useRole();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -46,6 +46,12 @@ const Dashboard = () => {
               <User className="w-4 h-4" />
               {user?.email}
             </Badge>
+            {isAdmin && (
+              <Button variant="outline" size="sm" onClick={() => navigate("/admin")}>
+                <Shield className="w-4 h-4 mr-2" />
+                Admin
+              </Button>
+            )}
             <Button variant="outline" size="sm" onClick={handleLogout}>
               <LogOut className="w-4 h-4 mr-2" />
               Sair
@@ -127,7 +133,7 @@ const Dashboard = () => {
             </Card>
 
             {/* Admin Panel Card - Only visible to admins */}
-            {isAdmin() && (
+            {isAdmin && (
               <Card className="hover:shadow-lg transition-shadow cursor-pointer border-primary/20">
                 <CardHeader>
                   <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
