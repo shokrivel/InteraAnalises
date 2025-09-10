@@ -2,13 +2,15 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Heart, LogOut, MessageCircle, User, History } from "lucide-react";
+import { Heart, LogOut, MessageCircle, User, History, Shield } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const { isAdmin } = useUserRole();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -123,6 +125,33 @@ const Dashboard = () => {
                 </Button>
               </CardContent>
             </Card>
+
+            {/* Admin Panel Card - Only visible to admins */}
+            {isAdmin() && (
+              <Card className="hover:shadow-lg transition-shadow cursor-pointer border-primary/20">
+                <CardHeader>
+                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
+                    <Shield className="w-6 h-6 text-primary" />
+                  </div>
+                  <CardTitle className="flex items-center gap-2">
+                    Painel Admin
+                    <Badge variant="secondary" className="text-xs">ADMIN</Badge>
+                  </CardTitle>
+                  <CardDescription>
+                    Gerencie usuários, consultas e configurações do sistema
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button 
+                    variant="default" 
+                    className="w-full"
+                    onClick={() => navigate("/admin")}
+                  >
+                    Acessar Painel
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </section>
