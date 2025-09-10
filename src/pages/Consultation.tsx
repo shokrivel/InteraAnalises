@@ -56,16 +56,14 @@ const Consultation = () => {
     setLoading(true);
 
     try {
-      // Aqui será implementada a integração com a IA
-      console.log('Consultation data:', answers);
+      console.log('Submitting consultation data:', answers);
       
-      toast({
-        title: "Consulta iniciada!",
-        description: "Processando suas informações...",
+      // Navigate to consultation chat with the answers
+      navigate("/consultation-chat", { 
+        state: { 
+          consultationData: answers 
+        } 
       });
-      
-      // Navegar para uma página de resultados (a ser criada)
-      navigate("/dashboard");
     } catch (error) {
       toast({
         title: "Erro ao processar consulta",
