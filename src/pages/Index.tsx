@@ -14,11 +14,7 @@ const Index = () => {
 
   useEffect(() => {
     console.log('Index: checking auth state', { user: !!user, loading });
-    // Remover redirecionamento automático - deixar LoginForm controlar
-    // if (!loading && user) {
-    //   console.log('Index: redirecting to profile');
-    //   navigate("/profile", { replace: true });
-    // }
+    // Sem redirecionamentos automáticos
   }, [user, loading, navigate]);
 
   return (

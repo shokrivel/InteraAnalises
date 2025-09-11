@@ -41,21 +41,15 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
       } else {
         console.log("Login bem-sucedido, dados:", data);
         
-        console.log("Login bem-sucedido - iniciando processo de redirecionamento");
+        console.log("Login bem-sucedido - dados:", data);
         
         toast({
           title: "Login realizado com sucesso!",
-          description: "Redirecionando para o seu perfil...",
+          description: "Bem-vindo ao InteraSaúde",
         });
 
-        // Fechar modal primeiro
+        // Apenas fechar o modal, sem redirecionamentos
         onSuccess();
-        
-        // Aguardar sessão ser processada e redirecionar
-        setTimeout(() => {
-          console.log("Executando redirecionamento para /profile");
-          window.location.href = '/profile';
-        }, 300);
       }
     } catch (err) {
       console.error("Erro inesperado no login:", err);
