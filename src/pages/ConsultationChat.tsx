@@ -4,11 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Heart, ArrowLeft, Bot, User, Copy, CheckCheck } from "lucide-react";
+import { Heart, ArrowLeft, Bot, User, Copy, CheckCheck, MapPin } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import HealthcareProvidersMap from "@/components/maps/HealthcareProvidersMap";
 
 interface ConsultationResponse {
   response: string;
@@ -20,6 +21,7 @@ const ConsultationChat = () => {
   const [consultationResponse, setConsultationResponse] = useState<ConsultationResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [showMap, setShowMap] = useState(false);
   const { user } = useAuth();
   const { profile } = useProfile();
   const navigate = useNavigate();
@@ -257,6 +259,14 @@ const ConsultationChat = () => {
               <div className="text-center space-y-4">
                 <h3 className="font-medium">Próximos passos</h3>
                 <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  <Button 
+                    onClick={() => setShowMap(!showMap)}
+                    variant="outline"
+                    className="flex items-center gap-2"
+                  >
+                    <MapPin className="h-4 w-4" />
+                    {showMap ? 'Ocultar Mapa' : 'Ver Profissionais Próximos'}
+                  </Button>
                   <Button onClick={() => navigate("/consultation")}>
                     Nova Consulta
                   </Button>
@@ -270,6 +280,18 @@ const ConsultationChat = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Healthcare Providers Map */}
+          {showMap && profile && (
+            <Card>
+              <CardContent className="p-6">
+                <HealthcareProvidersMap 
+                  userAddress={profile.address && profile.city ? `${profile.address}, ${profile.city}` : undefined}
+                  onClose={() => setShowMap(false)}
+                />
+              </CardContent>
+            </Card>
+          )}
 
           {/* Disclaimer */}
           <Card className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950">

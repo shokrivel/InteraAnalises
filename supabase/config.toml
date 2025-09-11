@@ -57,3 +57,12 @@ enable_confirmations = false
 
 [functions.send-password-reset]
 verify_jwt = false
+
+[functions.send-registration-confirmation]
+verify_jwt = false
+
+[functions.gemini-consultation]
+verify_jwt = true
+
+[functions.find-healthcare-providers]
+verify_jwt = true
