@@ -112,7 +112,11 @@ const Dashboard = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Button variant="outline" className="w-full">
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={() => navigate("/consultation-history")}
+                >
                   Ver Histórico
                 </Button>
               </CardContent>

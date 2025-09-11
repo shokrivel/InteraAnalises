@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import Consultation from "./pages/Consultation";
 import ConsultationChat from "./pages/ConsultationChat";
+import ConsultationHistory from "./pages/ConsultationHistory";
 import AdminPanel from "./pages/AdminPanel";
 import ResetPassword from "./pages/ResetPassword";
 import Profile from "./pages/Profile";
@@ -27,6 +28,7 @@ const App = () => (
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/consultation" element={<Consultation />} />
             <Route path="/consultation-chat" element={<ConsultationChat />} />
+            <Route path="/consultation-history" element={<ConsultationHistory />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/admin" element={<AdminPanel />} />

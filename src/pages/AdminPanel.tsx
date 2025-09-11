@@ -8,6 +8,8 @@ import { ArrowLeft, Heart, Users, Settings, FileText } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/hooks/useRole";
 import FieldsManagement from "@/components/admin/FieldsManagement";
+import UserManagement from "@/components/admin/UserManagement";
+import SystemSettings from "@/components/admin/SystemSettings";
 
 const AdminPanel = () => {
   const { user } = useAuth();
@@ -61,10 +63,11 @@ const AdminPanel = () => {
       <section className="py-8 px-4">
         <div className="container mx-auto max-w-6xl">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="overview">Visão Geral</TabsTrigger>
               <TabsTrigger value="users">Usuários</TabsTrigger>
-              <TabsTrigger value="fields">Campos da Consulta</TabsTrigger>
+              <TabsTrigger value="fields">Campos</TabsTrigger>
+              <TabsTrigger value="settings">Configurações</TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="space-y-6">
@@ -78,11 +81,14 @@ const AdminPanel = () => {
                     <CardDescription>
                       Gerencie perfis e permissões dos usuários do sistema
                     </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                      Funcionalidade em desenvolvimento
-                    </p>
+                   </CardHeader>
+                   <CardContent>
+                     <Button 
+                       variant="outline" 
+                       onClick={() => setActiveTab('users')}
+                     >
+                       Gerenciar Usuários
+                     </Button>
                   </CardContent>
                 </Card>
 
@@ -115,34 +121,29 @@ const AdminPanel = () => {
                     <CardDescription>
                       Configurações gerais do sistema
                     </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                      Funcionalidade em desenvolvimento
-                    </p>
+                   </CardHeader>
+                   <CardContent>
+                     <Button 
+                       variant="outline" 
+                       onClick={() => setActiveTab('settings')}
+                     >
+                       Abrir Configurações
+                     </Button>
                   </CardContent>
                 </Card>
               </div>
             </TabsContent>
 
             <TabsContent value="users">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Gestão de Usuários</CardTitle>
-                  <CardDescription>
-                    Visualize e gerencie os usuários do sistema
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground">
-                    Funcionalidade de gestão de usuários em desenvolvimento.
-                  </p>
-                </CardContent>
-              </Card>
+              <UserManagement />
             </TabsContent>
 
             <TabsContent value="fields">
               <FieldsManagement />
+            </TabsContent>
+
+            <TabsContent value="settings">
+              <SystemSettings />
             </TabsContent>
           </Tabs>
         </div>
