@@ -35,6 +35,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       async (event, session) => {
         console.log('🔥 Auth state change:', event, 'User:', session?.user?.email, 'Session exists:', !!session);
         
+        if (event === 'SIGNED_OUT') {
+          console.log('🚪 User signed out, clearing state');
+          setSession(null);
+          setUser(null);
+          setLoading(false);
+          return;
+        }
+        
         if (event === 'SIGNED_IN' && session) {
           console.log('✅ User signed in successfully');
         }

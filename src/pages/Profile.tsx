@@ -272,8 +272,17 @@ const Profile = () => {
               variant="ghost" 
               size="sm" 
               onClick={async () => {
-                await supabase.auth.signOut();
-                navigate('/', { replace: true });
+                console.log('🚪 Profile logout button clicked');
+                try {
+                  const { error } = await supabase.auth.signOut();
+                  if (error) {
+                    console.error('Profile logout error:', error);
+                  } else {
+                    console.log('✅ Profile logout successful');
+                  }
+                } catch (err) {
+                  console.error('Profile logout exception:', err);
+                }
               }}
             >
               Sair

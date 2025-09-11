@@ -42,8 +42,17 @@ const Index = () => {
                 <Button 
                   variant="ghost" 
                   onClick={async () => {
-                    await supabase.auth.signOut();
-                    navigate('/', { replace: true });
+                    console.log('🚪 Logout button clicked');
+                    try {
+                      const { error } = await supabase.auth.signOut();
+                      if (error) {
+                        console.error('Logout error:', error);
+                      } else {
+                        console.log('✅ Logout successful');
+                      }
+                    } catch (err) {
+                      console.error('Logout exception:', err);
+                    }
                   }}
                 >
                   Sair
