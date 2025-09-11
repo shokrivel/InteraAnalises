@@ -13,6 +13,7 @@ const AdminPanel = () => {
   const { user } = useAuth();
   const { isAdmin } = useRole();
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState('overview');
 
   if (!isAdmin) {
     return (
@@ -59,7 +60,7 @@ const AdminPanel = () => {
       {/* Admin Content */}
       <section className="py-8 px-4">
         <div className="container mx-auto max-w-6xl">
-          <Tabs defaultValue="overview" className="space-y-6">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="overview">Visão Geral</TabsTrigger>
               <TabsTrigger value="users">Usuários</TabsTrigger>
@@ -98,10 +99,7 @@ const AdminPanel = () => {
                   <CardContent>
                     <Button 
                       variant="outline" 
-                      onClick={() => {
-                        const fieldsTab = document.querySelector('[value="fields"]') as HTMLElement;
-                        fieldsTab?.click();
-                      }}
+                      onClick={() => setActiveTab('fields')}
                     >
                       Gerenciar Campos
                     </Button>
