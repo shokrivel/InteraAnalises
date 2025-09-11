@@ -93,6 +93,46 @@ const DynamicField = ({ field, value, onChange, required }: DynamicFieldProps) =
           </Select>
         );
 
+      case 'aglomerado':
+        // For aglomerado fields, show different options based on user profile
+        const getAglomeradoOptions = () => {
+          const scientificTerms = field.field_options?.scientific_terms || '';
+          const layTerms = field.field_options?.lay_terms || '';
+          
+          const scientificArray = scientificTerms.split(' - ').filter(term => term.trim());
+          const layArray = layTerms.split(' - ').filter(term => term.trim());
+          
+          // Import the hook to get user profile type
+          const { useProfile } = require('@/hooks/useProfile');
+          const { profile } = useProfile();
+          const userProfileType = profile?.profile_type || 'patient';
+          
+          // Show lay terms for patients, scientific terms for others
+          const termsToShow = userProfileType === 'patient' ? layArray : scientificArray;
+          
+          return termsToShow.map((term, index) => ({
+            value: term.trim(),
+            label: term.trim()
+          }));
+        };
+
+        const aglomeradoOptions = getAglomeradoOptions();
+        
+        return (
+          <Select value={value || ''} onValueChange={handleChange}>
+            <SelectTrigger>
+              <SelectValue placeholder={`Selecione ${field.field_label.toLowerCase()}`} />
+            </SelectTrigger>
+            <SelectContent>
+              {aglomeradoOptions.map((option, index) => (
+                <SelectItem key={index} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        );
+
       default:
         return (
           <Input

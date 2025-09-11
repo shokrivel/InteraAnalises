@@ -18,7 +18,8 @@ const FIELD_TYPES = [
   { value: 'select', label: 'Seleção' },
   { value: 'checkbox', label: 'Checkbox' },
   { value: 'number', label: 'Número' },
-  { value: 'date', label: 'Data' }
+  { value: 'date', label: 'Data' },
+  { value: 'aglomerado', label: 'Aglomerado' }
 ];
 
 const PROFILE_LEVELS = [
@@ -37,7 +38,7 @@ const FieldsManagement = () => {
   const [formData, setFormData] = useState({
     field_name: '',
     field_label: '',
-    field_type: 'text' as 'text' | 'textarea' | 'select' | 'checkbox' | 'number' | 'date',
+    field_type: 'text' as 'text' | 'textarea' | 'select' | 'checkbox' | 'number' | 'date' | 'aglomerado',
     field_options: {},
     required_for_levels: [] as string[],
     visible_for_levels: ['patient', 'academic', 'health_professional'] as string[],
@@ -266,6 +267,51 @@ const FieldsManagement = () => {
                 />
               </div>
             </div>
+
+            {/* Campos específicos para tipo "aglomerado" */}
+            {formData.field_type === 'aglomerado' && (
+              <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+                <h4 className="font-medium text-sm">Configuração do Campo Aglomerado</h4>
+                <div className="space-y-2">
+                  <Label htmlFor="scientific_terms">Palavras pré-definidas (científico)</Label>
+                  <Textarea
+                    id="scientific_terms"
+                    value={formData.field_options?.scientific_terms || ''}
+                    onChange={(e) => setFormData(prev => ({ 
+                      ...prev, 
+                      field_options: { 
+                        ...prev.field_options, 
+                        scientific_terms: e.target.value 
+                      } 
+                    }))}
+                    placeholder="Cefaleia - Cólica abdominal - Dispneia"
+                    rows={3}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Separe os termos com " - " (hífen com espaços)
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lay_terms">Palavras pré-definidas (leigos)</Label>
+                  <Textarea
+                    id="lay_terms"
+                    value={formData.field_options?.lay_terms || ''}
+                    onChange={(e) => setFormData(prev => ({ 
+                      ...prev, 
+                      field_options: { 
+                        ...prev.field_options, 
+                        lay_terms: e.target.value 
+                      } 
+                    }))}
+                    placeholder="Dor de cabeça - Dor de barriga - Falta de ar"
+                    rows={3}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Separe os termos com " - " (hífen com espaços). Deve ter o mesmo número de termos que a lista científica.
+                  </p>
+                </div>
+              </div>
+            )}
 
             <div className="space-y-4">
               <div>

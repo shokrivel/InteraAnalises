@@ -6,7 +6,7 @@ export interface ConsultationField {
   id: string;
   field_name: string;
   field_label: string;
-  field_type: 'text' | 'textarea' | 'select' | 'checkbox' | 'number' | 'date';
+  field_type: 'text' | 'textarea' | 'select' | 'checkbox' | 'number' | 'date' | 'aglomerado';
   field_options?: any;
   required_for_levels: string[];
   visible_for_levels: string[];
