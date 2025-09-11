@@ -271,23 +271,15 @@ const Profile = () => {
             <Button 
               variant="ghost" 
               size="sm" 
-              onClick={async () => {
-                console.log('🚪 Profile logout button clicked');
-                try {
-                  // Clear local storage first
-                  localStorage.removeItem('supabase.auth.token');
-                  
-                  const { error } = await supabase.auth.signOut();
-                  console.log('Logout result:', { error });
-                  
-                  // Force navigate regardless of error
-                  navigate('/', { replace: true });
-                  
-                } catch (err) {
-                  console.error('Profile logout exception:', err);
-                  // Force navigate even on exception
-                  navigate('/', { replace: true });
-                }
+              onClick={() => {
+                console.log('🚪 Profile force logout - clearing all auth data');
+                
+                // Clear all possible auth storage
+                localStorage.clear();
+                sessionStorage.clear();
+                
+                // Force navigation to home and reload
+                window.location.href = '/';
               }}
             >
               Sair

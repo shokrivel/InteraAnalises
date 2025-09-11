@@ -41,23 +41,15 @@ const Index = () => {
                 </Button>
                 <Button 
                   variant="ghost" 
-                  onClick={async () => {
-                    console.log('🚪 Logout button clicked');
-                    try {
-                      // Clear local storage first
-                      localStorage.removeItem('supabase.auth.token');
-                      
-                      const { error } = await supabase.auth.signOut();
-                      console.log('Logout result:', { error });
-                      
-                      // Force refresh the page to clear all state
-                      window.location.href = '/';
-                      
-                    } catch (err) {
-                      console.error('Logout exception:', err);
-                      // Force refresh even on exception
-                      window.location.href = '/';
-                    }
+                  onClick={() => {
+                    console.log('🚪 Force logout - clearing all auth data');
+                    
+                    // Clear all possible auth storage
+                    localStorage.clear();
+                    sessionStorage.clear();
+                    
+                    // Force page reload to reset all state
+                    window.location.reload();
                   }}
                 >
                   Sair
