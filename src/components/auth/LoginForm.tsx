@@ -44,11 +44,8 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
           title: "Login realizado com sucesso!",
           description: "Bem-vindo ao InteraSaúde",
         });
-        // Força recarregamento para garantir sessão aplicada corretamente no preview
-        setTimeout(() => {
-          onSuccess();
-          window.location.assign("/dashboard");
-        }, 150);
+        // Fechar o modal e deixar o AuthContext lidar com o redirecionamento
+        onSuccess();
       }
     } catch (err) {
       console.error("Erro inesperado no login:", err);
