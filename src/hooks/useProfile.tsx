@@ -37,12 +37,14 @@ export const useProfile = () => {
         .maybeSingle();
 
       if (error) {
+        console.error('Error fetching profile:', error);
         setError(error.message);
       } else {
         setProfile(data);
         setError(null);
       }
     } catch (err) {
+      console.error('Unexpected error fetching profile:', err);
       setError('Erro ao buscar perfil');
     } finally {
       setLoading(false);

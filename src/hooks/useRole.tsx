@@ -28,14 +28,16 @@ export const useRole = () => {
           .from('user_roles')
           .select('*')
           .eq('user_id', user.id)
-          .single();
+          .maybeSingle();
 
         if (error) {
+          console.error('Error fetching user role:', error);
           setError(error.message);
         } else {
           setUserRole(data);
         }
       } catch (err) {
+        console.error('Unexpected error fetching user role:', err);
         setError('Erro ao buscar role do usuário');
       } finally {
         setLoading(false);
