@@ -25,24 +25,33 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
     setLoading(true);
     setError("");
 
+    console.log("Tentando fazer login com:", email);
+
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
+      console.log("Resposta do login:", { data, error });
+
       if (error) {
+        console.error("Erro de login:", error);
         setError(error.message);
       } else {
+        console.log("Login bem-sucedido, dados:", data);
         toast({
           title: "Login realizado com sucesso!",
           description: "Bem-vindo ao InteraSaúde",
         });
-        // Navegar para o dashboard antes de fechar o modal
-        navigate("/dashboard", { replace: true });
-        onSuccess();
+        // Aguardar um momento para a sessão ser configurada antes de navegar
+        setTimeout(() => {
+          navigate("/dashboard", { replace: true });
+          onSuccess();
+        }, 200);
       }
     } catch (err) {
+      console.error("Erro inesperado no login:", err);
       setError("Erro inesperado. Tente novamente.");
     } finally {
       setLoading(false);
