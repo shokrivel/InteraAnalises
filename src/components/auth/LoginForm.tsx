@@ -25,37 +25,54 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
     setLoading(true);
     setError("");
 
-    console.log("Tentando fazer login com:", email);
+    console.log("🔄 INICIANDO LOGIN para:", email);
 
     try {
+      console.log("📡 Chamando Supabase...");
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      console.log("Resposta do login:", { data, error });
+      console.log("📥 RESPOSTA:", { 
+        temData: !!data, 
+        temUser: !!data?.user, 
+        temError: !!error,
+        erro: error?.message 
+      });
 
       if (error) {
-        console.error("Erro de login:", error);
+        console.error("❌ ERRO:", error.message);
         setError(error.message);
-      } else {
-        console.log("Login bem-sucedido, dados:", data);
-        
-        console.log("Login bem-sucedido - dados:", data);
-        
-        toast({
-          title: "Login realizado com sucesso!",
-          description: "Bem-vindo ao InteraSaúde",
-        });
-
-        // Apenas fechar o modal, sem redirecionamentos
-        onSuccess();
+        return;
       }
-    } catch (err) {
-      console.error("Erro inesperado no login:", err);
-      setError("Erro inesperado. Tente novamente.");
+
+      if (!data?.user) {
+        console.error("❌ SEM USUÁRIO");
+        setError("Falha na autenticação");
+        return;
+      }
+
+      console.log("✅ LOGIN SUCESSO! Email:", data.user.email);
+      
+      // Limpar erro e fechar modal
+      setError("");
+      onSuccess();
+      
+      toast({
+        title: "Login realizado!",
+        description: "Bem-vindo de volta!",
+      });
+
+      console.log("🎯 Modal fechado, usuário logado");
+
+    } catch (err: any) {
+      console.error("💥 ERRO FATAL:", err);
+      setError("Erro fatal: " + (err.message || "Tente novamente"));
     } finally {
       setLoading(false);
+      console.log("🏁 Login process finished");
     }
   };
 
