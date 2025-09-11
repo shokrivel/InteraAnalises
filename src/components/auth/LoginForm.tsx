@@ -44,11 +44,11 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
           title: "Login realizado com sucesso!",
           description: "Bem-vindo ao InteraSaúde",
         });
-        // Aguardar um momento para a sessão ser configurada antes de navegar
+        // Força recarregamento para garantir sessão aplicada corretamente no preview
         setTimeout(() => {
-          navigate("/dashboard", { replace: true });
           onSuccess();
-        }, 200);
+          window.location.assign("/dashboard");
+        }, 150);
       }
     } catch (err) {
       console.error("Erro inesperado no login:", err);
