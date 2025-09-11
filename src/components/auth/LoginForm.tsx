@@ -15,143 +15,107 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [resetLoading, setResetLoading] = useState(false);
   const [error, setError] = useState("");
   const { toast } = useToast();
-  const navigate = useNavigate();
 
-  const handleLogin = async (e: React.FormEvent) => {
+  console.log("🎬 LoginForm renderizado - Email:", email);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("🚀 FORMULÁRIO SUBMETIDO! Email:", email, "Password length:", password.length);
+    
     setLoading(true);
     setError("");
 
-    console.log("🔄 INICIANDO LOGIN para:", email);
-
     try {
-      console.log("📡 Chamando Supabase...");
+      console.log("📡 Chamando Supabase auth...");
       
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      const result = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password: password,
       });
 
-      console.log("📥 RESPOSTA:", { 
-        temData: !!data, 
-        temUser: !!data?.user, 
-        temError: !!error,
-        erro: error?.message 
-      });
+      console.log("📥 RESULTADO COMPLETO:", result);
 
-      if (error) {
-        console.error("❌ ERRO:", error.message);
-        setError(error.message);
+      if (result.error) {
+        console.error("❌ ERRO SUPABASE:", result.error);
+        setError(result.error.message);
         return;
       }
 
-      if (!data?.user) {
-        console.error("❌ SEM USUÁRIO");
-        setError("Falha na autenticação");
+      if (!result.data?.user) {
+        console.error("❌ SEM USUÁRIO NO RESULTADO");
+        setError("Login falhou - sem usuário");
         return;
       }
 
-      console.log("✅ LOGIN SUCESSO! Email:", data.user.email);
+      console.log("✅ LOGIN SUCESSO!");
+      console.log("👤 Usuário:", result.data.user.email);
       
-      // Limpar erro e fechar modal
-      setError("");
       onSuccess();
       
       toast({
-        title: "Login realizado!",
-        description: "Bem-vindo de volta!",
+        title: "Sucesso!",
+        description: "Login realizado com sucesso",
       });
-
-      console.log("🎯 Modal fechado, usuário logado");
 
     } catch (err: any) {
-      console.error("💥 ERRO FATAL:", err);
-      setError("Erro fatal: " + (err.message || "Tente novamente"));
+      console.error("💥 ERRO EXCEPTION:", err);
+      setError("Erro: " + err.message);
     } finally {
       setLoading(false);
-      console.log("🏁 Login process finished");
-    }
-  };
-
-  const handlePasswordReset = async () => {
-    if (!email) {
-      setError("Por favor, insira seu e-mail antes de solicitar a redefinição de senha.");
-      return;
-    }
-
-    setResetLoading(true);
-    setError("");
-
-    try {
-      const { data, error } = await supabase.functions.invoke('send-password-reset', {
-        body: { email }
-      });
-
-      if (error) {
-        setError(error.message);
-      } else {
-        toast({
-          title: "E-mail enviado!",
-          description: "Verifique sua caixa de entrada para redefinir sua senha.",
-        });
-      }
-    } catch (err) {
-      setError("Erro inesperado. Tente novamente.");
-    } finally {
-      setResetLoading(false);
     }
   };
 
   return (
-    <form onSubmit={handleLogin} className="space-y-4">
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-      
-      <div className="space-y-2">
-        <Label htmlFor="email">E-mail</Label>
-        <Input
-          id="email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="seu@email.com"
-          required
-        />
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="password">Senha</Label>
-        <Input
-          id="password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="••••••••"
-          required
-        />
-      </div>
-      
-      <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? "Entrando..." : "Entrar"}
-      </Button>
-      
-      <div className="text-center">
-        <button
-          type="button"
-          onClick={handlePasswordReset}
-          disabled={resetLoading}
-          className="text-sm text-primary hover:underline disabled:opacity-50"
+    <div className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+        
+        <div className="space-y-2">
+          <Label htmlFor="email">E-mail</Label>
+          <Input
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => {
+              console.log("📝 Email mudou:", e.target.value);
+              setEmail(e.target.value);
+            }}
+            placeholder="seu@email.com"
+            required
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="password">Senha</Label>
+          <Input
+            id="password"
+            type="password"
+            value={password}
+            onChange={(e) => {
+              console.log("🔐 Password mudou, length:", e.target.value.length);
+              setPassword(e.target.value);
+            }}
+            placeholder="••••••••"
+            required
+          />
+        </div>
+        
+        <Button 
+          type="submit" 
+          className="w-full" 
+          disabled={loading}
+          onClick={() => console.log("🔘 BOTÃO CLICADO!")}
         >
-          {resetLoading ? "Enviando..." : "Esqueci minha senha"}
-        </button>
-      </div>
-    </form>
+          {loading ? "Entrando..." : "Entrar"}
+        </Button>
+      </form>
+    </div>
   );
 };
 
