@@ -42,10 +42,29 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
         console.log("Login bem-sucedido, dados:", data);
         toast({
           title: "Login realizado com sucesso!",
-          description: "Bem-vindo ao InteraSaúde",
+          description: "Conectando seu perfil...",
         });
-        // Fechar o modal e deixar o AuthContext lidar com o redirecionamento
+
+        // Garante sessão ativa e conecta o perfil antes de navegar
+        try {
+          const sessionRes = await supabase.auth.getSession();
+          console.log('Sessão após login:', { hasSession: !!sessionRes.data.session });
+
+          const userId = data.user?.id;
+          if (userId) {
+            const { data: profile, error: profileError } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('user_id', userId)
+              .maybeSingle();
+            console.log('Perfil carregado após login:', { profile, profileError });
+          }
+        } catch (pErr) {
+          console.warn('Aviso ao conectar perfil após login:', pErr);
+        }
+
         onSuccess();
+        navigate('/dashboard', { replace: true });
       }
     } catch (err) {
       console.error("Erro inesperado no login:", err);
