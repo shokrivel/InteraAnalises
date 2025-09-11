@@ -17,42 +17,26 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const { toast } = useToast();
-
-  console.log("🎬 LoginForm renderizado - Email:", email);
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("🚀 FORMULÁRIO SUBMETIDO! Email:", email, "Password length:", password.length);
-    
     setLoading(true);
     setError("");
 
     try {
-      console.log("📡 Chamando Supabase auth...");
-      
-      const result = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password: password,
       });
 
-      console.log("📥 RESULTADO COMPLETO:", result);
-
-      if (result.error) {
-        console.error("❌ ERRO SUPABASE:", result.error);
-        setError(result.error.message);
+      if (error) {
+        setError(error.message);
         return;
       }
 
-      if (!result.data?.user) {
-        console.error("❌ SEM USUÁRIO NO RESULTADO");
-        setError("Login falhou - sem usuário");
-        return;
-      }
-
-      console.log("✅ LOGIN SUCESSO!");
-      console.log("👤 Usuário:", result.data.user.email);
-      
       onSuccess();
+      navigate('/profile');
       
       toast({
         title: "Sucesso!",
@@ -60,7 +44,6 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
       });
 
     } catch (err: any) {
-      console.error("💥 ERRO EXCEPTION:", err);
       setError("Erro: " + err.message);
     } finally {
       setLoading(false);
@@ -82,10 +65,7 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
             id="email"
             type="email"
             value={email}
-            onChange={(e) => {
-              console.log("📝 Email mudou:", e.target.value);
-              setEmail(e.target.value);
-            }}
+            onChange={(e) => setEmail(e.target.value)}
             placeholder="seu@email.com"
             required
           />
@@ -97,10 +77,7 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
             id="password"
             type="password"
             value={password}
-            onChange={(e) => {
-              console.log("🔐 Password mudou, length:", e.target.value.length);
-              setPassword(e.target.value);
-            }}
+            onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
             required
           />
@@ -110,7 +87,6 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
           type="submit" 
           className="w-full" 
           disabled={loading}
-          onClick={() => console.log("🔘 BOTÃO CLICADO!")}
         >
           {loading ? "Entrando..." : "Entrar"}
         </Button>
