@@ -181,6 +181,7 @@ export type Database = {
         | "checkbox"
         | "number"
         | "date"
+        | "aglomerado"
       user_profile_type: "patient" | "academic" | "health_professional"
     }
     CompositeTypes: {
@@ -310,7 +311,15 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],
-      field_type: ["text", "textarea", "select", "checkbox", "number", "date"],
+      field_type: [
+        "text",
+        "textarea",
+        "select",
+        "checkbox",
+        "number",
+        "date",
+        "aglomerado",
+      ],
       user_profile_type: ["patient", "academic", "health_professional"],
     },
   },

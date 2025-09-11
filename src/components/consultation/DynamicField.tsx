@@ -4,6 +4,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ConsultationField } from "@/hooks/useConsultationFields";
+import AglomeradoField from "./AglomeradoField";
 
 interface DynamicFieldProps {
   field: ConsultationField;
@@ -94,44 +95,7 @@ const DynamicField = ({ field, value, onChange, required }: DynamicFieldProps) =
         );
 
       case 'aglomerado':
-        // For aglomerado fields, show different options based on user profile
-        const getAglomeradoOptions = () => {
-          const scientificTerms = field.field_options?.scientific_terms || '';
-          const layTerms = field.field_options?.lay_terms || '';
-          
-          const scientificArray = scientificTerms.split(' - ').filter(term => term.trim());
-          const layArray = layTerms.split(' - ').filter(term => term.trim());
-          
-          // Import the hook to get user profile type
-          const { useProfile } = require('@/hooks/useProfile');
-          const { profile } = useProfile();
-          const userProfileType = profile?.profile_type || 'patient';
-          
-          // Show lay terms for patients, scientific terms for others
-          const termsToShow = userProfileType === 'patient' ? layArray : scientificArray;
-          
-          return termsToShow.map((term, index) => ({
-            value: term.trim(),
-            label: term.trim()
-          }));
-        };
-
-        const aglomeradoOptions = getAglomeradoOptions();
-        
-        return (
-          <Select value={value || ''} onValueChange={handleChange}>
-            <SelectTrigger>
-              <SelectValue placeholder={`Selecione ${field.field_label.toLowerCase()}`} />
-            </SelectTrigger>
-            <SelectContent>
-              {aglomeradoOptions.map((option, index) => (
-                <SelectItem key={index} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        );
+        return <AglomeradoField field={field} value={value} onChange={onChange} required={required} />;
 
       default:
         return (
@@ -145,8 +109,8 @@ const DynamicField = ({ field, value, onChange, required }: DynamicFieldProps) =
     }
   };
 
-  // For checkbox fields, don't render a separate label
-  if (field.field_type === 'checkbox') {
+  // For checkbox and aglomerado fields, don't render a separate wrapper
+  if (field.field_type === 'checkbox' || field.field_type === 'aglomerado') {
     return (
       <div className="space-y-2">
         {renderField()}

@@ -276,11 +276,11 @@ const FieldsManagement = () => {
                   <Label htmlFor="scientific_terms">Palavras pré-definidas (científico)</Label>
                   <Textarea
                     id="scientific_terms"
-                    value={formData.field_options?.scientific_terms || ''}
+                    value={((formData.field_options as any)?.scientific_terms) || ''}
                     onChange={(e) => setFormData(prev => ({ 
                       ...prev, 
                       field_options: { 
-                        ...prev.field_options, 
+                        ...(prev.field_options as any), 
                         scientific_terms: e.target.value 
                       } 
                     }))}
@@ -295,11 +295,11 @@ const FieldsManagement = () => {
                   <Label htmlFor="lay_terms">Palavras pré-definidas (leigos)</Label>
                   <Textarea
                     id="lay_terms"
-                    value={formData.field_options?.lay_terms || ''}
+                    value={((formData.field_options as any)?.lay_terms) || ''}
                     onChange={(e) => setFormData(prev => ({ 
                       ...prev, 
                       field_options: { 
-                        ...prev.field_options, 
+                        ...(prev.field_options as any), 
                         lay_terms: e.target.value 
                       } 
                     }))}
