@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Heart, Users, Settings, FileText } from "lucide-react";
+import { ArrowLeft, Heart, Users, Settings, FileText, Shield, Crown } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/hooks/useRole";
 import FieldsManagement from "@/components/admin/FieldsManagement";
@@ -13,11 +13,11 @@ import SystemSettings from "@/components/admin/SystemSettings";
 
 const AdminPanel = () => {
   const { user } = useAuth();
-  const { isAdmin } = useRole();
+  const { isAdmin, isModerator, hasAdminAccess } = useRole();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
 
-  if (!isAdmin) {
+  if (!hasAdminAccess) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Card>
@@ -50,11 +50,13 @@ const AdminPanel = () => {
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
               <Heart className="w-5 h-5 text-primary-foreground" />
             </div>
-            <h1 className="text-xl font-bold text-foreground">Painel Administrativo</h1>
+            <h1 className="text-xl font-bold text-foreground">
+              Painel {isAdmin ? 'Administrativo' : 'de Moderação'}
+            </h1>
           </div>
-          <Badge variant="secondary" className="flex items-center gap-2">
-            <Settings className="w-4 h-4" />
-            Administrador
+          <Badge variant={isAdmin ? "default" : "secondary"} className="flex items-center gap-2">
+            {isAdmin ? <Crown className="w-4 h-4" /> : <Shield className="w-4 h-4" />}
+            {isAdmin ? 'Administrador' : 'Moderador'}
           </Badge>
         </div>
       </header>
@@ -63,11 +65,11 @@ const AdminPanel = () => {
       <section className="py-8 px-4">
         <div className="container mx-auto max-w-6xl">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-4' : 'grid-cols-3'}`}>
               <TabsTrigger value="overview">Visão Geral</TabsTrigger>
               <TabsTrigger value="users">Usuários</TabsTrigger>
               <TabsTrigger value="fields">Campos</TabsTrigger>
-              <TabsTrigger value="settings">Configurações</TabsTrigger>
+              {isAdmin && <TabsTrigger value="settings">Configurações</TabsTrigger>}
             </TabsList>
 
             <TabsContent value="overview" className="space-y-6">
@@ -112,25 +114,27 @@ const AdminPanel = () => {
                   </CardContent>
                 </Card>
 
-                <Card>
-                  <CardHeader>
-                    <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
-                      <Settings className="w-6 h-6 text-primary" />
-                    </div>
-                    <CardTitle>Configurações</CardTitle>
-                    <CardDescription>
-                      Configurações gerais do sistema
-                    </CardDescription>
-                   </CardHeader>
-                   <CardContent>
-                     <Button 
-                       variant="outline" 
-                       onClick={() => setActiveTab('settings')}
-                     >
-                       Abrir Configurações
-                     </Button>
-                  </CardContent>
-                </Card>
+                {isAdmin && (
+                  <Card>
+                    <CardHeader>
+                      <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
+                        <Settings className="w-6 h-6 text-primary" />
+                      </div>
+                      <CardTitle>Configurações</CardTitle>
+                      <CardDescription>
+                        Configurações gerais do sistema
+                      </CardDescription>
+                     </CardHeader>
+                     <CardContent>
+                        <Button 
+                          variant="outline" 
+                          onClick={() => setActiveTab('settings')}
+                        >
+                          Abrir Configurações
+                        </Button>
+                     </CardContent>
+                   </Card>
+                )}
               </div>
             </TabsContent>
 
@@ -142,9 +146,11 @@ const AdminPanel = () => {
               <FieldsManagement />
             </TabsContent>
 
-            <TabsContent value="settings">
-              <SystemSettings />
-            </TabsContent>
+            {isAdmin && (
+              <TabsContent value="settings">
+                <SystemSettings />
+              </TabsContent>
+            )}
           </Tabs>
         </div>
       </section>

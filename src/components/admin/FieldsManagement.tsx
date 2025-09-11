@@ -7,10 +7,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, Save, X } from "lucide-react";
+import { Plus, Edit, Trash2, Save, X, Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ConsultationField } from "@/hooks/useConsultationFields";
+import { useRole } from "@/hooks/useRole";
 
 const FIELD_TYPES = [
   { value: 'text', label: 'Texto' },
@@ -34,6 +35,7 @@ const FieldsManagement = () => {
   const [editingField, setEditingField] = useState<ConsultationField | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const { toast } = useToast();
+  const { isAdmin } = useRole();
 
   const [formData, setFormData] = useState({
     field_name: '',
@@ -198,14 +200,24 @@ const FieldsManagement = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Gestão de Campos da Consulta</h2>
-        <Button onClick={handleCreate}>
-          <Plus className="w-4 h-4 mr-2" />
-          Novo Campo
-        </Button>
+        <div>
+          <h2 className="text-2xl font-bold">Gestão de Campos da Consulta</h2>
+          {!isAdmin && (
+            <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
+              <Lock className="w-3 h-3" />
+              Visualização apenas - Sem permissão para editar
+            </p>
+          )}
+        </div>
+        {isAdmin && (
+          <Button onClick={handleCreate}>
+            <Plus className="w-4 h-4 mr-2" />
+            Novo Campo
+          </Button>
+        )}
       </div>
 
-      {(isCreating || editingField) && (
+      {(isCreating || editingField) && isAdmin && (
         <Card>
           <CardHeader>
             <CardTitle>
@@ -401,12 +413,21 @@ const FieldsManagement = () => {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => handleEdit(field)}>
-                    <Edit className="w-4 h-4" />
-                  </Button>
-                  <Button variant="destructive" size="sm" onClick={() => handleDelete(field.id)}>
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                  {isAdmin ? (
+                    <>
+                      <Button variant="outline" size="sm" onClick={() => handleEdit(field)}>
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button variant="destructive" size="sm" onClick={() => handleDelete(field.id)}>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </>
+                  ) : (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Lock className="w-3 h-3" />
+                      <span className="text-xs">Sem permissão</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </CardContent>

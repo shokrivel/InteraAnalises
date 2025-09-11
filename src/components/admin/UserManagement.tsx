@@ -5,9 +5,10 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, User, Crown, Shield, UserCheck } from "lucide-react";
+import { Search, User, Crown, Shield, UserCheck, Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useRole } from "@/hooks/useRole";
 
 interface UserProfile {
   id: string;
@@ -27,6 +28,7 @@ const UserManagement = () => {
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [profileTypeFilter, setProfileTypeFilter] = useState<string>("all");
   const { toast } = useToast();
+  const { isAdmin, isModerator } = useRole();
 
   useEffect(() => {
     fetchUsers();
@@ -161,9 +163,18 @@ const UserManagement = () => {
         <CardTitle className="flex items-center gap-2">
           <UserCheck className="w-5 h-5" />
           Gestão de Usuários
+          {isModerator && !isAdmin && (
+            <Badge variant="secondary" className="ml-2">
+              <Lock className="w-3 h-3 mr-1" />
+              Acesso Limitado
+            </Badge>
+          )}
         </CardTitle>
         <CardDescription>
-          Visualize e gerencie os usuários do sistema
+          {isAdmin 
+            ? "Visualize e gerencie os usuários do sistema" 
+            : "Visualize os usuários do sistema (acesso limitado)"
+          }
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -253,19 +264,26 @@ const UserManagement = () => {
                         {new Date(user.created_at).toLocaleDateString('pt-BR')}
                       </TableCell>
                       <TableCell>
-                        <Select 
-                          value={user.user_role || 'user'} 
-                          onValueChange={(value) => updateUserRole(user.user_id, value as any)}
-                        >
-                          <SelectTrigger className="w-[130px]">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="user">Usuário</SelectItem>
-                            <SelectItem value="moderator">Moderador</SelectItem>
-                            <SelectItem value="admin">Admin</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        {isAdmin ? (
+                          <Select 
+                            value={user.user_role || 'user'} 
+                            onValueChange={(value) => updateUserRole(user.user_id, value as any)}
+                          >
+                            <SelectTrigger className="w-[130px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="user">Usuário</SelectItem>
+                              <SelectItem value="moderator">Moderador</SelectItem>
+                              <SelectItem value="admin">Admin</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Lock className="w-3 h-3" />
+                            <span className="text-xs">Sem permissão</span>
+                          </div>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))
