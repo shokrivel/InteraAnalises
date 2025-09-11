@@ -16,7 +16,7 @@ const Index = () => {
     console.log('Index: checking auth state', { user: !!user, loading });
     if (!loading && user) {
       console.log('Index: redirecting to dashboard');
-      navigate("/dashboard");
+      navigate("/dashboard", { replace: true });
     }
   }, [user, loading, navigate]);
 

@@ -40,53 +40,16 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
         setError(error.message);
       } else {
         console.log("Login bem-sucedido, dados:", data);
+        
+        // Fechar o modal imediatamente após sucesso
+        onSuccess();
+        
         toast({
           title: "Login realizado com sucesso!",
-          description: "Conectando seu perfil...",
+          description: "Bem-vindo ao InteraSaúde",
         });
 
-        try {
-          // Garante sessão ativa
-          const { data: sessData } = await supabase.auth.getSession();
-          console.log('Sessão após login:', { hasSession: !!sessData.session });
-
-          const userId = data.user?.id;
-          const meta = (data.user as any)?.user_metadata || {};
-
-          if (userId) {
-            // Verifica se o perfil existe; cria se não existir
-            const { data: profileRow, error: profileFetchError } = await supabase
-              .from('profiles')
-              .select('id')
-              .eq('user_id', userId)
-              .maybeSingle();
-
-            console.log('Perfil existente?', { profileRow, profileFetchError });
-
-            if (!profileRow && !profileFetchError) {
-              const insertPayload = {
-                user_id: userId,
-                name: meta.name || data.user?.email || 'Usuário',
-                birth_date: (meta.birth_date as string) || '2000-01-01',
-                address: meta.address || '-',
-                city: meta.city || '-',
-                zip_code: meta.zip_code || null,
-                profile_type: (meta.profile_type as any) || 'patient'
-              } as const;
-
-              const { error: profileInsertError } = await supabase
-                .from('profiles')
-                .insert(insertPayload);
-
-              console.log('Criação de perfil:', { profileInsertError });
-            }
-          }
-        } catch (pErr) {
-          console.warn('Aviso ao conectar/criar perfil após login:', pErr);
-        }
-
-        onSuccess();
-        navigate('/dashboard', { replace: true });
+        // Navegação será feita pelo AuthContext automaticamente
       }
     } catch (err) {
       console.error("Erro inesperado no login:", err);
