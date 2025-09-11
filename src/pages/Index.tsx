@@ -44,14 +44,19 @@ const Index = () => {
                   onClick={async () => {
                     console.log('🚪 Logout button clicked');
                     try {
+                      // Clear local storage first
+                      localStorage.removeItem('supabase.auth.token');
+                      
                       const { error } = await supabase.auth.signOut();
-                      if (error) {
-                        console.error('Logout error:', error);
-                      } else {
-                        console.log('✅ Logout successful');
-                      }
+                      console.log('Logout result:', { error });
+                      
+                      // Force refresh the page to clear all state
+                      window.location.href = '/';
+                      
                     } catch (err) {
                       console.error('Logout exception:', err);
+                      // Force refresh even on exception
+                      window.location.href = '/';
                     }
                   }}
                 >
