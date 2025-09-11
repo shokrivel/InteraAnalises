@@ -263,10 +263,22 @@ const Profile = () => {
               {isEditing ? "Editar Perfil" : "Meu Perfil"}
             </h1>
           </div>
-          <Badge variant="secondary" className="flex items-center gap-2">
-            <User className="w-4 h-4" />
-            {user?.email}
-          </Badge>
+          <div className="flex items-center gap-4">
+            <Badge variant="secondary" className="flex items-center gap-2">
+              <User className="w-4 h-4" />
+              {user?.email}
+            </Badge>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={async () => {
+                await supabase.auth.signOut();
+                navigate('/', { replace: true });
+              }}
+            >
+              Sair
+            </Button>
+          </div>
         </div>
       </header>
 

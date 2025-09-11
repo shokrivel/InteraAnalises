@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Heart, Microscope, Droplet, Users, Shield, BookOpen } from "lucide-react";
 import AuthDialog from "@/components/auth/AuthDialog";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
@@ -31,9 +32,29 @@ const Index = () => {
             </div>
             <h1 className="text-2xl font-bold text-foreground">InteraSaúde</h1>
           </div>
-          <Button onClick={() => setAuthDialogOpen(true)}>
-            Entrar / Cadastrar
-          </Button>
+          
+          {!loading && (
+            user ? (
+              <div className="flex items-center gap-4">
+                <Button variant="outline" onClick={() => navigate('/profile')}>
+                  Meu Perfil
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  onClick={async () => {
+                    await supabase.auth.signOut();
+                    navigate('/', { replace: true });
+                  }}
+                >
+                  Sair
+                </Button>
+              </div>
+            ) : (
+              <Button onClick={() => setAuthDialogOpen(true)}>
+                Entrar / Cadastrar
+              </Button>
+            )
+          )}
         </div>
       </header>
 
