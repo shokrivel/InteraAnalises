@@ -46,10 +46,13 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
         
         toast({
           title: "Login realizado com sucesso!",
-          description: "Bem-vindo ao InteraSaúde",
+          description: "Redirecionando para o seu perfil...",
         });
 
-        // Navegação será feita pelo AuthContext automaticamente
+        // Redireciona diretamente para o perfil após garantir que o modal fechou
+        setTimeout(() => {
+          navigate('/profile', { replace: true });
+        }, 150);
       }
     } catch (err) {
       console.error("Erro inesperado no login:", err);
