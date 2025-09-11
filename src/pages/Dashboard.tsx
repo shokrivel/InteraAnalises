@@ -9,10 +9,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 const Dashboard = () => {
-  const { user } = useAuth();
-  const { isAdmin } = useRole();
+  const { user, loading } = useAuth();
+  const { isAdmin, loading: roleLoading } = useRole();
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  console.log('Dashboard - Auth state:', { user: !!user, email: user?.email, loading, roleLoading });
 
   const handleLogout = async () => {
     try {
