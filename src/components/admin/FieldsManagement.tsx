@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, Save, X, Lock } from "lucide-react";
+import { Plus, Edit, Trash2, Save, X, Lock, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ConsultationField } from "@/hooks/useConsultationFields";
@@ -35,18 +35,22 @@ const FieldsManagement = () => {
   const [editingField, setEditingField] = useState<ConsultationField | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const { toast } = useToast();
-  const { isAdmin } = useRole();
+  const { isAdmin, isModerator } = useRole();
 
   const [formData, setFormData] = useState({
     field_name: '',
     field_label: '',
     field_type: 'text' as 'text' | 'textarea' | 'select' | 'checkbox' | 'number' | 'date' | 'aglomerado',
-    field_options: {},
+    field_options: {} as any,
     required_for_levels: [] as string[],
     visible_for_levels: ['patient', 'academic', 'health_professional'] as string[],
     field_order: 0,
     is_active: true
   });
+
+  useEffect(() => {
+    fetchFields();
+  }, []);
 
   const fetchFields = async () => {
     try {
@@ -68,51 +72,63 @@ const FieldsManagement = () => {
     }
   };
 
-  useEffect(() => {
-    fetchFields();
-  }, []);
-
   const resetForm = () => {
     setFormData({
       field_name: '',
       field_label: '',
       field_type: 'text',
-      field_options: {},
+      field_options: {} as any,
       required_for_levels: [],
       visible_for_levels: ['patient', 'academic', 'health_professional'],
-      field_order: fields.length + 1,
+      field_order: fields.length,
       is_active: true
     });
   };
 
   const handleCreate = () => {
-    resetForm();
     setIsCreating(true);
     setEditingField(null);
+    resetForm();
   };
 
   const handleEdit = (field: ConsultationField) => {
+    setEditingField(field);
+    setIsCreating(false);
     setFormData({
       field_name: field.field_name,
       field_label: field.field_label,
       field_type: field.field_type,
-      field_options: field.field_options || {},
-      required_for_levels: field.required_for_levels,
-      visible_for_levels: field.visible_for_levels,
+      field_options: field.field_options as any || {},
+      required_for_levels: field.required_for_levels || [],
+      visible_for_levels: field.visible_for_levels || ['patient', 'academic', 'health_professional'],
       field_order: field.field_order,
       is_active: field.is_active
     });
-    setEditingField(field);
-    setIsCreating(false);
   };
 
   const handleSave = async () => {
+    if (!formData.field_name || !formData.field_label) {
+      toast({
+        title: "Erro de validação",
+        description: "Nome e rótulo são obrigatórios.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       if (editingField) {
-        // Update existing field
         const { error } = await supabase
           .from('consultation_fields')
-          .update(formData)
+          .update({
+            field_label: formData.field_label,
+            field_type: formData.field_type,
+            field_options: formData.field_options,
+            required_for_levels: formData.required_for_levels,
+            visible_for_levels: formData.visible_for_levels,
+            field_order: formData.field_order,
+            is_active: formData.is_active
+          })
           .eq('id', editingField.id);
 
         if (error) throw error;
@@ -122,16 +138,24 @@ const FieldsManagement = () => {
           description: "Campo atualizado com sucesso.",
         });
       } else {
-        // Create new field
         const { error } = await supabase
           .from('consultation_fields')
-          .insert([formData]);
+          .insert({
+            field_name: formData.field_name,
+            field_label: formData.field_label,
+            field_type: formData.field_type,
+            field_options: formData.field_options,
+            required_for_levels: formData.required_for_levels,
+            visible_for_levels: formData.visible_for_levels,
+            field_order: formData.field_order,
+            is_active: formData.is_active
+          });
 
         if (error) throw error;
 
         toast({
           title: "Campo criado",
-          description: "Novo campo criado com sucesso.",
+          description: "Campo criado com sucesso.",
         });
       }
 
@@ -198,243 +222,338 @@ const FieldsManagement = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">Gestão de Campos da Consulta</h2>
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <FileText className="w-5 h-5" />
+          Campos da Consulta
+          {isModerator && !isAdmin && (
+            <Badge variant="secondary" className="ml-2">
+              <Lock className="w-3 h-3 mr-1" />
+              Acesso Limitado
+            </Badge>
+          )}
+        </CardTitle>
+        <CardDescription>
+          {isAdmin 
+            ? "Configure os campos que serão exibidos no formulário de consulta" 
+            : "Visualize os campos da consulta (acesso limitado)"
+          }
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="flex items-center justify-between">
+          {isAdmin && (
+            <Button onClick={handleCreate} disabled={isCreating || editingField !== null}>
+              <Plus className="w-4 h-4 mr-2" />
+              Novo Campo
+            </Button>
+          )}
           {!isAdmin && (
-            <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
-              <Lock className="w-3 h-3" />
-              Visualização apenas - Sem permissão para editar
-            </p>
+            <div className="bg-muted/50 border rounded-lg p-4 text-center w-full">
+              <Lock className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
+              <p className="text-sm text-muted-foreground">
+                Moderadores podem visualizar os campos mas não podem criar ou editar.
+                <br />
+                Entre em contato com um administrador para fazer alterações.
+              </p>
+            </div>
           )}
         </div>
-        {isAdmin && (
-          <Button onClick={handleCreate}>
-            <Plus className="w-4 h-4 mr-2" />
-            Novo Campo
-          </Button>
-        )}
-      </div>
 
-      {(isCreating || editingField) && isAdmin && (
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              {editingField ? 'Editar Campo' : 'Criar Novo Campo'}
-            </CardTitle>
-            <CardDescription>
-              Configure os campos que aparecerão na consulta
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="field_name">Nome do Campo</Label>
-                <Input
-                  id="field_name"
-                  value={formData.field_name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, field_name: e.target.value }))}
-                  placeholder="nome_do_campo"
-                  disabled={!!editingField}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="field_label">Rótulo do Campo</Label>
-                <Input
-                  id="field_label"
-                  value={formData.field_label}
-                  onChange={(e) => setFormData(prev => ({ ...prev, field_label: e.target.value }))}
-                  placeholder="Rótulo que aparece para o usuário"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="field_type">Tipo do Campo</Label>
-                <Select
-                  value={formData.field_type}
-                  onValueChange={(value: any) => setFormData(prev => ({ ...prev, field_type: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {FIELD_TYPES.map(type => (
-                      <SelectItem key={type.value} value={type.value}>
-                        {type.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="field_order">Ordem</Label>
-                <Input
-                  id="field_order"
-                  type="number"
-                  value={formData.field_order}
-                  onChange={(e) => setFormData(prev => ({ ...prev, field_order: parseInt(e.target.value) || 0 }))}
-                />
-              </div>
-            </div>
-
-            {/* Campos específicos para tipo "aglomerado" */}
-            {formData.field_type === 'aglomerado' && (
-              <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
-                <h4 className="font-medium text-sm">Configuração do Campo Aglomerado</h4>
+        {(isCreating || editingField) && isAdmin && (
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                {editingField ? 'Editar Campo' : 'Criar Novo Campo'}
+              </CardTitle>
+              <CardDescription>
+                Configure os campos que aparecerão na consulta
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="scientific_terms">Palavras pré-definidas (científico)</Label>
-                  <Textarea
-                    id="scientific_terms"
-                    value={((formData.field_options as any)?.scientific_terms) || ''}
-                    onChange={(e) => setFormData(prev => ({ 
-                      ...prev, 
-                      field_options: { 
-                        ...(prev.field_options as any), 
-                        scientific_terms: e.target.value 
-                      } 
-                    }))}
-                    placeholder="Cefaleia - Cólica abdominal - Dispneia"
-                    rows={3}
+                  <Label htmlFor="field_name">Nome do Campo</Label>
+                  <Input
+                    id="field_name"
+                    value={formData.field_name}
+                    onChange={(e) => setFormData(prev => ({ ...prev, field_name: e.target.value }))}
+                    placeholder="nome_do_campo"
+                    disabled={!!editingField}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Separe os termos com " - " (hífen com espaços)
-                  </p>
                 </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="lay_terms">Palavras pré-definidas (leigos)</Label>
-                  <Textarea
-                    id="lay_terms"
-                    value={((formData.field_options as any)?.lay_terms) || ''}
-                    onChange={(e) => setFormData(prev => ({ 
-                      ...prev, 
-                      field_options: { 
-                        ...(prev.field_options as any), 
-                        lay_terms: e.target.value 
-                      } 
-                    }))}
-                    placeholder="Dor de cabeça - Dor de barriga - Falta de ar"
-                    rows={3}
+                  <Label htmlFor="field_label">Rótulo do Campo</Label>
+                  <Input
+                    id="field_label"
+                    value={formData.field_label}
+                    onChange={(e) => setFormData(prev => ({ ...prev, field_label: e.target.value }))}
+                    placeholder="Rótulo que aparece para o usuário"
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Separe os termos com " - " (hífen com espaços). Deve ter o mesmo número de termos que a lista científica.
-                  </p>
                 </div>
-              </div>
-            )}
 
-            <div className="space-y-4">
-              <div>
-                <Label className="text-base font-medium">Visível para:</Label>
-                <div className="mt-2 space-y-2">
-                  {PROFILE_LEVELS.map(level => (
-                    <div key={level.value} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`visible-${level.value}`}
-                        checked={formData.visible_for_levels.includes(level.value)}
-                        onCheckedChange={(checked) => 
-                          handleLevelChange(level.value, 'visible', checked as boolean)
-                        }
-                      />
-                      <Label htmlFor={`visible-${level.value}`}>{level.label}</Label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <Label className="text-base font-medium">Obrigatório para:</Label>
-                <div className="mt-2 space-y-2">
-                  {PROFILE_LEVELS.map(level => (
-                    <div key={level.value} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`required-${level.value}`}
-                        checked={formData.required_for_levels.includes(level.value)}
-                        onCheckedChange={(checked) => 
-                          handleLevelChange(level.value, 'required', checked as boolean)
-                        }
-                      />
-                      <Label htmlFor={`required-${level.value}`}>{level.label}</Label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-2">
-              <Button onClick={handleSave}>
-                <Save className="w-4 h-4 mr-2" />
-                Salvar
-              </Button>
-              <Button variant="outline" onClick={handleCancel}>
-                <X className="w-4 h-4 mr-2" />
-                Cancelar
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      <div className="grid gap-4">
-        {fields.map((field) => (
-          <Card key={field.id}>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold">{field.field_label}</h3>
-                    <Badge variant="outline">{FIELD_TYPES.find(t => t.value === field.field_type)?.label}</Badge>
-                    {!field.is_active && (
-                      <Badge variant="destructive">Inativo</Badge>
-                    )}
-                  </div>
-                  <p className="text-sm text-muted-foreground">{field.field_name}</p>
-                  <div className="flex gap-2">
-                    <div>
-                      <span className="text-xs text-muted-foreground">Visível: </span>
-                      {field.visible_for_levels.map(level => (
-                        <Badge key={level} variant="secondary" className="text-xs mr-1">
-                          {PROFILE_LEVELS.find(l => l.value === level)?.label}
-                        </Badge>
+                  <Label htmlFor="field_type">Tipo do Campo</Label>
+                  <Select
+                    value={formData.field_type}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, field_type: value as any }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {FIELD_TYPES.map(type => (
+                        <SelectItem key={type.value} value={type.value}>
+                          {type.label}
+                        </SelectItem>
                       ))}
-                    </div>
-                    {field.required_for_levels.length > 0 && (
-                      <div>
-                        <span className="text-xs text-muted-foreground">Obrigatório: </span>
-                        {field.required_for_levels.map(level => (
-                          <Badge key={level} variant="destructive" className="text-xs mr-1">
-                            {PROFILE_LEVELS.find(l => l.value === level)?.label}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div className="flex gap-2">
-                  {isAdmin ? (
-                    <>
-                      <Button variant="outline" size="sm" onClick={() => handleEdit(field)}>
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button variant="destructive" size="sm" onClick={() => handleDelete(field.id)}>
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </>
-                  ) : (
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Lock className="w-3 h-3" />
-                      <span className="text-xs">Sem permissão</span>
+
+                <div className="space-y-2">
+                  <Label htmlFor="field_order">Ordem</Label>
+                  <Input
+                    id="field_order"
+                    type="number"
+                    value={formData.field_order}
+                    onChange={(e) => setFormData(prev => ({ ...prev, field_order: parseInt(e.target.value) || 0 }))}
+                  />
+                </div>
+              </div>
+
+              {(formData.field_type === 'select' || formData.field_type === 'aglomerado') && (
+                <div className="space-y-4">
+                  <Label>Opções do Campo</Label>
+                  {formData.field_type === 'select' && (
+                    <div className="space-y-2">
+                      <Label htmlFor="select_options">Opções (uma por linha)</Label>
+                      <Textarea
+                        id="select_options"
+                        value={formData.field_options?.options?.join('\n') || ''}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          field_options: {
+                            ...prev.field_options,
+                            options: e.target.value.split('\n').filter(opt => opt.trim())
+                          }
+                        }))}
+                        placeholder="Opção 1&#10;Opção 2&#10;Opção 3"
+                        rows={4}
+                      />
+                    </div>
+                  )}
+
+                  {formData.field_type === 'aglomerado' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="scientific_terms">Palavras pré-definidas (científico)</Label>
+                        <Textarea
+                          id="scientific_terms"
+                          value={formData.field_options?.scientific || ''}
+                          onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            field_options: {
+                              ...prev.field_options,
+                              scientific: e.target.value
+                            }
+                          }))}
+                          placeholder="Cefaleia - Cólica abdominal - Dispneia"
+                          rows={3}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Use " - " para separar os termos
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="lay_terms">Palavras pré-definidas (leigos)</Label>
+                        <Textarea
+                          id="lay_terms"
+                          value={formData.field_options?.lay || ''}
+                          onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            field_options: {
+                              ...prev.field_options,
+                              lay: e.target.value
+                            }
+                          }))}
+                          placeholder="Dor de cabeça - Dor de barriga - Falta de ar"
+                          rows={3}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Use " - " para separar os termos
+                        </p>
+                      </div>
                     </div>
                   )}
                 </div>
+              )}
+
+              <div className="space-y-4">
+                <div>
+                  <Label>Visível para os níveis:</Label>
+                  <div className="flex flex-wrap gap-4 mt-2">
+                    {PROFILE_LEVELS.map(level => (
+                      <div key={level.value} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`visible_${level.value}`}
+                          checked={formData.visible_for_levels.includes(level.value)}
+                          onCheckedChange={(checked) => 
+                            handleLevelChange(level.value, 'visible', checked as boolean)
+                          }
+                        />
+                        <Label htmlFor={`visible_${level.value}`} className="text-sm">
+                          {level.label}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <Label>Obrigatório para os níveis:</Label>
+                  <div className="flex flex-wrap gap-4 mt-2">
+                    {PROFILE_LEVELS.map(level => (
+                      <div key={level.value} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`required_${level.value}`}
+                          checked={formData.required_for_levels.includes(level.value)}
+                          onCheckedChange={(checked) => 
+                            handleLevelChange(level.value, 'required', checked as boolean)
+                          }
+                        />
+                        <Label htmlFor={`required_${level.value}`} className="text-sm">
+                          {level.label}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="is_active"
+                    checked={formData.is_active}
+                    onCheckedChange={(checked) => 
+                      setFormData(prev => ({ ...prev, is_active: checked as boolean }))
+                    }
+                  />
+                  <Label htmlFor="is_active">Campo ativo</Label>
+                </div>
+              </div>
+
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" onClick={handleCancel}>
+                  <X className="w-4 h-4 mr-2" />
+                  Cancelar
+                </Button>
+                <Button onClick={handleSave}>
+                  <Save className="w-4 h-4 mr-2" />
+                  Salvar
+                </Button>
               </div>
             </CardContent>
           </Card>
-        ))}
-      </div>
-    </div>
+        )}
+
+        <div className="rounded-md border">
+          <div className="relative w-full overflow-auto">
+            <table className="w-full caption-bottom text-sm">
+              <thead className="[&_tr]:border-b">
+                <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                    Nome
+                  </th>
+                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                    Rótulo
+                  </th>
+                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                    Tipo
+                  </th>
+                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                    Níveis
+                  </th>
+                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                    Status
+                  </th>
+                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                    Ações
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="[&_tr:last-child]:border-0">
+                {fields.length === 0 ? (
+                  <tr className="border-b transition-colors hover:bg-muted/50">
+                    <td colSpan={6} className="p-8 text-center text-muted-foreground">
+                      Nenhum campo encontrado
+                    </td>
+                  </tr>
+                ) : (
+                  fields.map((field) => (
+                    <tr key={field.id} className="border-b transition-colors hover:bg-muted/50">
+                      <td className="p-4 align-middle font-medium">
+                        {field.field_name}
+                      </td>
+                      <td className="p-4 align-middle">
+                        {field.field_label}
+                      </td>
+                      <td className="p-4 align-middle">
+                        <Badge variant="outline">
+                          {FIELD_TYPES.find(t => t.value === field.field_type)?.label || field.field_type}
+                        </Badge>
+                      </td>
+                      <td className="p-4 align-middle">
+                        <div className="flex flex-wrap gap-1">
+                          {field.visible_for_levels?.map(level => (
+                            <Badge key={level} variant="secondary" className="text-xs">
+                              {PROFILE_LEVELS.find(l => l.value === level)?.label || level}
+                            </Badge>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="p-4 align-middle">
+                        <Badge variant={field.is_active ? "default" : "destructive"}>
+                          {field.is_active ? 'Ativo' : 'Inativo'}
+                        </Badge>
+                      </td>
+                      <td className="p-4 align-middle">
+                        {isAdmin ? (
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEdit(field)}
+                              disabled={editingField !== null || isCreating}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDelete(field.id)}
+                              disabled={editingField !== null || isCreating}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Lock className="w-3 h-3" />
+                            <span className="text-xs">Sem permissão</span>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 

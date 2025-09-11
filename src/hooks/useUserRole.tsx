@@ -64,12 +64,17 @@ export const useUserRole = () => {
     return userRole === 'moderator';
   };
 
+  const hasAdminAccess = (): boolean => {
+    return userRole === 'admin' || userRole === 'moderator';
+  };
+
   return { 
     userRole, 
     loading, 
     error, 
     hasRole, 
     isAdmin, 
-    isModerator 
+    isModerator,
+    hasAdminAccess
   };
 };
