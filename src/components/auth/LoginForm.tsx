@@ -41,18 +41,21 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
       } else {
         console.log("Login bem-sucedido, dados:", data);
         
-        // Fechar o modal imediatamente após sucesso
-        onSuccess();
+        console.log("Login bem-sucedido - iniciando processo de redirecionamento");
         
         toast({
           title: "Login realizado com sucesso!",
           description: "Redirecionando para o seu perfil...",
         });
 
-        // Redireciona diretamente para o perfil após garantir que o modal fechou
+        // Fechar modal primeiro
+        onSuccess();
+        
+        // Aguardar sessão ser processada e redirecionar
         setTimeout(() => {
-          navigate('/profile', { replace: true });
-        }, 150);
+          console.log("Executando redirecionamento para /profile");
+          window.location.href = '/profile';
+        }, 300);
       }
     } catch (err) {
       console.error("Erro inesperado no login:", err);
