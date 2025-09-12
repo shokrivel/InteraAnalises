@@ -3,11 +3,15 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Heart, Calendar, Clock, MessageSquare, Search } from "lucide-react";
+import { ArrowLeft, Heart, Calendar, Clock, MessageSquare, Search, ChevronDown, ChevronUp, Download, Filter } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useRole } from "@/hooks/useRole";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 
 interface ConsultationRecord {
   id: string;
@@ -22,12 +26,17 @@ interface ConsultationRecord {
 
 const ConsultationHistory = () => {
   const { user, loading: authLoading } = useAuth();
+  const { hasAdminAccess } = useRole();
   const navigate = useNavigate();
   const { toast } = useToast();
   
   const [consultations, setConsultations] = useState<ConsultationRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [periodFilter, setPeriodFilter] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
+  const itemsPerPage = 5;
 
   useEffect(() => {
     if (!authLoading && user) {
@@ -40,11 +49,18 @@ const ConsultationHistory = () => {
 
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      
+      let query = supabase
         .from('consultation_history')
         .select('*')
-        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
+
+      // Se o usuário não tem acesso admin, filtrar apenas suas consultas
+      if (!hasAdminAccess) {
+        query = query.eq('user_id', user.id);
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         console.error('Error fetching consultations:', error);
@@ -68,12 +84,71 @@ const ConsultationHistory = () => {
     }
   };
 
-  const filteredConsultations = consultations.filter(consultation =>
+  const filterConsultationsByPeriod = (consultations: ConsultationRecord[]) => {
+    if (periodFilter === "all") return consultations;
+    
+    const now = new Date();
+    const filterDate = new Date();
+    
+    switch (periodFilter) {
+      case "week":
+        filterDate.setDate(now.getDate() - 7);
+        break;
+      case "month":
+        filterDate.setMonth(now.getMonth() - 1);
+        break;
+      case "quarter":
+        filterDate.setMonth(now.getMonth() - 3);
+        break;
+      case "year":
+        filterDate.setFullYear(now.getFullYear() - 1);
+        break;
+      default:
+        return consultations;
+    }
+    
+    return consultations.filter(consultation => 
+      consultation.created_at && new Date(consultation.created_at) >= filterDate
+    );
+  };
+
+  const filteredConsultations = filterConsultationsByPeriod(consultations).filter(consultation =>
     consultation.symptoms?.some(symptom => 
       symptom.toLowerCase().includes(searchTerm.toLowerCase())
     ) ||
     consultation.ai_response?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const totalPages = Math.ceil(filteredConsultations.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedConsultations = filteredConsultations.slice(startIndex, startIndex + itemsPerPage);
+
+  const toggleCardExpansion = (consultationId: string) => {
+    const newExpanded = new Set(expandedCards);
+    if (newExpanded.has(consultationId)) {
+      newExpanded.delete(consultationId);
+    } else {
+      newExpanded.add(consultationId);
+    }
+    setExpandedCards(newExpanded);
+  };
+
+  const exportToCSV = () => {
+    const csvContent = [
+      'Data,ID,Sintomas,Duração,Resposta IA',
+      ...filteredConsultations.map(c => 
+        `"${formatDate(c.created_at)}","${c.id}","${c.symptoms?.join('; ') || ''}","${formatDuration(c.symptom_duration)}","${c.ai_response?.replace(/"/g, '""') || ''}"`
+      )
+    ].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `consultas_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "Data não disponível";
@@ -140,26 +215,51 @@ const ConsultationHistory = () => {
             </div>
             <h1 className="text-xl font-bold text-foreground">Histórico de Consultas</h1>
           </div>
-          <Badge variant="secondary" className="flex items-center gap-2">
-            <MessageSquare className="w-4 h-4" />
-            {consultations.length} consultas
-          </Badge>
+          <div className="flex items-center gap-3">
+            <Badge variant="secondary" className="flex items-center gap-2">
+              <MessageSquare className="w-4 h-4" />
+              {filteredConsultations.length} de {consultations.length} consultas
+            </Badge>
+            {hasAdminAccess && (
+              <Button variant="outline" size="sm" onClick={exportToCSV}>
+                <Download className="w-4 h-4 mr-2" />
+                Exportar CSV
+              </Button>
+            )}
+          </div>
         </div>
       </header>
 
       {/* Content */}
       <section className="py-8 px-4">
         <div className="container mx-auto max-w-4xl">
-          {/* Search */}
-          <div className="mb-6">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por sintomas ou resposta da IA..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+          {/* Search and Filters */}
+          <div className="mb-6 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por sintomas ou resposta da IA..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-muted-foreground" />
+                <Select value={periodFilter} onValueChange={setPeriodFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Período" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os períodos</SelectItem>
+                    <SelectItem value="week">Última semana</SelectItem>
+                    <SelectItem value="month">Último mês</SelectItem>
+                    <SelectItem value="quarter">Último trimestre</SelectItem>
+                    <SelectItem value="year">Último ano</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
 
@@ -168,7 +268,7 @@ const ConsultationHistory = () => {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
               <p className="mt-2 text-muted-foreground">Carregando histórico...</p>
             </div>
-          ) : filteredConsultations.length === 0 ? (
+          ) : paginatedConsultations.length === 0 ? (
             <Card>
               <CardContent className="pt-6">
                 <div className="text-center py-12">
@@ -196,8 +296,9 @@ const ConsultationHistory = () => {
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-4">
-              {filteredConsultations.map((consultation) => (
+            <>
+              <div className="space-y-4">
+                {paginatedConsultations.map((consultation) => (
                 <Card key={consultation.id} className="hover:shadow-lg transition-shadow">
                   <CardHeader>
                     <div className="flex items-start justify-between">
@@ -241,15 +342,29 @@ const ConsultationHistory = () => {
 
                     {consultation.ai_response && (
                       <div>
-                        <h4 className="font-semibold text-sm mb-2">Resposta da IA:</h4>
-                        <div className="bg-muted/50 rounded-lg p-4">
-                          <p className="text-sm leading-relaxed">
-                            {consultation.ai_response.length > 300 
-                              ? `${consultation.ai_response.substring(0, 300)}...`
-                              : consultation.ai_response
-                            }
-                          </p>
-                        </div>
+                        <Collapsible>
+                          <CollapsibleTrigger asChild>
+                            <Button 
+                              variant="outline" 
+                              className="w-full justify-between"
+                              onClick={() => toggleCardExpansion(consultation.id)}
+                            >
+                              <span className="font-semibold text-sm">Resposta da IA</span>
+                              {expandedCards.has(consultation.id) ? (
+                                <ChevronUp className="w-4 h-4" />
+                              ) : (
+                                <ChevronDown className="w-4 h-4" />
+                              )}
+                            </Button>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent className="mt-2">
+                            <div className="bg-muted/50 rounded-lg p-4">
+                              <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                                {consultation.ai_response}
+                              </p>
+                            </div>
+                          </CollapsibleContent>
+                        </Collapsible>
                       </div>
                     )}
 
@@ -265,8 +380,44 @@ const ConsultationHistory = () => {
                     )}
                   </CardContent>
                 </Card>
-              ))}
-            </div>
+                ))}
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex justify-center mt-8">
+                  <Pagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious 
+                          onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                          className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                        />
+                      </PaginationItem>
+                      
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                        <PaginationItem key={page}>
+                          <PaginationLink
+                            onClick={() => setCurrentPage(page)}
+                            isActive={currentPage === page}
+                            className="cursor-pointer"
+                          >
+                            {page}
+                          </PaginationLink>
+                        </PaginationItem>
+                      ))}
+                      
+                      <PaginationItem>
+                        <PaginationNext 
+                          onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                          className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                </div>
+              )}
+            </>
           )}
         </div>
       </section>
