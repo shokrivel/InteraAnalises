@@ -352,12 +352,12 @@ const FieldsManagement = () => {
                         <Label htmlFor="scientific_terms">Palavras pré-definidas (científico)</Label>
                         <Textarea
                           id="scientific_terms"
-                          value={formData.field_options?.scientific || ''}
+                          value={formData.field_options?.scientific_terms || ''}
                           onChange={(e) => setFormData(prev => ({
                             ...prev,
                             field_options: {
                               ...prev.field_options,
-                              scientific: e.target.value
+                              scientific_terms: e.target.value
                             }
                           }))}
                           placeholder="Cefaleia - Cólica abdominal - Dispneia"
@@ -371,12 +371,12 @@ const FieldsManagement = () => {
                         <Label htmlFor="lay_terms">Palavras pré-definidas (leigos)</Label>
                         <Textarea
                           id="lay_terms"
-                          value={formData.field_options?.lay || ''}
+                          value={formData.field_options?.lay_terms || ''}
                           onChange={(e) => setFormData(prev => ({
                             ...prev,
                             field_options: {
                               ...prev.field_options,
-                              lay: e.target.value
+                              lay_terms: e.target.value
                             }
                           }))}
                           placeholder="Dor de cabeça - Dor de barriga - Falta de ar"
