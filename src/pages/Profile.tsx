@@ -11,6 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import ChangePasswordSection from "@/components/profile/ChangePasswordSection";
 
 const Profile = () => {
   const { user, loading: authLoading } = useAuth();
@@ -443,6 +444,11 @@ const Profile = () => {
               )}
             </CardContent>
           </Card>
+
+          {/* Seção de Alterar Senha */}
+          <div className="mt-8">
+            <ChangePasswordSection />
+          </div>
         </div>
       </section>
     </div>

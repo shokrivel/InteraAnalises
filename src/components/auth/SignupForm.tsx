@@ -189,16 +189,6 @@ const SignupForm = ({ onSuccess }: SignupFormProps) => {
       
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="city">Cidade *</Label>
-          <Input
-            id="city"
-            value={formData.city}
-            onChange={(e) => handleInputChange("city", e.target.value)}
-            placeholder="Sua cidade"
-            required
-          />
-        </div>
-        <div className="space-y-2">
           <Label htmlFor="zip-code">CEP *</Label>
           <Input
             id="zip-code"
@@ -210,6 +200,16 @@ const SignupForm = ({ onSuccess }: SignupFormProps) => {
             }}
             placeholder="00000-000"
             maxLength={9}
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="city">Cidade *</Label>
+          <Input
+            id="city"
+            value={formData.city}
+            onChange={(e) => handleInputChange("city", e.target.value)}
+            placeholder="Sua cidade"
             required
           />
         </div>

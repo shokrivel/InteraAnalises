@@ -22,6 +22,7 @@ interface ConsultationRecord {
   epidemiological_info: any;
   ai_response: string | null;
   created_at: string | null;
+  attachments?: any;
 }
 
 const ConsultationHistory = () => {
@@ -365,6 +366,44 @@ const ConsultationHistory = () => {
                             </div>
                           </CollapsibleContent>
                         </Collapsible>
+                      </div>
+                    )}
+
+                    {/* Anexos */}
+                    {consultation.attachments && Array.isArray(consultation.attachments) && consultation.attachments.length > 0 && (
+                      <div>
+                        <h4 className="font-semibold text-sm mb-2">Anexos:</h4>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                          {(Array.isArray(consultation.attachments) ? consultation.attachments : []).map((attachment: any, index: number) => (
+                            <div key={index} className="border rounded-lg p-2 hover:bg-muted/50 transition-colors">
+                              <div className="flex items-center gap-2">
+                                {attachment.type?.startsWith('image/') ? (
+                                  <Image className="w-4 h-4 text-blue-500" />
+                                ) : attachment.name?.endsWith('.pdf') ? (
+                                  <FileText className="w-4 h-4 text-red-500" />
+                                ) : (
+                                  <File className="w-4 h-4 text-gray-500" />
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs font-medium truncate">{attachment.name || 'Anexo'}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {attachment.size ? `${(attachment.size / 1024 / 1024).toFixed(2)} MB` : ''}
+                                  </p>
+                                </div>
+                                {attachment.url && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 w-6 p-0"
+                                    onClick={() => window.open(attachment.url, '_blank')}
+                                  >
+                                    <ExternalLink className="w-3 h-3" />
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
 
