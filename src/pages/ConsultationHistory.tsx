@@ -31,7 +31,7 @@ const ConsultationHistory = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  const [consultations, setConsultations] = useState<ConsultationRecord[] | undefined>(undefined);
+  const [consultations, setConsultations] = useState<ConsultationRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [periodFilter, setPeriodFilter] = useState<string>("all");
@@ -71,7 +71,8 @@ const ConsultationHistory = () => {
           variant: "destructive",
         });
       } else {
-        setConsultations(data || []);
+  console.log("Consultations recebidas:", data);
+  setConsultations(Array.isArray(data) ? data : []);
       }
     } catch (err) {
       console.error('Unexpected error:', err);
