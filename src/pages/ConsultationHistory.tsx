@@ -31,7 +31,7 @@ const ConsultationHistory = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  const [consultations, setConsultations] = useState<ConsultationRecord[] | undefined>(undefined);
+  const [consultations, setConsultations] = useState<ConsultationRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [periodFilter, setPeriodFilter] = useState<string>("all");
@@ -113,10 +113,12 @@ const ConsultationHistory = () => {
     );
   };
 
-  const filteredConsultations = filterConsultationsByPeriod(consultations).filter(consultation =>
+  const filteredConsultations = filterConsultationsByPeriod(consultations || []).filter(consultation =>
+  // Verifica se sintomas existem e são strings antes de chamar toLowerCase
   consultation.symptoms?.some(symptom =>
     typeof symptom === "string" && symptom.toLowerCase().includes(searchTerm.toLowerCase())
   ) ||
+  // Verifica se ai_response existe e é string
   (typeof consultation.ai_response === "string" && consultation.ai_response.toLowerCase().includes(searchTerm.toLowerCase()))
 );
 
