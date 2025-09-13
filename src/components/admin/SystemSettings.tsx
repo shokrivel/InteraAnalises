@@ -23,9 +23,8 @@ const SystemSettings = () => {
   // AI Settings
   const [maxTokens, setMaxTokens] = useState("4000");
   const [temperature, setTemperature] = useState("0.7");
-  const [systemPrompt, setSystemPrompt] = useState(`Você é um assistente especializado em saúde, focado em Parasitologia, Bioquímica e Hematologia. 
-Forneça respostas baseadas em evidências científicas, sempre adaptando a linguagem ao perfil do usuário (paciente, acadêmico ou profissional de saúde).
-Nunca forneça diagnósticos definitivos - sempre recomende consulta médica presencial.`);
+  const [systemPrompt, setSystemPrompt] = useState("");
+const [loadingSave, setLoadingSave] = useState(false);
   
   // Notification Settings
   const [emailNotifications, setEmailNotifications] = useState(true);
