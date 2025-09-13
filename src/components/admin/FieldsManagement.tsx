@@ -20,7 +20,8 @@ const FIELD_TYPES = [
   { value: 'checkbox', label: 'Checkbox' },
   { value: 'number', label: 'Número' },
   { value: 'date', label: 'Data' },
-  { value: 'aglomerado', label: 'Aglomerado' }
+  { value: 'aglomerado', label: 'Aglomerado' },
+  { value: 'file_upload', label: 'Anexar Exames' }
 ];
 
 const PROFILE_LEVELS = [
@@ -40,7 +41,7 @@ const FieldsManagement = () => {
   const [formData, setFormData] = useState({
     field_name: '',
     field_label: '',
-    field_type: 'text' as 'text' | 'textarea' | 'select' | 'checkbox' | 'number' | 'date' | 'aglomerado',
+    field_type: 'text' as 'text' | 'textarea' | 'select' | 'checkbox' | 'number' | 'date' | 'aglomerado' | 'file_upload',
     field_options: {} as any,
     required_for_levels: [] as string[],
     visible_for_levels: ['patient', 'academic', 'health_professional'] as string[],

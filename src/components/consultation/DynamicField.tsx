@@ -5,6 +5,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ConsultationField } from "@/hooks/useConsultationFields";
 import AglomeradoField from "./AglomeradoField";
+import FileUploadField from "./FileUploadField";
 
 interface DynamicFieldProps {
   field: ConsultationField;
@@ -97,6 +98,9 @@ const DynamicField = ({ field, value, onChange, required }: DynamicFieldProps) =
       case 'aglomerado':
         return <AglomeradoField field={field} value={value} onChange={onChange} required={required} />;
 
+      case 'file_upload':
+        return <FileUploadField field={field} value={value || []} onChange={onChange} required={required} />;
+
       default:
         return (
           <Input
@@ -109,8 +113,8 @@ const DynamicField = ({ field, value, onChange, required }: DynamicFieldProps) =
     }
   };
 
-  // For checkbox and aglomerado fields, don't render a separate wrapper
-  if (field.field_type === 'checkbox' || field.field_type === 'aglomerado') {
+  // For checkbox, aglomerado and file_upload fields, don't render a separate wrapper
+  if (field.field_type === 'checkbox' || field.field_type === 'aglomerado' || field.field_type === 'file_upload') {
     return (
       <div className="space-y-2">
         {renderField()}

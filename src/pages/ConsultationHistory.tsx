@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Heart, Calendar, Clock, MessageSquare, Search, ChevronDown, ChevronUp, Download, Filter } from "lucide-react";
+import { ArrowLeft, Heart, Calendar, Clock, MessageSquare, Search, ChevronDown, ChevronUp, Download, Filter, File, Image, FileText, ExternalLink } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";

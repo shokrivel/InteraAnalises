@@ -62,6 +62,7 @@ export type Database = {
       consultation_history: {
         Row: {
           ai_response: string | null
+          attachments: Json | null
           created_at: string | null
           epidemiological_info: Json | null
           exam_results: Json | null
@@ -73,6 +74,7 @@ export type Database = {
         }
         Insert: {
           ai_response?: string | null
+          attachments?: Json | null
           created_at?: string | null
           epidemiological_info?: Json | null
           exam_results?: Json | null
@@ -84,6 +86,7 @@ export type Database = {
         }
         Update: {
           ai_response?: string | null
+          attachments?: Json | null
           created_at?: string | null
           epidemiological_info?: Json | null
           exam_results?: Json | null
