@@ -186,6 +186,7 @@ export type Database = {
         | "number"
         | "date"
         | "aglomerado"
+        | "file_upload"
       user_profile_type: "patient" | "academic" | "health_professional"
     }
     CompositeTypes: {
@@ -323,6 +324,7 @@ export const Constants = {
         "number",
         "date",
         "aglomerado",
+        "file_upload",
       ],
       user_profile_type: ["patient", "academic", "health_professional"],
     },
