@@ -31,7 +31,7 @@ const ConsultationHistory = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  const [consultations, setConsultations] = useState<ConsultationRecord[]>([]);
+  const [consultations, setConsultations] = useState<ConsultationRecord[] | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [periodFilter, setPeriodFilter] = useState<string>("all");
@@ -200,6 +200,25 @@ const ConsultationHistory = () => {
       </div>
     );
   }
+
+  if (!loading && consultations === undefined) {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <Card>
+        <CardContent className="pt-6 text-center">
+          <h2 className="text-xl font-semibold mb-2">Erro ao carregar</h2>
+          <p className="text-muted-foreground mb-4">
+            O histórico de consultas não pôde ser carregado no momento.
+          </p>
+          <Button onClick={() => fetchConsultations()}>
+            Tentar novamente
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 
   return (
     <div className="min-h-screen bg-background">
