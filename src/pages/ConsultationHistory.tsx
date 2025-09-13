@@ -31,7 +31,7 @@ const ConsultationHistory = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  const [consultations, setConsultations] = useState<ConsultationRecord[]>([]);
+  const [consultations, setConsultations] = useState<ConsultationRecord[] | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [periodFilter, setPeriodFilter] = useState<string>("all");
@@ -71,8 +71,7 @@ const ConsultationHistory = () => {
           variant: "destructive",
         });
       } else {
-  console.log("Consultations recebidas:", data);
-  setConsultations(Array.isArray(data) ? data : []);
+        setConsultations(data || []);
       }
     } catch (err) {
       console.error('Unexpected error:', err);
@@ -115,11 +114,11 @@ const ConsultationHistory = () => {
   };
 
   const filteredConsultations = filterConsultationsByPeriod(consultations).filter(consultation =>
-    consultation.symptoms?.some(symptom => 
-      symptom.toLowerCase().includes(searchTerm.toLowerCase())
-    ) ||
-    consultation.ai_response?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  consultation.symptoms?.some(symptom =>
+    typeof symptom === "string" && symptom.toLowerCase().includes(searchTerm.toLowerCase())
+  ) ||
+  (typeof consultation.ai_response === "string" && consultation.ai_response.toLowerCase().includes(searchTerm.toLowerCase()))
+);
 
   const totalPages = Math.ceil(filteredConsultations.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
