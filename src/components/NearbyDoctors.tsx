@@ -1,8 +1,14 @@
 import React, { useState } from "react";
 
+interface Doctor {
+  place_id: string;
+  name: string;
+  vicinity: string;
+}
+
 function NearbyDoctors() {
-  const [doctors, setDoctors] = useState([]);
-  const [error, setError] = useState("");
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [error, setError] = useState<string>("");
 
   const fetchDoctors = async () => {
     try {
@@ -10,7 +16,7 @@ function NearbyDoctors() {
       const radius = 5000;
 
       const response = await fetch(
-        `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${location}&radius=${radius}&type=doctor&key=${process.env.REACT_APP_GOOGLE_MAPS_KEY}`
+        `/api/nearby-doctors?location=${location}&radius=${radius}`
       );
 
       const data = await response.json();
