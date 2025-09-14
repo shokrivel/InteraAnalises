@@ -298,9 +298,10 @@ const ConsultationChat = () => {
           <Card className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950">
             <CardContent className="pt-6">
               <p className="text-sm text-amber-800 dark:text-amber-200">
-                <strong>Importante:</strong> Esta resposta é gerada por inteligência artificial para fins educativos e informativos. 
-                Não substitui o diagnóstico médico profissional. Em caso de emergência ou sintomas graves, 
-                procure atendimento médico imediatamente.
+                <strong> IMPORTANTE: ESTA RESPOSTA É GERADA POR INTELIGÊNCIA ARTIFICIAL PARA FINS EDUCATIVOS E INFORMATIVOS. 
+        NÃO SUBSTITUI O DIAGNÓSTICO MÉDICO PROFISSIONAL. EM CASO DE EMERGÊNCIA OU SINTOMAS GRAVES, 
+        PROCURE ATENDIMENTO MÉDICO IMEDIATAMENTE. 
+                </strong> 
               </p>
             </CardContent>
           </Card>
