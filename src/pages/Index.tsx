@@ -28,7 +28,7 @@ const Index = () => {
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <img 
-              src="/logo-interasaude.svg" 
+              src="/logointerasaude.svg" 
               alt="InteraSaúde Logo" 
               className="w-10 h-10"
             />
