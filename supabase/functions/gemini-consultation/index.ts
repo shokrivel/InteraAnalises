@@ -76,13 +76,81 @@ serve(async (req) => {
       }
     });
 
+    // Build Gemini parts with text and any image attachments
+    const parts: any[] = [
+      {
+        text: `${systemPrompt}\n\n${consultationContext}\n\nConsidere também as imagens anexadas (se houver) ao elaborar a análise.`
+      }
+    ];
+
+    const attachments = Array.isArray(consultationData.exam_attachments) ? consultationData.exam_attachments : [];
+    if (attachments.length) {
+      console.log(`Found ${attachments.length} attachments. Preparing images for Gemini...`);
+
+      const arrayBufferToBase64 = (buffer: ArrayBuffer) => {
+        const bytes = new Uint8Array(buffer);
+        let binary = '';
+        const chunkSize = 0x8000;
+        for (let i = 0; i < bytes.length; i += chunkSize) {
+          const chunk = bytes.subarray(i, Math.min(i + chunkSize, bytes.length));
+          binary += String.fromCharCode(...chunk);
+        }
+        return btoa(binary);
+      };
+
+      const imagePromises = attachments.map(async (att: any, idx: number) => {
+        try {
+          const mime = typeof att?.type === 'string' && att.type.includes('/') ? att.type : 'image/png';
+          if (!(att?.path) && !(typeof att?.url === 'string' && att.url)) {
+            console.warn('Skipping attachment without path/url at index', idx);
+            return;
+          }
+
+          let blob: Blob | null = null;
+
+          if (att?.path) {
+            const { data: fileBlob, error: dlErr } = await supabaseAdmin
+              .storage.from('consultation-attachments')
+              .download(att.path);
+            if (dlErr) {
+              console.error('Failed to download attachment from storage:', dlErr, 'path:', att.path);
+              return;
+            }
+            blob = fileBlob;
+          } else if (att?.url) {
+            // Fallback: try fetching the URL (may fail if bucket is private)
+            const res = await fetch(att.url);
+            if (!res.ok) {
+              console.error('Failed to fetch attachment URL:', att.url, 'status:', res.status);
+              return;
+            }
+            blob = await res.blob();
+          }
+
+          if (!blob) return;
+
+          const base64 = arrayBufferToBase64(await blob.arrayBuffer());
+          parts.push({
+            inline_data: {
+              mime_type: mime,
+              data: base64,
+            }
+          });
+          console.log(`Added image attachment part (${mime}) to Gemini request.`);
+        } catch (e) {
+          console.error('Error processing attachment index', idx, e);
+        }
+      });
+
+      await Promise.all(imagePromises);
+    }
+
     const GOOGLE_AI_API_KEY = Deno.env.get('GOOGLE_AI_API_KEY');
     if (!GOOGLE_AI_API_KEY) {
       throw new Error('GOOGLE_AI_API_KEY não configurada');
     }
 
-    console.log('Sending request to Gemini API...');
-
+    console.log('Sending request to Gemini API with', parts.length, 'parts...');
     // Call Gemini API
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GOOGLE_AI_API_KEY}`, {
       method: 'POST',
@@ -92,11 +160,7 @@ serve(async (req) => {
       body: JSON.stringify({
         contents: [
           {
-            parts: [
-              {
-                text: `${systemPrompt}\n\n${consultationContext}\n\nPor favor, forneça uma resposta completa e estruturada baseada nas informações fornecidas.`
-              }
-            ]
+            parts
           }
         ],
         generationConfig: {
