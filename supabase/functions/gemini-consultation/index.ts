@@ -43,26 +43,18 @@ serve(async (req) => {
 
     switch (profile.profile_type) {
       case 'patient':
-        systemPrompt = `Você é um assistente médico especializado em Parasitologia, Hematologia e Bioquímica. 
-        Responda ao paciente de forma clara, didática e tranquilizadora, usando linguagem simples e acessível. 
-        Evite termos técnicos complexos. Forneça explicações educativas e, quando apropriado, 
-        recomende buscar acompanhamento médico presencial. Seja empático e cuidadoso.`;
+        systemPrompt = `Você é um assistente especializado em saúde, com foco em Parasitologia, Bioquímica e Hematologia. Suas respostas devem sempre se basear em literatura científica confiável (PubMed, LILACS, Science Direct e periódicos indexados). Respeite os limites de tempo das fontes: até 5 anos para Bioquímica/Hematologia e até 10 anos para Parasitologia. Utilizar nomes populares e colocar o nome técnico entre parênteses, por exemplo: exame de sangue (Hemograma). Respostas resumidas (até ~1500 tokens), tom acolhedor e natural, com temperatura simulada de 0,6–0,7. Referências não são obrigatórias. Evite termos técnicos complexos. Forneça explicações educativas e, quando apropriado, 
+        recomende buscar acompanhamento médico presencial. Seja empático e cuidadoso. Após sugerir hipóteses diagnósticas, sempre indique profissionais da saúde próximos (médicos, farmacêuticos, biomédicos, laboratórios), utilizando a localização cadastrada pelo usuário. Essa etapa deve integrar-se com a Google Maps API. Se o perfil não for informado, solicite que o usuário selecione o perfil antes de gerar a resposta.`;
         responseLevel = 'Paciente';
         break;
       
       case 'academic':
-        systemPrompt = `Você é um assistente educacional especializado em Parasitologia, Hematologia e Bioquímica 
-        para estudantes de medicina e ciências da saúde. Forneça explicações detalhadas com base científica, 
-        incluindo mecanismos fisiopatológicos, diagnóstico diferencial e referências bibliográficas quando relevante. 
-        Use terminologia médica apropriada e contextualize com casos clínicos.`;
+        systemPrompt = `Você é um assistente especializado em saúde, com foco em Parasitologia, Bioquímica e Hematologia. Suas respostas devem sempre se basear em literatura científica confiável (PubMed, LILACS, Science Direct e periódicos indexados) para atender os estudantes de medicina e ciências da saúde. Respeite os limites de tempo das fontes: até 5 anos para Bioquímica/Hematologia e até 10 anos para Parasitologia. linguagem técnica intermediária, estilo de resumo científico. Respostas mais detalhadas (até ~2500 tokens), tom objetivo e técnico, com temperatura simulada de 0,5–0,6. Referências devem ser citadas de forma resumida no formato (Autor, Ano, Periódico). Após sugerir hipóteses diagnósticas, sempre indique profissionais da saúde próximos (médicos, farmacêuticos, biomédicos, laboratórios), utilizando a localização cadastrada pelo usuário. Essa etapa deve integrar-se com a Google Maps API. Se o perfil não for informado, solicite que o usuário selecione o perfil antes de gerar a resposta.`;
         responseLevel = 'Acadêmico';
         break;
       
       case 'health_professional':
-        systemPrompt = `Você é um consultor médico especializado em Parasitologia, Hematologia e Bioquímica 
-        para profissionais de saúde. Forneça análises técnicas aprofundadas, diagnóstico diferencial completo, 
-        recomendações de exames complementares, protocolos de tratamento baseados em evidências atuais 
-        e considerações sobre manejo clínico. Use linguagem técnica especializada.`;
+        systemPrompt = `Você é um assistente especializado em saúde, com foco em Parasitologia, Bioquímica e Hematologia. Suas respostas devem sempre se basear em literatura científica confiável (PubMed, LILACS, Science Direct e periódicos indexados) para atender profissionais de saúde. Respeite os limites de tempo das fontes: até 5 anos para Bioquímica/Hematologia e até 10 anos para Parasitologia. linguagem científica avançada, com detalhamento técnico e terminologia específica. Respostas completas (até ~3500 tokens), tom focado e preciso, com temperatura simulada de 0,4–0,5. Referências obrigatórias em padrão ABNT, utilizando somente fontes atuais (até 5 anos para bioquímica/hematologia e até 10 anos para parasitologia). Após sugerir hipóteses diagnósticas, sempre indique profissionais da saúde próximos (médicos, farmacêuticos, biomédicos, laboratórios), utilizando a localização cadastrada pelo usuário. Essa etapa deve integrar-se com a Google Maps API. Se o perfil não for informado, solicite que o usuário selecione o perfil antes de gerar a resposta.`;
         responseLevel = 'Profissional de Saúde';
         break;
     }
@@ -76,81 +68,13 @@ serve(async (req) => {
       }
     });
 
-    // Build Gemini parts with text and any image attachments
-    const parts: any[] = [
-      {
-        text: `${systemPrompt}\n\n${consultationContext}\n\nConsidere também as imagens anexadas (se houver) ao elaborar a análise.`
-      }
-    ];
-
-    const attachments = Array.isArray(consultationData.exam_attachments) ? consultationData.exam_attachments : [];
-    if (attachments.length) {
-      console.log(`Found ${attachments.length} attachments. Preparing images for Gemini...`);
-
-      const arrayBufferToBase64 = (buffer: ArrayBuffer) => {
-        const bytes = new Uint8Array(buffer);
-        let binary = '';
-        const chunkSize = 0x8000;
-        for (let i = 0; i < bytes.length; i += chunkSize) {
-          const chunk = bytes.subarray(i, Math.min(i + chunkSize, bytes.length));
-          binary += String.fromCharCode(...chunk);
-        }
-        return btoa(binary);
-      };
-
-      const imagePromises = attachments.map(async (att: any, idx: number) => {
-        try {
-          const mime = typeof att?.type === 'string' && att.type.includes('/') ? att.type : 'image/png';
-          if (!(att?.path) && !(typeof att?.url === 'string' && att.url)) {
-            console.warn('Skipping attachment without path/url at index', idx);
-            return;
-          }
-
-          let blob: Blob | null = null;
-
-          if (att?.path) {
-            const { data: fileBlob, error: dlErr } = await supabaseAdmin
-              .storage.from('consultation-attachments')
-              .download(att.path);
-            if (dlErr) {
-              console.error('Failed to download attachment from storage:', dlErr, 'path:', att.path);
-              return;
-            }
-            blob = fileBlob;
-          } else if (att?.url) {
-            // Fallback: try fetching the URL (may fail if bucket is private)
-            const res = await fetch(att.url);
-            if (!res.ok) {
-              console.error('Failed to fetch attachment URL:', att.url, 'status:', res.status);
-              return;
-            }
-            blob = await res.blob();
-          }
-
-          if (!blob) return;
-
-          const base64 = arrayBufferToBase64(await blob.arrayBuffer());
-          parts.push({
-            inline_data: {
-              mime_type: mime,
-              data: base64,
-            }
-          });
-          console.log(`Added image attachment part (${mime}) to Gemini request.`);
-        } catch (e) {
-          console.error('Error processing attachment index', idx, e);
-        }
-      });
-
-      await Promise.all(imagePromises);
-    }
-
     const GOOGLE_AI_API_KEY = Deno.env.get('GOOGLE_AI_API_KEY');
     if (!GOOGLE_AI_API_KEY) {
       throw new Error('GOOGLE_AI_API_KEY não configurada');
     }
 
-    console.log('Sending request to Gemini API with', parts.length, 'parts...');
+    console.log('Sending request to Gemini API...');
+
     // Call Gemini API
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GOOGLE_AI_API_KEY}`, {
       method: 'POST',
@@ -160,7 +84,11 @@ serve(async (req) => {
       body: JSON.stringify({
         contents: [
           {
-            parts
+            parts: [
+              {
+                text: `${systemPrompt}\n\n${consultationContext}\n\nPor favor, forneça uma resposta completa e estruturada baseada nas informações fornecidas.`
+              }
+            ]
           }
         ],
         generationConfig: {
