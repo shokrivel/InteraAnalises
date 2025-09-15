@@ -298,7 +298,10 @@ const ConsultationChat = () => {
                 <CardTitle>Profissionais de Saúde Recomendados</CardTitle>
               </CardHeader>
               <CardContent>
-                <NearbyDoctors prognosis={consultationResponse?.response} />
+                <NearbyDoctors 
+  prognosis={consultationResponse?.response} 
+  userAddress={profile?.address && profile?.city ? `${profile.address}, ${profile.city}` : undefined}
+/>
               </CardContent>
             </Card>
 
