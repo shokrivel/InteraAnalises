@@ -9,6 +9,8 @@ interface NearbyDoctorsProps {
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_KEY;
 
 function NearbyDoctors({ prognosis, userAddress }: NearbyDoctorsProps) {
+  console.log("Prognóstico recebido:", prognosis);
+  
   const [doctors, setDoctors] = useState<any[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -110,14 +112,17 @@ function NearbyDoctors({ prognosis, userAddress }: NearbyDoctorsProps) {
     try {
       // CORREÇÃO: Nome da função corrigido
       const specialty = mapPrognosisToSpecialty(prognosis);
+      console.log("Especialidade mapeada para busca:", specialty);
       const location = await determineUserLocation();
       const radius = 15000; // 15km
+      const apiUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${location}&radius=${radius}&type=doctor&keyword=${encodeURIComponent(specialty)}&key=${GOOGLE_MAPS_API_KEY}`;
+      
+      console.log("URL da API sendo chamada:", apiUrl);
 
-      const response = await fetch(
-        `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${location}&radius=${radius}&type=doctor&keyword=${encodeURIComponent(specialty)}&key=${GOOGLE_MAPS_API_KEY}`
-      );
-
+      const response = await fetch(apiUrl);
       const data = await response.json();
+
+      console.log("Resposta recebida do Google:", data);
 
       if (data.status === "OK") {
         setDoctors(data.results);
