@@ -56,6 +56,8 @@ const ConsultationChat = () => {
           throw new Error(error.message);
         }
 
+        setConsultationResponse(data);
+        
         if (data.error) {
           throw new Error(data.error);
         }
