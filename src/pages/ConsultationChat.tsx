@@ -59,8 +59,6 @@ const ConsultationChat = () => {
         if (data.error) {
           throw new Error(data.error);
         }
-
-        setConsultationResponse(data);
         
         toast({
           title: "Consulta processada com sucesso!",
@@ -305,7 +303,7 @@ const ConsultationChat = () => {
 </Card>
 
           )}
-          <NearbyDoctors />
+          <NearbyDoctors prognosis={consultationResponse?.response} />
           {/* Disclaimer */}
           <Card className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950">
             <CardContent className="pt-6">
