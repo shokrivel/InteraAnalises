@@ -1,15 +1,49 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
-function NearbyDoctors({ prognosis }) {
+interface NearbyDoctorsProps {
+  prognosis?: string; // Prognóstico vindo da IA
+  userAddress?: string; // Endereço do cadastro no Supabase
+}
+
+function NearbyDoctors({ prognosis, userAddress }: NearbyDoctorsProps) {
   const [doctors, setDoctors] = useState<any[]>([]);
-  const [error, setError] = useState<string>("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [permission, setPermission] = useState<PermissionState | null>(null);
+  const [location, setLocation] = useState<string | null>(null);
 
-  // Mapeamento simples de prognóstico → especialidade
+  // Checa status de permissão no load
+  useEffect(() => {
+    if ("permissions" in navigator) {
+      navigator.permissions
+        .query({ name: "geolocation" as PermissionName })
+        .then((result) => setPermission(result.state));
+    }
+  }, []);
+
+  // Atualiza em tempo real se permitido
+  useEffect(() => {
+    if (permission === "granted") {
+      const watchId = navigator.geolocation.watchPosition(
+        (pos) => {
+          setLocation(`${pos.coords.latitude},${pos.coords.longitude}`);
+        },
+        (err) => {
+          console.warn("Erro no watchPosition:", err.message);
+          setLocation(null);
+        },
+        { enableHighAccuracy: true }
+      );
+      return () => navigator.geolocation.clearWatch(watchId);
+    }
+  }, [permission]);
+
+  // Função que interpreta prognóstico → especialidade
   const mapPrognosisToSpecialty = (prognosis: string) => {
     if (!prognosis) return "doctor";
 
-    const lower = prognosis.toLowerCase();
-
+    const lower = prognosis.toLowerCase();;
+    
     if (lower.includes("pele") || lower.includes("acne") || lower.includes("dermatite")) return "dermatologist";
     if (lower.includes("coração") || lower.includes("pressão") || lower.includes("infarto")) return "cardiologist";
     if (lower.includes("pulmão") || lower.includes("tosse") || lower.includes("asma") || lower.includes("pneumonia")) return "pulmonologist";
@@ -25,57 +59,101 @@ function NearbyDoctors({ prognosis }) {
     if (lower.includes("ouvido") || lower.includes("rinite") || lower.includes("sinusite")) return "otolaryngologist";
     if (lower.includes("gravidez") || lower.includes("parto") || lower.includes("obstetra")) return "obstetrician";
 
-    return "doctor"; // fallback
+    return "clínico geral";
   };
 
-  const fetchDoctors = () => {
-    if (!navigator.geolocation) {
-      setError("Geolocalização não suportada neste navegador");
+  const fetchDoctors = async () => {
+    if (!prognosis) {
+      setError("Não foi possível determinar a especialidade a partir do prognóstico.");
       return;
     }
 
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-        try {
-          const radius = 5000; // 5 km
-          const query = mapPrognosisToSpecialty(prognosis);
+    try {
+      setLoading(true);
+      setError("");
 
-          const response = await fetch(
-            `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latitude},${longitude}&radius=${radius}&type=doctor&keyword=${query}&key=${
-              import.meta.env.VITE_GOOGLE_MAPS_KEY
-            }`
-          );
+      const specialty = extractSpecialty(prognosis);
+      let finalLocation = location || "-23.5505,-46.6333"; // fallback SP
 
-          const data = await response.json();
-
-          if (data.status === "OK") {
-            setDoctors(data.results);
-          } else {
-            setError(`Erro da API: ${data.status}`);
-          }
-        } catch (err) {
-          setError("Erro ao buscar os profissionais de saúde");
+      // Se localização não disponível, tenta endereço cadastrado
+      if (!location && userAddress) {
+        const geoResponse = await fetch(
+          `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
+            userAddress
+          )}&key=${process.env.REACT_APP_GOOGLE_MAPS_KEY}`
+        );
+        const geoData = await geoResponse.json();
+        if (geoData.status === "OK" && geoData.results.length > 0) {
+          const loc = geoData.results[0].geometry.location;
+          finalLocation = `${loc.lat},${loc.lng}`;
         }
-      },
-      (error) => {
-        setError("Permissão de localização negada ou indisponível");
       }
-    );
+
+      // Busca médicos no Google Places
+      const radius = 5000;
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${finalLocation}&radius=${radius}&type=doctor&keyword=${encodeURIComponent(
+          specialty
+        )}&key=${process.env.VITE_GOOGLE_MAPS_KEY}`
+      );
+
+      const data = await response.json();
+
+      if (data.status === "OK") {
+        setDoctors(data.results);
+      } else {
+        setError(`Erro da API: ${data.status}`);
+      }
+    } catch (err) {
+      console.error(err);
+      setError("Erro ao buscar os profissionais de saúde");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div>
-      <h2>Profissionais de Saúde Recomendados</h2>
-      <p>Para localizar médicos próximos, permita o acesso à sua localização.</p>
-      <button onClick={fetchDoctors}>🔍 Buscar profissionais</button>
+      <h2 className="text-lg font-bold mt-6 mb-2">Médicos próximos</h2>
 
-      {error && <p style={{ color: "red" }}>{error}</p>}
+      {/* Mostrar status da permissão */}
+      {permission === "prompt" && (
+        <p className="text-gray-600">
+          Para localizar médicos próximos, permita o acesso à sua localização.
+        </p>
+      )}
+      {permission === "denied" && (
+        <p className="text-red-600">
+          Localização bloqueada. Habilite nas configurações do navegador.
+        </p>
+      )}
+      {permission === "granted" && (
+        <p className="text-green-600">Localização em tempo real ativada ✅</p>
+      )}
 
-      <ul>
+      <button
+        onClick={fetchDoctors}
+        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 mt-2"
+      >
+        Buscar profissionais
+      </button>
+
+      {loading && <p>Carregando...</p>}
+      {error && <p className="text-red-600">{error}</p>}
+
+      <ul className="mt-4 space-y-2">
         {doctors.map((doc) => (
-          <li key={doc.place_id}>
-            <strong>{doc.name}</strong> - {doc.vicinity}
+          <li key={doc.place_id} className="p-3 border rounded-md">
+            <strong>{doc.name}</strong> <br />
+            {doc.vicinity} <br />
+            <a
+              href={`https://www.google.com/maps/place/?q=place_id:${doc.place_id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-500 underline"
+            >
+              Ver no mapa
+            </a>
           </li>
         ))}
       </ul>
