@@ -1,7 +1,0 @@
-<svg width="240" height="240" viewBox="0 0 240 240" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- Background: w-10 h-10 bg-primary rounded-lg (scaled up to 240x240) -->
-  <rect width="240" height="240" rx="24" fill="hsl(182, 50%, 25%)"/>
-  
-  <!-- Heart icon: w-6 h-6 text-primary-foreground (scaled up proportionally) -->
-  <path d="M120 190.4c-2.4 0-4.8-.8-6.8-2.4-17.6-14.4-57.2-49.6-57.2-92 0-24.8 20-44.8 44.8-44.8 11.2 0 21.6 4.8 29.2 13.6 7.6-8.8 18-13.6 29.2-13.6 24.8 0 44.8 20 44.8 44.8 0 42.4-39.6 77.6-57.2 92-2 1.6-4.4 2.4-6.8 2.4z" fill="hsl(0, 0%, 98%)"/>
-</svg>
