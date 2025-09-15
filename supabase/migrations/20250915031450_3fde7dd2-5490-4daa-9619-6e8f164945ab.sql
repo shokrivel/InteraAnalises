@@ -35,7 +35,7 @@ INSERT INTO public.paginas_conteudo (slug, titulo, conteudo_texto, url_imagem)
 VALUES (
   'saiba-mais',
   'Saiba Mais sobre a InteraSaúde',
-  'A InteraSaúde é uma plataforma inovadora que utiliza inteligência artificial para auxiliar na análise de sintomas e exames médicos. Nossa missão é democratizar o acesso à informação em saúde, fornecendo orientações precisas e personalizadas para cada usuário.\n\nCom nossa tecnologia avançada, você pode:\n• Consultar sobre sintomas de forma rápida e segura\n• Fazer upload de exames para análise\n• Receber orientações personalizadas baseadas no seu perfil\n• Manter um histórico completo das suas consultas\n\nNossa plataforma é desenvolvida com foco na segurança e privacidade dos seus dados, seguindo as melhores práticas de proteção de informações médicas.',
+  'Desenvolvida por estudantes do curso de farmácia da Unicesumar, a InteraSaúde é uma plataforma inovadora que, através de bancos de dados próprios, utiliza da inteligência artificial para auxiliar na análise de sintomas e exames médicos. Nossa missão é democratizar o acesso à informação em saúde, fornecendo prováveis prognósticos personalizados para cada usuário e indicações de profissionais que possam te atender.\n\nCom nossa tecnologia avançada, você pode:\n• Consultar sobre sintomas de forma rápida e segura\n• Fazer upload de exames para análise\n• Receber orientações personalizadas baseadas no seu perfil\n• Manter um histórico completo das suas consultas\n\nNossa plataforma é desenvolvida com foco na segurança e privacidade dos seus dados, seguindo as melhores práticas de proteção de informações médicas.',
   null
 );
 
