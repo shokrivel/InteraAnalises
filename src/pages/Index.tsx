@@ -85,7 +85,7 @@ const Index = () => {
               <Button size="lg" onClick={() => setAuthDialogOpen(true)}>
                 Começar Agora
               </Button>
-              <Button variant="outline" size="lg">
+              <Button variant="outline" size="lg" onClick={() => navigate('/saiba-mais')}>
                 Saiba Mais
               </Button>
             </div>

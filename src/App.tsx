@@ -12,6 +12,7 @@ import ConsultationHistory from "./pages/ConsultationHistory";
 import AdminPanel from "./pages/AdminPanel";
 import ResetPassword from "./pages/ResetPassword";
 import Profile from "./pages/Profile";
+import SaibaMais from "./pages/SaibaMais";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/consultation-history" element={<ConsultationHistory />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/saiba-mais" element={<SaibaMais />} />
             <Route path="/admin" element={<AdminPanel />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

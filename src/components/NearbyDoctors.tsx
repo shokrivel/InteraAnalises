@@ -14,14 +14,7 @@ function NearbyDoctors({ prognosis, userLocation }: NearbyDoctorsProps) {
   const extractSpecialty = (text: string): string => {
     const lower = text.toLowerCase();
 
-    Com certeza! Abaixo está o código preenchido com uma lista abrangente de especialidades médicas reconhecidas no Brasil, seguindo o padrão que você iniciou.
-
-JavaScript
-
-function obterEspecialista(texto) {
-  const lower = texto.toLowerCase();
-
-  if (lower.includes("dermat")) return "dermatologista";
+    if (lower.includes("dermat")) return "dermatologista";
   if (lower.includes("cardio")) return "cardiologista";
   if (lower.includes("psiqui")) return "psiquiatra";
   if (lower.includes("gineco")) return "ginecologista";

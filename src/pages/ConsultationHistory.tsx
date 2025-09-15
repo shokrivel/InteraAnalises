@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Heart, Calendar, Clock, MessageSquare, Search, ChevronDown, ChevronUp, Download, Filter, File, Image, FileText, ExternalLink } from "lucide-react";
+import { ArrowLeft, Heart, Calendar, Clock, MessageSquare, Search, ChevronDown, ChevronUp, Download, Filter, File, Image, FileText, ExternalLink, RotateCcw } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,6 +12,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { useRole } from "@/hooks/useRole";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
+import ReopenConsultationModal from "@/components/consultation/ReopenConsultationModal";
 
 interface ConsultationRecord {
   id: string;
@@ -23,6 +24,8 @@ interface ConsultationRecord {
   ai_response: string | null;
   created_at: string | null;
   attachments?: any;
+  consulta_original_id?: string | null;
+  status?: string;
 }
 
 const ConsultationHistory = () => {
@@ -37,6 +40,8 @@ const ConsultationHistory = () => {
   const [periodFilter, setPeriodFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
+  const [reopenModalOpen, setReopenModalOpen] = useState(false);
+  const [selectedConsultation, setSelectedConsultation] = useState<ConsultationRecord | null>(null);
   const itemsPerPage = 5;
 
   useEffect(() => {
@@ -170,6 +175,15 @@ const ConsultationHistory = () => {
     if (duration < 7) return `${duration} dias`;
     if (duration < 30) return `${Math.floor(duration / 7)} semanas`;
     return `${Math.floor(duration / 30)} meses`;
+  };
+
+  const handleReopenSuccess = () => {
+    // Refresh consultations after successful reopen
+    fetchConsultations();
+    toast({
+      title: "Sucesso",
+      description: "Consulta processada com sucesso!",
+    });
   };
 
   if (authLoading) {
@@ -438,6 +452,27 @@ const ConsultationHistory = () => {
                         </p>
                       </div>
                     )}
+
+                    {/* Reopen consultation button */}
+                    <div className="pt-4 border-t border-border mt-4">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedConsultation(consultation);
+                          setReopenModalOpen(true);
+                        }}
+                        className="flex items-center gap-2"
+                      >
+                        <RotateCcw className="w-4 h-4" />
+                        Reabrir Consulta
+                      </Button>
+                      {consultation.consulta_original_id && (
+                        <Badge variant="secondary" className="ml-2">
+                          {consultation.status === 'atualizada' ? 'Atualizada' : 'Reaberta'}
+                        </Badge>
+                      )}
+                    </div>
                   </CardContent>
                 </Card>
                 ))}
@@ -481,6 +516,16 @@ const ConsultationHistory = () => {
           )}
         </div>
       </section>
+
+      {/* Reopen Consultation Modal */}
+      {selectedConsultation && (
+        <ReopenConsultationModal
+          open={reopenModalOpen}
+          onOpenChange={setReopenModalOpen}
+          originalConsultation={selectedConsultation}
+          onSuccess={handleReopenSuccess}
+        />
+      )}
     </div>
   );
 };

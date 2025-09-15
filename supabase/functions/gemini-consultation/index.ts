@@ -19,15 +19,30 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { consultationData, userId } = await req.json();
-    console.log('Consultation data received:', consultationData);
-    console.log('User ID:', userId);
+    const body = await req.json();
+    console.log('Request body received:', body);
+    
+    const { 
+      user_id, 
+      symptoms, 
+      attachments = [], 
+      consulta_original_id,
+      status = 'finalizada',
+      original_consultation,
+      consultationData,  // For backward compatibility
+      userId,           // For backward compatibility
+      ...additionalData 
+    } = body;
+
+    // Handle backward compatibility
+    const actualUserId = user_id || userId;
+    const actualConsultationData = consultationData || additionalData;
 
     // Get user profile to determine knowledge level
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('profile_type, name')
-      .eq('user_id', userId)
+      .eq('user_id', actualUserId)
       .single();
 
     if (profileError) {
@@ -59,21 +74,88 @@ serve(async (req) => {
         break;
     }
 
-    // Build consultation context
-    let consultationContext = `Paciente: ${profile.name}\nNível de resposta: ${responseLevel}\n\nDados da consulta:\n`;
+    // Handle file attachments (download and convert to base64)
+    let imageParts = [];
+    console.log(`Processing ${attachments.length} attachments...`);
     
-    Object.entries(consultationData).forEach(([key, value]) => {
-      if (value && value !== '' && value !== false) {
-        consultationContext += `${key}: ${value}\n`;
+    for (const attachment of attachments) {
+      try {
+        const { data: fileData, error: downloadError } = await supabaseAdmin.storage
+          .from('consultation-attachments')
+          .download(attachment.path);
+          
+        if (downloadError) {
+          console.error('Error downloading file:', downloadError);
+          continue;
+        }
+        
+        // Convert to base64
+        const arrayBuffer = await fileData.arrayBuffer();
+        const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+        
+        // Only process images for Gemini
+        if (attachment.type?.startsWith('image/')) {
+          imageParts.push({
+            inline_data: {
+              mime_type: attachment.type,
+              data: base64
+            }
+          });
+          console.log(`Added image attachment part (${attachment.name})`);
+        }
+      } catch (error) {
+        console.error(`Error processing attachment ${attachment.name}:`, error);
       }
-    });
+    }
+
+    // Build consultation context
+    let consultationContext = '';
+    
+    // Handle re-evaluation case
+    if (consulta_original_id && original_consultation) {
+      const originalDate = new Date(original_consultation.created_at).toLocaleDateString('pt-BR');
+      const currentDate = new Date().toLocaleDateString('pt-BR');
+      
+      consultationContext = `REAVALIAÇÃO DE CONSULTA.
+INFORMAÇÕES ORIGINAIS (Data: ${originalDate}):
+- Sintomas: ${original_consultation.symptoms?.join(', ') || 'Não informado'}
+- Prognóstico Anterior: ${original_consultation.ai_response || 'Não disponível'}
+---
+NOVAS INFORMAÇÕES (Data: ${currentDate}):
+- Detalhes: ${symptoms?.join(', ') || 'Não informado'}
+---
+Analisando o histórico completo, forneça um novo prognóstico considerando a evolução do quadro.`;
+    } else {
+      // Regular consultation
+      consultationContext = `Paciente: ${profile.name}\nNível de resposta: ${responseLevel}\n\nDados da consulta:\n`;
+      
+      if (symptoms && symptoms.length > 0) {
+        consultationContext += `Sintomas: ${symptoms.join(', ')}\n`;
+      }
+      
+      Object.entries(actualConsultationData).forEach(([key, value]) => {
+        if (value && value !== '' && value !== false) {
+          consultationContext += `${key}: ${value}\n`;
+        }
+      });
+    }
 
     const GOOGLE_AI_API_KEY = Deno.env.get('GOOGLE_AI_API_KEY');
     if (!GOOGLE_AI_API_KEY) {
       throw new Error('GOOGLE_AI_API_KEY não configurada');
     }
 
-    console.log('Sending request to Gemini API...');
+    console.log(`Sending request to Gemini API with ${1 + imageParts.length} parts...`);
+
+    // Build request parts - start with text
+    const requestParts = [
+      {
+        text: `${systemPrompt}\n\n${consultationContext}\n\nPor favor, forneça uma resposta completa e estruturada baseada nas informações fornecidas.`
+      }
+    ];
+
+    // Add image parts if any
+    requestParts.push(...imageParts);
 
     // Call Gemini API
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GOOGLE_AI_API_KEY}`, {
@@ -84,11 +166,7 @@ serve(async (req) => {
       body: JSON.stringify({
         contents: [
           {
-            parts: [
-              {
-                text: `${systemPrompt}\n\n${consultationContext}\n\nPor favor, forneça uma resposta completa e estruturada baseada nas informações fornecidas.`
-              }
-            ]
+            parts: requestParts
           }
         ],
         generationConfig: {
@@ -135,15 +213,18 @@ serve(async (req) => {
     const { data: consultationRecord, error: saveError } = await supabaseAdmin
       .from('consultation_history')
       .insert({
-        user_id: userId,
-        symptoms: consultationData.symptoms ? [consultationData.symptoms] : [],
+        user_id: actualUserId,
+        symptoms: symptoms || (actualConsultationData.symptoms ? [actualConsultationData.symptoms] : []),
         ai_response: aiResponse,
-        symptom_duration: consultationData.symptom_duration ? parseInt(consultationData.symptom_duration) : null,
-        exam_results: Object.keys(consultationData).length > 0 ? consultationData : null,
+        symptom_duration: actualConsultationData.symptom_duration ? parseInt(actualConsultationData.symptom_duration) : null,
+        exam_results: Object.keys(actualConsultationData).length > 0 ? actualConsultationData : null,
         epidemiological_info: {
           profile_type: profile.profile_type,
-          consultation_fields: consultationData
-        }
+          consultation_fields: actualConsultationData
+        },
+        attachments: attachments,
+        consulta_original_id: consulta_original_id || null,
+        status: status
       })
       .select()
       .single();

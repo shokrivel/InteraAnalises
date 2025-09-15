@@ -293,17 +293,15 @@ const ConsultationChat = () => {
 )}
 
 {/* Nearby Doctors */}
-<Card>
-  <CardHeader>
-    <CardTitle>Profissionais de Saúde Recomendados</CardTitle>
-  </CardHeader>
-  <CardContent>
-    <NearbyDoctors specialty={consultationResponse.response} />
-  </CardContent>
-</Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Profissionais de Saúde Recomendados</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <NearbyDoctors prognosis={consultationResponse?.response} />
+              </CardContent>
+            </Card>
 
-          )}
-          <NearbyDoctors prognosis={consultationResponse?.response} />
           {/* Disclaimer */}
           <Card className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950">
             <CardContent className="pt-6">

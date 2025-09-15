@@ -63,11 +63,13 @@ export type Database = {
         Row: {
           ai_response: string | null
           attachments: Json | null
+          consulta_original_id: string | null
           created_at: string | null
           epidemiological_info: Json | null
           exam_results: Json | null
           family_symptoms: boolean | null
           id: string
+          status: string
           symptom_duration: number | null
           symptoms: string[] | null
           user_id: string
@@ -75,11 +77,13 @@ export type Database = {
         Insert: {
           ai_response?: string | null
           attachments?: Json | null
+          consulta_original_id?: string | null
           created_at?: string | null
           epidemiological_info?: Json | null
           exam_results?: Json | null
           family_symptoms?: boolean | null
           id?: string
+          status?: string
           symptom_duration?: number | null
           symptoms?: string[] | null
           user_id: string
@@ -87,14 +91,54 @@ export type Database = {
         Update: {
           ai_response?: string | null
           attachments?: Json | null
+          consulta_original_id?: string | null
           created_at?: string | null
           epidemiological_info?: Json | null
           exam_results?: Json | null
           family_symptoms?: boolean | null
           id?: string
+          status?: string
           symptom_duration?: number | null
           symptoms?: string[] | null
           user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consultation_history_consulta_original_id_fkey"
+            columns: ["consulta_original_id"]
+            isOneToOne: false
+            referencedRelation: "consultation_history"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      paginas_conteudo: {
+        Row: {
+          conteudo_texto: string
+          created_at: string
+          id: string
+          slug: string
+          titulo: string
+          updated_at: string
+          url_imagem: string | null
+        }
+        Insert: {
+          conteudo_texto: string
+          created_at?: string
+          id?: string
+          slug: string
+          titulo: string
+          updated_at?: string
+          url_imagem?: string | null
+        }
+        Update: {
+          conteudo_texto?: string
+          created_at?: string
+          id?: string
+          slug?: string
+          titulo?: string
+          updated_at?: string
+          url_imagem?: string | null
         }
         Relationships: []
       }
