@@ -12,9 +12,11 @@ function NearbyDoctors({ prognosis, userLocation }: NearbyDoctorsProps) {
 
   // Função que interpreta o prognóstico para escolher a especialidade
   const extractSpecialty = (text: string): string => {
-    const lower = text.toLowerCase();
+    if (!text) return "clínico geral";
 
-    if (lower.includes("dermat")) return "dermatologista";
+    const lower = text.toLowerCase();;
+
+  if (lower.includes("dermat")) return "dermatologista";
   if (lower.includes("cardio")) return "cardiologista";
   if (lower.includes("psiqui")) return "psiquiatra";
   if (lower.includes("gineco")) return "ginecologista";
@@ -86,10 +88,39 @@ function NearbyDoctors({ prognosis, userLocation }: NearbyDoctorsProps) {
 
       const specialty = extractSpecialty(prognosis);
 
-      // Definir localização (fixo SP se não vier nada)
-      const location = userLocation || "-23.5505,-46.6333"; 
-      const radius = 5000;
+      let location = "-23.5505,-46.6333"; // fallback padrão (SP)
 
+      // 1️⃣ Tentar geolocalização do navegador
+      const geolocation = await new Promise<string | null>((resolve) => {
+        if (!navigator.geolocation) return resolve(null);
+
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            resolve(`${pos.coords.latitude},${pos.coords.longitude}`);
+          },
+          () => resolve(null), // usuário negou
+          { timeout: 8000 }
+        );
+      });
+
+      if (geolocation) {
+        location = geolocation;
+      } else if (userAddress) {
+        // 2️⃣ Se não houver geolocalização, tentar converter o endereço do cadastro
+        const geoResponse = await fetch(
+          `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
+            userAddress
+          )}&key=${process.env.REACT_APP_GOOGLE_MAPS_KEY}`
+        );
+        const geoData = await geoResponse.json();
+        if (geoData.status === "OK" && geoData.results.length > 0) {
+          const loc = geoData.results[0].geometry.location;
+          location = `${loc.lat},${loc.lng}`;
+        }
+      }
+
+      // 3️⃣ Buscar médicos na API Places
+      const radius = 5000;
       const response = await fetch(
         `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${location}&radius=${radius}&type=doctor&keyword=${encodeURIComponent(
           specialty
@@ -104,6 +135,7 @@ function NearbyDoctors({ prognosis, userLocation }: NearbyDoctorsProps) {
         setError(`Erro da API: ${data.status}`);
       }
     } catch (err) {
+      console.error(err);
       setError("Erro ao buscar os profissionais de saúde");
     } finally {
       setLoading(false);
@@ -113,8 +145,8 @@ function NearbyDoctors({ prognosis, userLocation }: NearbyDoctorsProps) {
   return (
     <div>
       <h2 className="text-lg font-bold mt-6 mb-2">Médicos próximos</h2>
-      <button 
-        onClick={fetchDoctors} 
+      <button
+        onClick={fetchDoctors}
         className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
       >
         Buscar profissionais
