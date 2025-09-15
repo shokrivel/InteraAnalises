@@ -132,7 +132,7 @@ function NearbyDoctors({ prognosis, userAddress }: NearbyDoctorsProps) {
       const response = await fetch(
         `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${finalLocation}&radius=${radius}&type=doctor&keyword=${encodeURIComponent(
           specialty
-        )}&key=${process.env.REACT_APP_VITE_GOOGLE_MAPS_KEY}`
+        )}&key=${process.env.VITE_GOOGLE_MAPS_KEY}`
       );
 
       const data = await response.json();
