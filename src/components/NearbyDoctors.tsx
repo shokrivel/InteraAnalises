@@ -118,7 +118,7 @@ function NearbyDoctors({ prognosis, userAddress }: NearbyDoctorsProps) {
         const geoResponse = await fetch(
           `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
             userAddress
-          )}&key=${process.env.REACT_APP_GOOGLE_MAPS_KEY}`
+          )}&key=${process.env.REACT_APP_VITE_GOOGLE_MAPS_KEY}`
         );
         const geoData = await geoResponse.json();
         if (geoData.status === "OK" && geoData.results.length > 0) {
@@ -128,7 +128,7 @@ function NearbyDoctors({ prognosis, userAddress }: NearbyDoctorsProps) {
       }
 
       // Busca médicos no Google Places
-      const radius = 20000;
+      const radius = 5000;
       const response = await fetch(
         `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${finalLocation}&radius=${radius}&type=doctor&keyword=${encodeURIComponent(
           specialty

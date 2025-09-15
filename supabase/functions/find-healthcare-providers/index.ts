@@ -76,7 +76,7 @@ serve(async (req: Request) => {
 
     const { address, lat, lng, radius = 5000, type = 'all' }: FindProvidersRequest = await req.json();
 
-    const googleMapsApiKey = Deno.env.get('GOOGLE_MAPS_API_KEY');
+    const googleMapsApiKey = Deno.env.get('VITE_GOOGLE_MAPS_KEY');
     if (!googleMapsApiKey) {
       return new Response(JSON.stringify({ error: 'Google Maps API não configurado' }), {
         status: 500,
