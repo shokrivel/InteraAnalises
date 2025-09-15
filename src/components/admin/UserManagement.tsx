@@ -71,7 +71,7 @@ const UserManagement = () => {
       const usersWithRoles = profiles?.map(profile => ({
         ...profile,
         user_role: roleMap.get(profile.user_id) || 'user',
-        user_email: `user-${profile.user_id.slice(0, 8)}@example.com` // Placeholder
+        const email = user.email || user.user_metadata?.email;
       })) || [];
 
       setUsers(usersWithRoles);
