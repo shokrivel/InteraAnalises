@@ -90,11 +90,16 @@ function NearbyDoctors({ prognosis, userAddress }: NearbyDoctorsProps) {
       }
 
       // Busca médicos no Google Places
-      const radius = 5000;
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+        const { latitude, longitude } = position.coords;
+        try {
+          const radius = 15000;
+          const query = mapPrognosisToSpecialty(prognosis);
       const response = await fetch(
         `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${finalLocation}&radius=${radius}&type=doctor&keyword=${encodeURIComponent(
           specialty
-        )}&key=${process.env.VITE_GOOGLE_MAPS_KEY}`
+        )}&key=${import.meta.env.VITE_GOOGLE_MAPS_KEY}`
       );
 
       const data = await response.json();
