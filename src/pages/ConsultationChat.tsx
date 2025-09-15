@@ -67,15 +67,32 @@ const ConsultationChat = () => {
           description: "A IA analisou suas informações e gerou uma resposta personalizada.",
         });
 
-      } catch (error: any) {
-        console.error('Error processing consultation:', error);
-        toast({
-          title: "Erro ao processar consulta",
-          description: error.message || "Tente novamente mais tarde.",
-          variant: "destructive",
-        });
-        navigate("/dashboard");
-      } finally {
+      catch (error: any) {
+  console.error('Error processing consultation:', error);
+
+  // MELHORIA: Tenta extrair a mensagem de erro específica da função
+  let errorMessage = "Tente novamente mais tarde.";
+  if (error.message) {
+      try {
+          // A mensagem de erro da Supabase vem como uma string JSON
+          const parsedError = JSON.parse(error.message);
+          if (parsedError.error) {
+              errorMessage = parsedError.error;
+          }
+      } catch (e) {
+          // Se não for JSON, usa a mensagem original
+          errorMessage = error.message;
+      }
+  }
+
+  toast({
+    title: "Erro ao processar consulta",
+    description: errorMessage, // <--- USA A MENSAGEM DE ERRO ESPECÍFICA
+    variant: "destructive",
+  });
+  navigate("/dashboard");
+} finally {
+        
         setLoading(false);
       }
     };
