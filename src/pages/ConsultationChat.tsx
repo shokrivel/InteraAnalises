@@ -283,15 +283,27 @@ const ConsultationChat = () => {
           </Card>
 
           {/* Healthcare Providers Map */}
-          {showMap && profile && (
-            <Card>
-              <CardContent className="p-6">
-                <HealthcareProvidersMap 
-                  userAddress={profile.address && profile.city ? `${profile.address}, ${profile.city}` : undefined}
-                  onClose={() => setShowMap(false)}
-                />
-              </CardContent>
-            </Card>
+{showMap && profile && (
+  <Card>
+    <CardContent className="p-6">
+      <HealthcareProvidersMap 
+        userAddress={profile.address && profile.city ? `${profile.address}, ${profile.city}` : undefined}
+        onClose={() => setShowMap(false)}
+      />
+    </CardContent>
+  </Card>
+)}
+
+{/* Nearby Doctors */}
+<Card>
+  <CardHeader>
+    <CardTitle>Profissionais de Saúde Recomendados</CardTitle>
+  </CardHeader>
+  <CardContent>
+    <NearbyDoctors specialty={consultationResponse.response} />
+  </CardContent>
+</Card>
+
           )}
           <NearbyDoctors />
           {/* Disclaimer */}
