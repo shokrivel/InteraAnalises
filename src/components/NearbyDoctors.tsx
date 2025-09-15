@@ -1,31 +1,63 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
-interface Doctor {
-  place_id: string;
-  name: string;
-  vicinity: string;
-}
+function NearbyDoctors({ specialty = "clinica medica" }) {
+  const [doctors, setDoctors] = useState([]);
+  const [error, setError] = useState("");
+  const [map, setMap] = useState(null);
 
-function NearbyDoctors() {
-  const [doctors, setDoctors] = useState<Doctor[]>([]);
-  const [error, setError] = useState<string>("");
+  useEffect(() => {
+    // inicializa o mapa
+    const initMap = () => {
+      const mapInstance = new window.google.maps.Map(
+        document.getElementById("map"),
+        {
+          center: { lat: -23.5505, lng: -46.6333 },
+          zoom: 12,
+        }
+      );
+      setMap(mapInstance);
+    };
+
+    if (!window.google) {
+      const script = document.createElement("script");
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.REACT_APP_GOOGLE_MAPS_KEY}&libraries=places`;
+      script.onload = initMap;
+      document.body.appendChild(script);
+    } else {
+      initMap();
+    }
+  }, []);
 
   const fetchDoctors = async () => {
+    if (!map) return;
     try {
-      const location = "-23.5505,-46.6333";
-      const radius = 5000;
+      const service = new window.google.maps.places.PlacesService(map);
+      const request = {
+        location: map.getCenter(),
+        radius: 5000,
+        keyword: specialty, // usa o prognóstico como filtro
+        type: "doctor",
+      };
 
-      const response = await fetch(
-        `/api/nearby-doctors?location=${location}&radius=${radius}`
-      );
+      service.nearbySearch(request, (results, status) => {
+        if (status === window.google.maps.places.PlacesServiceStatus.OK) {
+          setDoctors(results);
+          results.forEach((place) => {
+            const marker = new window.google.maps.Marker({
+              map,
+              position: place.geometry.location,
+              title: place.name,
+            });
 
-      const data = await response.json();
-
-      if (data.status === "OK") {
-        setDoctors(data.results);
-      } else {
-        setError(`Erro da API: ${data.status}`);
-      }
+            marker.addListener("click", () => {
+              map.setCenter(place.geometry.location);
+              map.setZoom(16); // zoom no profissional
+            });
+          });
+        } else {
+          setError(`Erro da API: ${status}`);
+        }
+      });
     } catch (err) {
       setError("Erro ao buscar os profissionais de saúde");
     }
@@ -33,18 +65,11 @@ function NearbyDoctors() {
 
   return (
     <div>
-      <h2>Médicos próximos</h2>
+      <h2>Médicos próximos ({specialty})</h2>
       <button onClick={fetchDoctors}>Buscar</button>
+      <div id="map" style={{ width: "100%", height: "400px" }}></div>
 
       {error && <p style={{ color: "red" }}>{error}</p>}
-
-      <ul>
-        {doctors.map((doc) => (
-          <li key={doc.place_id}>
-            <strong>{doc.name}</strong> - {doc.vicinity}
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }
