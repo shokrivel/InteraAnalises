@@ -11,8 +11,9 @@ function NearbyDoctors({ prognosis, userAddress }: NearbyDoctorsProps) {
   const [loading, setLoading] = useState(false);
   const [permission, setPermission] = useState<PermissionState | null>(null);
   const [location, setLocation] = useState<string | null>(null);
+  const [mapUrl, setMapUrl] = useState<string>("");
 
-  // Checa status de permissão no load
+  // Checa status de permissão ao carregar
   useEffect(() => {
     if ("permissions" in navigator) {
       navigator.permissions
@@ -21,7 +22,7 @@ function NearbyDoctors({ prognosis, userAddress }: NearbyDoctorsProps) {
     }
   }, []);
 
-  // Atualiza em tempo real se permitido
+  // Atualiza localização em tempo real se permitido
   useEffect(() => {
     if (permission === "granted") {
       const watchId = navigator.geolocation.watchPosition(
@@ -127,7 +128,6 @@ function NearbyDoctors({ prognosis, userAddress }: NearbyDoctorsProps) {
         }
       }
 
-      // Busca médicos no Google Places
       const radius = 5000;
       const response = await fetch(
         `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${finalLocation}&radius=${radius}&type=doctor&keyword=${encodeURIComponent(
@@ -150,11 +150,20 @@ function NearbyDoctors({ prognosis, userAddress }: NearbyDoctorsProps) {
     }
   };
 
+  // Função para dar zoom no mapa
+  const handleZoom = (doc: any) => {
+    if (doc.geometry?.location) {
+      const { lat, lng } = doc.geometry.location;
+      setMapUrl(
+        `https://www.google.com/maps?q=${lat},${lng}&z=17&output=embed`
+      );
+    }
+  };
+
   return (
     <div>
       <h2 className="text-lg font-bold mt-6 mb-2">Médicos próximos</h2>
 
-      {/* Mostrar status da permissão */}
       {permission === "prompt" && (
         <p className="text-gray-600">
           Para localizar médicos próximos, permita o acesso à sua localização.
@@ -184,17 +193,25 @@ function NearbyDoctors({ prognosis, userAddress }: NearbyDoctorsProps) {
           <li key={doc.place_id} className="p-3 border rounded-md">
             <strong>{doc.name}</strong> <br />
             {doc.vicinity} <br />
-            <a
-              href={`https://www.google.com/maps/place/?q=place_id:${doc.place_id}`}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              onClick={() => handleZoom(doc)}
               className="text-blue-500 underline"
             >
               Ver no mapa
-            </a>
+            </button>
           </li>
         ))}
       </ul>
+
+      {mapUrl && (
+        <iframe
+          src={mapUrl}
+          width="100%"
+          height="400"
+          style={{ marginTop: "10px", border: 0 }}
+          loading="lazy"
+        ></iframe>
+      )}
     </div>
   );
 }
