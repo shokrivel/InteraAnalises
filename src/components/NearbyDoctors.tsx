@@ -1,12 +1,15 @@
 import React, { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { Loader } from "@googlemaps/js-api-loader";
 
-interface NearbyDoctorsProps {
-  consultationResponse: string;
-}
+export default function NearbyDoctors() {
+  const locationState = useLocation();
+  const consultationResponse: string =
+    (locationState.state as any)?.consultationResponse || "";
 
-export default function NearbyDoctors({ consultationResponse }: NearbyDoctorsProps) {
-  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(
+    null
+  );
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -55,8 +58,8 @@ export default function NearbyDoctors({ consultationResponse }: NearbyDoctorsPro
 
       const request: google.maps.places.PlaceSearchRequest = {
         location,
-        radius: 3000, // 3km de raio
-        keyword: `médico ${consultationResponse}`, // filtro pelo prognóstico
+        radius: 3000, // 3 km de raio
+        keyword: `doctor ${consultationResponse}`, // usa o prognóstico como filtro
       };
 
       service.nearbySearch(request, (results, status) => {
@@ -78,7 +81,7 @@ export default function NearbyDoctors({ consultationResponse }: NearbyDoctorsPro
   }, [location, consultationResponse]);
 
   return (
-    <div className="mt-6">
+    <div className="mt-6 p-6 max-w-4xl mx-auto">
       <h2 className="text-xl font-bold">Profissionais de Saúde Recomendados</h2>
       {error && <p className="text-red-500 mt-2">{error}</p>}
       {!location && !error && <p>Carregando localização...</p>}

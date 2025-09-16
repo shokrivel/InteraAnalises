@@ -2,11 +2,11 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import { useToast } from "@/components/ui/use-toast";
-import NearbyDoctors from "../components/NearbyDoctors";
 
 export default function ConsultationChat() {
   const navigate = useNavigate();
   const { toast } = useToast();
+
   const [patientName, setPatientName] = useState("");
   const [symptoms, setSymptoms] = useState("");
   const [consultationResponse, setConsultationResponse] = useState<string | null>(null);
@@ -15,7 +15,6 @@ export default function ConsultationChat() {
     e.preventDefault();
 
     try {
-      // Chama a API da IA (via Supabase Edge Function / RLS)
       const { data, error } = await supabase.functions.invoke("consultation-chat", {
         body: { patientName, symptoms },
       });
@@ -85,11 +84,6 @@ export default function ConsultationChat() {
           <h2 className="text-xl font-semibold">Resultado da Consulta</h2>
           <p className="mt-2">{consultationResponse}</p>
         </div>
-      )}
-
-      {/* Pré-visualização dos médicos próximos */}
-      {consultationResponse && (
-        <NearbyDoctors consultationResponse={consultationResponse} />
       )}
     </div>
   );
