@@ -4,93 +4,93 @@ import { supabase } from "../supabaseClient";
 import { useToast } from "@/components/ui/use-toast";
 import NearbyDoctors from "./NearbyDoctors";
 
-const ConsultationChat: React.FC<{ user: any }> = ({ user }) => {
-  const [consultationData, setConsultationData] = useState<any>(null);
-  const [consultationResponse, setConsultationResponse] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
+export default function ConsultationChat() {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const [patientName, setPatientName] = useState("");
+  const [symptoms, setSymptoms] = useState("");
+  const [consultationResponse, setConsultationResponse] = useState<string | null>(null);
 
-  const processConsultation = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
     try {
-      setLoading(true);
-
-      console.log("Sending consultation data to Gemini:", consultationData);
-
-      const { data, error } = await supabase.functions.invoke("gemini-consultation", {
-        body: {
-          consultationData: consultationData,
-          userId: user.id,
-        },
+      // Chama a API da IA (via Supabase Edge Function / RLS)
+      const { data, error } = await supabase.functions.invoke("consultation-chat", {
+        body: { patientName, symptoms },
       });
 
-      console.log("Gemini response:", data);
+      if (error) throw error;
 
-      if (error) {
-        throw new Error(error.message);
+      if (data) {
+        setConsultationResponse(data.response);
+
+        // Salva no histórico
+        const { error: insertError } = await supabase.from("consultations").insert([
+          {
+            patient_name: patientName,
+            symptoms,
+            response: data.response,
+          },
+        ]);
+
+        if (insertError) throw insertError;
+
+        toast({
+          title: "Consulta salva!",
+          description: "O resultado foi armazenado no histórico.",
+        });
+
+        // Redireciona para NearbyDoctors passando o prognóstico
+        navigate("/nearby-doctors", {
+          state: { consultationResponse: data.response },
+        });
       }
-
-      setConsultationResponse(data);
-
-      if (data.error) {
-        throw new Error(data.error);
-      }
-
+    } catch (err: any) {
+      console.error("Erro na consulta:", err.message);
       toast({
-        title: "Consulta processada com sucesso!",
-        description: "A IA analisou suas informações e gerou uma resposta personalizada.",
-      });
-    } catch (error: any) {
-      console.error("Error processing consultation:", error);
-
-      let errorMessage = "Tente novamente mais tarde.";
-      if (error.message) {
-        try {
-          const parsedError = JSON.parse(error.message);
-          if (parsedError.error) {
-            errorMessage = parsedError.error;
-          }
-        } catch (e) {
-          errorMessage = error.message;
-        }
-      }
-
-      toast({
-        title: "Erro ao processar consulta",
-        description: errorMessage,
+        title: "Erro",
+        description: "Não foi possível realizar a consulta.",
         variant: "destructive",
       });
-
-      navigate("/dashboard");
-    } finally {
-      setLoading(false);
     }
   };
 
   return (
-    <div>
-      <h1>Consulta Virtual</h1>
-      <button onClick={processConsultation} disabled={loading}>
-        {loading ? "Processando..." : "Enviar consulta"}
-      </button>
+    <div className="p-6 max-w-2xl mx-auto">
+      <h1 className="text-2xl font-bold mb-4">Consulta Inteligente</h1>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <input
+          type="text"
+          placeholder="Seu nome"
+          value={patientName}
+          onChange={(e) => setPatientName(e.target.value)}
+          className="w-full p-2 border rounded"
+          required
+        />
+        <textarea
+          placeholder="Descreva seus sintomas"
+          value={symptoms}
+          onChange={(e) => setSymptoms(e.target.value)}
+          className="w-full p-2 border rounded"
+          required
+        />
+        <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded">
+          Enviar
+        </button>
+      </form>
 
       {consultationResponse && (
-        <div>
-          <h2>Resultado da Consulta</h2>
-          <p>{consultationResponse?.diagnosis}</p>
-          <p>
-            <strong>Profissional recomendado:</strong>{" "}
-            {consultationResponse?.recommendedDoctor}
-          </p>
-
-          {/* Integração com NearbyDoctors */}
-          <NearbyDoctors
-            query={consultationResponse?.recommendedDoctor || "clínica médica"}
-          />
+        <div className="mt-6 p-4 border rounded bg-gray-50">
+          <h2 className="text-xl font-semibold">Resultado da Consulta</h2>
+          <p className="mt-2">{consultationResponse}</p>
         </div>
+      )}
+
+      {/* Pré-visualização dos médicos próximos */}
+      {consultationResponse && (
+        <NearbyDoctors consultationResponse={consultationResponse} />
       )}
     </div>
   );
-};
-
-export default ConsultationChat;
+}

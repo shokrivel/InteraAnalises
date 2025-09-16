@@ -1,132 +1,88 @@
-import React, { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client"; 
+import React, { useEffect, useState } from "react";
+import { Loader } from "@googlemaps/js-api-loader";
 
 interface NearbyDoctorsProps {
-  prognosis?: string;
-  userAddress?: string;
+  consultationResponse: string;
 }
 
-function NearbyDoctors({ prognosis, userAddress }: NearbyDoctorsProps) {
-  const [doctors, setDoctors] = useState<any[]>([]);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+export default function NearbyDoctors({ consultationResponse }: NearbyDoctorsProps) {
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [map, setMap] = useState<google.maps.Map | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  // Pega a localização em tempo real
+  // Solicita permissão de localização
   useEffect(() => {
-    if (!navigator.geolocation) {
-      setError("Seu navegador não suporta geolocalização.");
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-      },
-      (err) => {
-        console.warn("Erro ao obter localização, usando fallback:", err.message);
-        setError("Não foi possível acessar sua localização. Usando fallback (SP).");
-        setLocation({ lat: -23.55052, lng: -46.633308 }); // fallback SP
-      }
-    );
-  }, []);
-
-  // Função que mapeia prognóstico → especialidade (em inglês)
-  const mapPrognosisToSpecialty = (prog: string): string => {
-    if (!prog) return "doctor";
-    const lower = prog.toLowerCase();
-    if (lower.includes("pele") || lower.includes("acne")) return "dermatologist";
-    if (lower.includes("coração") || lower.includes("pressão")) return "cardiologist";
-    if (lower.includes("pulmão") || lower.includes("asma")) return "pulmonologist";
-    if (lower.includes("estômago") || lower.includes("gastrite")) return "gastroenterologist";
-    if (lower.includes("ansiedade") || lower.includes("depressão")) return "psychiatrist";
-    return "doctor";
-  };
-
-  const fetchSpecialists = async () => {
-    if (!prognosis) {
-      setError("Prognóstico não disponível para buscar especialistas.");
-      return;
-    }
-
-    setLoading(true);
-    setError("");
-    setDoctors([]);
-
-    try {
-      const specialtyKeyword = mapPrognosisToSpecialty(prognosis);
-      console.log(`🔎 Buscando por especialistas: ${specialtyKeyword}`);
-
-      // Decide qual localização usar
-      let searchLocation = location;
-      if (!searchLocation && userAddress) {
-        console.log("📍 Usando endereço do usuário como fallback:", userAddress);
-      }
-
-      // Chama Edge Function no Supabase
-      const { data, error: invokeError } = await supabase.functions.invoke(
-        "find-healthcare-providers",
-        {
-          body: {
-            address: userAddress,
-            keyword: specialtyKeyword,
-            radius: 15000,
-            location: searchLocation, // se tiver lat/lng do navegador
-          },
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
+        },
+        (err) => {
+          console.error("Erro ao obter localização:", err);
+          setError("Não foi possível acessar sua localização.");
         }
       );
-
-      if (invokeError) throw invokeError;
-      if (data.error) throw new Error(data.error);
-
-      setDoctors(data.providers || []);
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message || "Erro ao buscar especialistas.");
-    } finally {
-      setLoading(false);
+    } else {
+      setError("Geolocalização não é suportada pelo navegador.");
     }
-  };
+  }, []);
+
+  // Carrega o Google Maps
+  useEffect(() => {
+    if (!location) return;
+
+    const loader = new Loader({
+      apiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
+      version: "weekly",
+      libraries: ["places"],
+    });
+
+    loader.load().then(() => {
+      const mapElement = document.getElementById("map") as HTMLElement;
+      if (!mapElement) return;
+
+      const mapInstance = new google.maps.Map(mapElement, {
+        center: location,
+        zoom: 14,
+      });
+      setMap(mapInstance);
+
+      // Busca médicos próximos
+      const service = new google.maps.places.PlacesService(mapInstance);
+
+      const request: google.maps.places.PlaceSearchRequest = {
+        location,
+        radius: 3000, // 3km de raio
+        keyword: `médico ${consultationResponse}`, // filtro pelo prognóstico
+      };
+
+      service.nearbySearch(request, (results, status) => {
+        if (status === google.maps.places.PlacesServiceStatus.OK && results) {
+          results.forEach((place) => {
+            if (place.geometry && place.geometry.location) {
+              new google.maps.Marker({
+                position: place.geometry.location,
+                map: mapInstance,
+                title: place.name,
+              });
+            }
+          });
+        } else {
+          setError("Erro ao buscar os profissionais de saúde");
+        }
+      });
+    });
+  }, [location, consultationResponse]);
 
   return (
-    <div>
-      <h2 className="text-lg font-bold mt-6 mb-2">Especialistas recomendados na sua região</h2>
-      <button
-        onClick={fetchSpecialists}
-        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 mt-2 disabled:bg-gray-400"
-        disabled={loading}
-      >
-        {loading ? "Buscando..." : "Buscar especialistas próximos"}
-      </button>
-
-      {error && <p className="text-red-600 mt-2">{error}</p>}
-
-      {doctors.length > 0 && (
-        <ul className="mt-4 space-y-2">
-          {doctors.map((doc) => (
-            <li key={doc.id} className="p-3 border rounded-md">
-              <strong>{doc.name}</strong> <br />
-              <span>{doc.address}</span> <br />
-              {doc.rating > 0 && (
-                <span>
-                  Nota: {doc.rating} ⭐ ({doc.reviewCount} avaliações)
-                </span>
-              )}
-              <br />
-              <a
-                href={`https://www.google.com/maps/place/?q=place_id:${doc.id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-500 underline"
-              >
-                Ver no mapa
-              </a>
-            </li>
-          ))}
-        </ul>
-      )}
+    <div className="mt-6">
+      <h2 className="text-xl font-bold">Profissionais de Saúde Recomendados</h2>
+      {error && <p className="text-red-500 mt-2">{error}</p>}
+      {!location && !error && <p>Carregando localização...</p>}
+      <div id="map" className="w-full h-96 mt-4 rounded border" />
     </div>
   );
 }
-
-export default NearbyDoctors;
