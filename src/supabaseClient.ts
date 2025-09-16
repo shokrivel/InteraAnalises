@@ -3,10 +3,10 @@ import { createClient } from "@supabase/supabase-js";
 
 // Pegando variáveis de ambiente
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error("⚠️ Variáveis VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY não estão configuradas!");
+  throw new Error("⚠️ Variáveis VITE_SUPABASE_URL e VITE_SUPABASE_PUBLISHABLE_KEY não estão configuradas!");
 }
 
 // Criando instância do cliente Supabase
