@@ -1,35 +1,29 @@
-// src/pages/Profile.tsx
-import React, { useState } from "react";
+import React from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import EditProfile from "@/pages/EditProfile"; // edição de perfil
+import EditProfile from "@/pages/EditProfile";
 import { useToast } from "@/hooks/use-toast";
 
 const Profile = () => {
   const { user } = useAuth();
-  const [editing, setEditing] = useState(false);
   const { toast } = useToast();
 
   if (!user) {
-    return <p>Carregando informações do perfil...</p>;
+    return <p className="text-center mt-6">Você precisa estar logado para ver o perfil.</p>;
   }
 
   return (
-    <div className="p-6">
-      {!editing ? (
+    <div className="max-w-3xl mx-auto px-4 py-8">
+      <h1 className="text-2xl font-bold mb-6">Meu Perfil</h1>
+
+      <div className="bg-white shadow rounded-lg p-6 space-y-4">
         <div>
-          <h2 className="text-2xl font-bold mb-4">Perfil</h2>
+          <p><strong>Nome:</strong> {user.user_metadata?.name || "Não informado"}</p>
           <p><strong>Email:</strong> {user.email}</p>
-          <p><strong>Nome:</strong> {user.user_metadata?.full_name || "Não informado"}</p>
-          <button
-            onClick={() => setEditing(true)}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg"
-          >
-            Editar Perfil
-          </button>
         </div>
-      ) : (
-        <EditProfile onClose={() => setEditing(false)} />
-      )}
+
+        {/* Somente botão para editar perfil */}
+        <EditProfile />
+      </div>
     </div>
   );
 };
