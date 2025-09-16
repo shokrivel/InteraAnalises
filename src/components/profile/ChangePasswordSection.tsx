@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 type Props = {
-  onClose: () => void;
+  onClose?: () => void;
 };
 
 const ChangePassword = ({ onClose }: Props) => {
@@ -33,7 +33,7 @@ const ChangePassword = ({ onClose }: Props) => {
       const { data, error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
       toast({ title: "Senha alterada", description: "Sua senha foi atualizada com sucesso." });
-      onClose();
+      onClose?.();
     } catch (err: any) {
       console.error(err);
       toast({ title: "Erro", description: err.message || "Não foi possível alterar a senha.", variant: "destructive" });
@@ -61,7 +61,7 @@ const ChangePassword = ({ onClose }: Props) => {
 
         <div className="flex gap-3 mt-4">
           <Button onClick={handleSubmit} disabled={loading}>Salvar</Button>
-          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          {onClose && <Button variant="outline" onClick={onClose}>Cancelar</Button>}
         </div>
       </div>
     </div>
