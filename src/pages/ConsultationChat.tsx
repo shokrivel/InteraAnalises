@@ -24,6 +24,7 @@ const ConsultationChat = () => {
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [showMap, setShowMap] = useState(false);
+  const [providers, setProviders] = useState<any[]>([]); // ← lista de especialistas buscados no Supabase
   const { user } = useAuth();
   const { profile } = useProfile();
   const navigate = useNavigate();
@@ -42,37 +43,56 @@ const ConsultationChat = () => {
       try {
         setLoading(true);
 
-        console.log('Sending consultation data to Gemini:', consultationData);
+        console.log("📤 Enviando dados para Gemini:", consultationData);
 
-        const { data, error } = await supabase.functions.invoke('gemini-consultation', {
+        const { data, error } = await supabase.functions.invoke("gemini-consultation", {
           body: {
             consultationData: consultationData,
-            userId: user.id
-          }
+            userId: user.id,
+          },
         });
 
-        console.log('Gemini response:', data);
+        console.log("🤖 Resposta da IA:", data);
 
-        if (error) {
-          throw new Error(error.message);
-        }
-
-        if (data.error) {
-          throw new Error(data.error);
-        }
+        if (error) throw new Error(error.message);
+        if (data.error) throw new Error(data.error);
 
         setConsultationResponse(data);
 
-        // Abrir mapa automaticamente ao receber a resposta da IA
+        // 👉 Ponto 1: extrair diagnóstico/especialidade
+        const extractedSpecialty = data.suggestedSpecialty || "Clínico Geral";
+
+        // 👉 Ponto 2: chamar Supabase para buscar especialistas próximos
+        if (profile?.address && profile?.city) {
+          const userAddress = `${profile.address}, ${profile.city}`;
+          console.log("📍 Buscando especialistas próximos:", extractedSpecialty, "em", userAddress);
+
+          const { data: providerData, error: providerError } =
+            await supabase.functions.invoke("find-healthcare-providers", {
+              body: {
+                address: userAddress,
+                keyword: extractedSpecialty,
+              },
+            });
+
+          if (providerError) {
+            console.error("Erro na busca de especialistas:", providerError);
+          } else {
+            console.log("👩‍⚕️ Especialistas encontrados:", providerData?.providers || []);
+            setProviders(providerData?.providers || []);
+          }
+        }
+
+        // 👉 Ponto 3: abrir o mapa automaticamente
         setShowMap(true);
 
         toast({
           title: "Consulta processada com sucesso!",
-          description: "A IA analisou suas informações e gerou uma resposta personalizada.",
+          description:
+            "A IA analisou suas informações e gerou uma resposta personalizada.",
         });
-
       } catch (error: any) {
-        console.error('Error processing consultation:', error);
+        console.error("Erro ao processar consulta:", error);
         toast({
           title: "Erro ao processar consulta",
           description: error.message || "Tente novamente mais tarde.",
@@ -85,7 +105,7 @@ const ConsultationChat = () => {
     };
 
     processConsultation();
-  }, [user, consultationData, navigate, toast]);
+  }, [user, consultationData, navigate, toast, profile]);
 
   const copyToClipboard = async () => {
     if (consultationResponse?.response) {
@@ -108,9 +128,9 @@ const ConsultationChat = () => {
   };
 
   const profileLabels = {
-    patient: 'Paciente',
-    academic: 'Acadêmico',
-    health_professional: 'Profissional de Saúde'
+    patient: "Paciente",
+    academic: "Acadêmico",
+    health_professional: "Profissional de Saúde",
   };
 
   if (loading) {
@@ -127,8 +147,14 @@ const ConsultationChat = () => {
             </p>
             <div className="flex items-center justify-center space-x-1">
               <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
-              <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-              <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+              <div
+                className="w-2 h-2 bg-primary rounded-full animate-bounce"
+                style={{ animationDelay: "0.1s" }}
+              ></div>
+              <div
+                className="w-2 h-2 bg-primary rounded-full animate-bounce"
+                style={{ animationDelay: "0.2s" }}
+              ></div>
             </div>
           </div>
         </div>
@@ -147,9 +173,7 @@ const ConsultationChat = () => {
             <p className="text-muted-foreground mb-4">
               Não foi possível processar sua consulta.
             </p>
-            <Button onClick={() => navigate("/dashboard")}>
-              Voltar ao Dashboard
-            </Button>
+            <Button onClick={() => navigate("/dashboard")}>Voltar ao Dashboard</Button>
           </CardContent>
         </Card>
       </div>
@@ -162,11 +186,7 @@ const ConsultationChat = () => {
       <header className="border-b border-border bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/80">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate("/dashboard")}
-            >
+            <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
               <ArrowLeft className="w-4 h-4 mr-2" />
               Voltar
             </Button>
@@ -184,7 +204,6 @@ const ConsultationChat = () => {
       {/* Chat Content */}
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto space-y-6">
-
           {/* User Message */}
           <div className="flex items-start space-x-3">
             <Avatar>
@@ -202,9 +221,14 @@ const ConsultationChat = () => {
                     </Badge>
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    <p><strong>Consulta enviada:</strong> {Object.keys(consultationData).length} campos preenchidos</p>
+                    <p>
+                      <strong>Consulta enviada:</strong>{" "}
+                      {Object.keys(consultationData).length} campos preenchidos
+                    </p>
                     {consultationData.symptoms && (
-                      <p className="mt-2"><strong>Sintomas:</strong> {consultationData.symptoms}</p>
+                      <p className="mt-2">
+                        <strong>Sintomas:</strong> {consultationData.symptoms}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -245,13 +269,16 @@ const ConsultationChat = () => {
                   </div>
 
                   <div className="prose prose-sm max-w-none">
-                    {consultationResponse.response.split('\n').map((paragraph, index) => (
-                      paragraph.trim() && (
-                        <p key={index} className="mb-3 leading-relaxed">
-                          {paragraph.trim()}
-                        </p>
-                      )
-                    ))}
+                    {consultationResponse.response
+                      .split("\n")
+                      .map(
+                        (paragraph, index) =>
+                          paragraph.trim() && (
+                            <p key={index} className="mb-3 leading-relaxed">
+                              {paragraph.trim()}
+                            </p>
+                          )
+                      )}
                   </div>
                 </div>
               </CardContent>
@@ -264,13 +291,13 @@ const ConsultationChat = () => {
               <div className="text-center space-y-4">
                 <h3 className="font-medium">Próximos passos</h3>
                 <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                  <Button 
+                  <Button
                     onClick={() => setShowMap(!showMap)}
                     variant="outline"
                     className="flex items-center gap-2"
                   >
                     <MapPin className="h-4 w-4" />
-                    {showMap ? 'Ocultar Mapa' : 'Ver Profissionais Próximos'}
+                    {showMap ? "Ocultar Mapa" : "Ver Profissionais Próximos"}
                   </Button>
                   <Button onClick={() => navigate("/consultation")}>
                     Nova Consulta
@@ -280,7 +307,8 @@ const ConsultationChat = () => {
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Esta consulta foi salva no seu histórico. ID: {consultationResponse.consultationId?.slice(0, 8)}...
+                  Esta consulta foi salva no seu histórico. ID:{" "}
+                  {consultationResponse.consultationId?.slice(0, 8)}...
                 </p>
               </div>
             </CardContent>
@@ -290,11 +318,39 @@ const ConsultationChat = () => {
           {showMap && profile && consultationResponse && (
             <Card>
               <CardContent className="p-6">
-                <HealthcareProvidersMap 
-                  userAddress={profile.address && profile.city ? `${profile.address}, ${profile.city}` : undefined}
+                <HealthcareProvidersMap
+                  userAddress={
+                    profile.address && profile.city
+                      ? `${profile.address}, ${profile.city}`
+                      : undefined
+                  }
                   keyword={consultationResponse.suggestedSpecialty} // ← keyword da IA
                   onClose={() => setShowMap(false)}
                 />
+
+                {/* Debug: lista de especialistas */}
+                {providers.length > 0 && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                    {providers.map((prov, idx) => (
+                      <Card key={idx} className="border">
+                        <CardHeader>
+                          <CardTitle>{prov.name}</CardTitle>
+                          <p className="text-sm text-muted-foreground">
+                            {consultationResponse.suggestedSpecialty}
+                          </p>
+                        </CardHeader>
+                        <CardContent>
+                          <p>{prov.address}</p>
+                          {prov.rating && (
+                            <p className="mt-2">
+                              ⭐ {prov.rating} ({prov.userRatingsTotal} avaliações)
+                            </p>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}
@@ -303,13 +359,13 @@ const ConsultationChat = () => {
           <Card className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950">
             <CardContent className="pt-6">
               <p className="text-sm text-amber-800 dark:text-amber-200">
-                <strong>Importante:</strong> Esta resposta é gerada por inteligência artificial para fins educativos e informativos. 
-                Não substitui o diagnóstico médico profissional. Em caso de emergência ou sintomas graves, 
-                procure atendimento médico imediatamente.
+                <strong>Importante:</strong> Esta resposta é gerada por inteligência artificial
+                para fins educativos e informativos. Não substitui o diagnóstico médico
+                profissional. Em caso de emergência ou sintomas graves, procure atendimento
+                médico imediatamente.
               </p>
             </CardContent>
           </Card>
-
         </div>
       </div>
     </div>
