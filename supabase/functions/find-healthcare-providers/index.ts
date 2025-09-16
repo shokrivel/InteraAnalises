@@ -81,29 +81,28 @@ serve(async (req) => {
       );
     }
 
-    // Formata resultados para o frontend
-    const formattedResults = (placesData.results || []).map((place: any) => ({
-      name: place.name,
-      address: place.vicinity,
-      rating: place.rating || null,
-      userRatingsTotal: place.user_ratings_total || 0,
-      location: place.geometry?.location || null,
-      placeId: place.place_id,
-      types: place.types || [],
-    }));
+    // Formata resultados para o frontend e adiciona especialidade
+const formattedResults = (placesData.results || []).map((place)=>({
+    name: place.name,
+    address: place.vicinity,
+    rating: place.rating || null,
+    userRatingsTotal: place.user_ratings_total || 0,
+    location: place.geometry?.location || null,
+    placeId: place.place_id,
+    types: place.types || [],
+    specialty: providerType // <-- adiciona especialidade inferida
+  }));
 
-    return new Response(
-      JSON.stringify({
-        providers: formattedResults,
-        searchLocation: { lat: searchLat, lng: searchLng },
-      }),
-      { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } },
-    );
-  } catch (error) {
-    console.error("Error in find-healthcare-providers:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
-    });
+return new Response(JSON.stringify({
+  providers: formattedResults,
+  searchLocation: {
+    lat: searchLat,
+    lng: searchLng
+  }
+}), {
+  status: 200,
+  headers: {
+    "Content-Type": "application/json",
+    ...corsHeaders
   }
 });
