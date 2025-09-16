@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import { useToast } from "@/components/ui/use-toast";
-import NearbyDoctors from "./NearbyDoctors";
+import NearbyDoctors from "../components/NearbyDoctors";
 
 export default function ConsultationChat() {
   const navigate = useNavigate();
