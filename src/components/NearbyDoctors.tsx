@@ -1,171 +1,109 @@
-// src/components/NearbyDoctors.tsx
-import React, { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 
-interface NearbyDoctorsProps {
-  prognosis?: string;
-  userAddress?: string;
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+// Função auxiliar para determinar o tipo de profissional a partir da especialidade/diagnóstico
+function determineProviderType(keyword?: string): string {
+  if (!keyword) return "doctor";
+  const lower = keyword.toLowerCase();
+
+  if (lower.includes("cardio")) return "cardiologist";
+  if (lower.includes("derma") || lower.includes("pele")) return "dermatologist";
+  if (lower.includes("psiqu")) return "psychiatrist";
+  if (lower.includes("psico")) return "psychologist";
+  if (lower.includes("gineco")) return "gynecologist";
+  if (lower.includes("orto")) return "orthopedist";
+  if (lower.includes("pedi")) return "pediatrician";
+
+  return "doctor"; // fallback genérico
 }
 
-interface Provider {
-  id: string;
-  name: string;
-  address?: string;
-  place_id?: string;
-  rating?: number;
-  user_ratings_total?: number;
-  lat?: number;
-  lng?: number;
-}
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
 
-function NearbyDoctors({ prognosis, userAddress }: NearbyDoctorsProps) {
-  const [doctors, setDoctors] = useState<Provider[]>([]);
-  const [error, setError] = useState<string>("");
-  const [loading, setLoading] = useState<boolean>(false);
-  const [permissionState, setPermissionState] = useState<PermissionState | null>(null);
+  try {
+    const { address, lat, lng, radius = 15000, keyword } = await req.json();
 
-  useEffect(() => {
-    // Consulta inicial do estado de permissões (opcional)
-    if ("permissions" in navigator) {
-      (navigator as any).permissions.query({ name: "geolocation" }).then((res: any) => {
-        setPermissionState(res.state);
-        res.onchange = () => setPermissionState(res.state);
-      }).catch(() => setPermissionState(null));
-    }
-  }, []);
-
-  const mapPrognosisToSpecialty = (prog: string): string => {
-    if (!prog) return "doctor";
-    const lower = prog.toLowerCase();
-    if (lower.includes("pele") || lower.includes("acne") || lower.includes("derm")) return "dermatologist";
-    if (lower.includes("coração") || lower.includes("pressão") || lower.includes("cardio")) return "cardiologist";
-    if (lower.includes("pulmão") || lower.includes("asma") || lower.includes("pneumo")) return "pulmonologist";
-    if (lower.includes("estômago") || lower.includes("gastrite") || lower.includes("gastro")) return "gastroenterologist";
-    if (lower.includes("infec") || lower.includes("febre") || lower.includes("paras")) return "infectious disease specialist";
-    if (lower.includes("sangue") || lower.includes("hemat")) return "hematologist";
-    // adicionar outros mapeamentos conforme necessidade
-    return "doctor";
-  };
-
-  const fetchSpecialists = async () => {
-    if (!prognosis) {
-      setError("Prognóstico não disponível para buscar especialistas.");
-      return;
+    const googleMapsApiKey = Deno.env.get("GOOGLE_MAPS_KEY");
+    if (!googleMapsApiKey) {
+      throw new Error("Google Maps API Key not configured in Supabase secrets.");
     }
 
-    setLoading(true);
-    setError("");
-    setDoctors([]);
+    let searchLat: number;
+    let searchLng: number;
 
-    const specialtyKeyword = mapPrognosisToSpecialty(prognosis);
+    // Se não tiver coordenadas, usa endereço para geocodificação
+    if (!lat || !lng) {
+      if (!address) throw new Error("Address or coordinates are required.");
 
-    // Tenta pegar localização atual
-    const tryUseCurrentLocation = (): Promise<{ lat: number; lng: number } | null> => {
-      return new Promise((resolve) => {
-        if (!navigator.geolocation) return resolve(null);
-        navigator.geolocation.getCurrentPosition(
-          (position) => resolve({ lat: position.coords.latitude, lng: position.coords.longitude }),
-          () => resolve(null),
-          { enableHighAccuracy: true, timeout: 10000 }
-        );
-      });
-    };
+      const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
+        address,
+      )}&key=${googleMapsApiKey}`;
 
-    try {
-      const current = await tryUseCurrentLocation();
+      const geocodeResponse = await fetch(geocodeUrl);
+      const geocodeData = await geocodeResponse.json();
 
-      let payload: any = {
-        keyword: specialtyKeyword,
-        radius: 15000 // 15 km
-      };
-
-      if (current) {
-        payload.lat = current.lat;
-        payload.lng = current.lng;
-      } else if (userAddress) {
-        payload.address = userAddress;
-      } else {
-        // fallback - sem localização nem endereço
-        setError("Não foi possível obter sua localização e não há endereço cadastrado.");
-        setLoading(false);
-        return;
+      if (geocodeData.status !== "OK" || !geocodeData.results.length) {
+        throw new Error("Address not found.");
       }
 
-      // Chama a edge function do Supabase (servidor)
-      const { data, error: invokeError } = await supabase.functions.invoke('find-healthcare-providers', {
-        body: payload
-      });
-
-      if (invokeError) throw invokeError;
-      if (!data) throw new Error("Sem dados retornados da função.");
-
-      const providers: Provider[] = (data.providers || []).map((p: any) => ({
-        id: p.place_id || p.id || p.uid,
-        name: p.name,
-        address: p.vicinity || p.formatted_address || p.address,
-        place_id: p.place_id,
-        rating: p.rating,
-        user_ratings_total: p.user_ratings_total,
-        lat: p.geometry?.location?.lat || p.lat,
-        lng: p.geometry?.location?.lng || p.lng
-      }));
-
-      setDoctors(providers);
-    } catch (err: any) {
-      console.error(err);
-      setError(err?.message || "Erro ao buscar os profissionais de saúde");
-    } finally {
-      setLoading(false);
+      const location = geocodeData.results[0].geometry.location;
+      searchLat = location.lat;
+      searchLng = location.lng;
+    } else {
+      searchLat = lat;
+      searchLng = lng;
     }
-  };
 
-  return (
-    <div>
-      <h2 className="text-lg font-bold mt-6 mb-2">Especialistas recomendados na sua região</h2>
+    // Define tipo de profissional baseado no diagnóstico/especialidade
+    const providerType = determineProviderType(keyword);
 
-      {permissionState === "prompt" && (
-        <p className="text-gray-600">Para localizar profissionais, permita o acesso à sua localização no navegador.</p>
-      )}
-      {permissionState === "denied" && (
-        <p className="text-red-600">Localização bloqueada. Habilite nas configurações do navegador.</p>
-      )}
+    // Monta URL do Google Places
+    const placesUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${searchLat},${searchLng}&radius=${radius}&type=doctor&keyword=${encodeURIComponent(
+      providerType,
+    )}&key=${googleMapsApiKey}`;
 
-      <button
-        onClick={fetchSpecialists}
-        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 mt-2 disabled:bg-gray-400"
-        disabled={loading}
-      >
-        {loading ? "Buscando..." : "Buscar especialistas próximos"}
-      </button>
+    console.log("Searching URL:", placesUrl);
 
-      {error && <p className="text-red-600 mt-2">{error}</p>}
+    const placesResponse = await fetch(placesUrl);
+    const placesData = await placesResponse.json();
 
-      {doctors.length > 0 && (
-        <ul className="mt-4 space-y-2">
-          {doctors.map((doc) => (
-            <li key={doc.id} className="p-3 border rounded-md">
-              <strong>{doc.name}</strong> <br />
-              <span>{doc.address}</span> <br />
-              {doc.rating !== undefined && <span>Nota: {doc.rating} ⭐ ({doc.user_ratings_total || 0} avaliações)</span>}
-              <br />
-              {doc.place_id ? (
-                <a
-                  href={`https://www.google.com/maps/place/?q=place_id:${doc.place_id}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-500 underline"
-                >
-                  Ver no mapa / Abrir no Google Maps
-                </a>
-              ) : (
-                <span className="text-muted-foreground">Localização indisponível</span>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
+    if (placesData.status !== "OK") {
+      throw new Error(
+        `Google Places API Error: ${placesData.status} - ${
+          placesData.error_message || ""
+        }`,
+      );
+    }
 
-export default NearbyDoctors;
+    // Formata resultados para o frontend
+    const formattedResults = (placesData.results || []).map((place: any) => ({
+      name: place.name,
+      address: place.vicinity,
+      rating: place.rating || null,
+      userRatingsTotal: place.user_ratings_total || 0,
+      location: place.geometry?.location || null,
+      placeId: place.place_id,
+      types: place.types || [],
+    }));
+
+    return new Response(
+      JSON.stringify({
+        providers: formattedResults,
+        searchLocation: { lat: searchLat, lng: searchLng },
+      }),
+      { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } },
+    );
+  } catch (error) {
+    console.error("Error in find-healthcare-providers:", error);
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json", ...corsHeaders },
+    });
+  }
+});
