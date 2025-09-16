@@ -34,69 +34,68 @@ const ConsultationChat: React.FC = () => {
 
   const consultationData = location.state?.consultationData;
 
-  useEffect(() => {
-    if (!user || !consultationData) {
-      navigate("/dashboard");
-      return;
-    }
+ // dentro de ConsultationChat.tsx -> useEffect
+useEffect(() => {
+  if (!user || !consultationData) {
+    navigate("/dashboard");
+    return;
+  }
 
-    const processConsultation = async () => {
-      try {
-        setLoading(true);
-        console.log("Sending consultation data to Gemini:", consultationData);
+  const processConsultation = async () => {
+    try {
+      setLoading(true);
+      console.log('Sending consultation data to Gemini:', consultationData);
 
-        const { data, error } = await supabase.functions.invoke('gemini-consultation', {
-          body: {
-            consultationData: consultationData,
-            userId: user.id
-          }
-        });
-
-        // Sempre setar o retorno, mesmo que haja warnings
-        if (data) {
-          // data pode conter: response, consultationId, diagnosis, userAddress, ...
-          setConsultationResponse(data as ConsultationResponse);
+      const { data, error } = await supabase.functions.invoke('gemini-consultation', {
+        body: {
+          consultationData: consultationData,
+          userId: user.id
         }
+      });
 
-        if (error) {
-          throw new Error(error.message || "Erro na função de consulta.");
-        }
+      console.log('Gemini response raw:', data, 'error:', error);
 
-        if ((data as any)?.error) {
-          throw new Error((data as any).error);
-        }
-
-        toast({
-          title: "Consulta processada com sucesso!",
-          description: "A IA analisou suas informações e gerou uma resposta personalizada.",
-        });
-
-      } catch (err: any) {
-        console.error('Error processing consultation:', err);
-
-        // tenta extrair mensagem específica (quando error.message for JSON)
-        let errorMessage = err?.message || "Tente novamente mais tarde.";
-        try {
-          const parsed = typeof err?.message === 'string' ? JSON.parse(err.message) : null;
-          if (parsed?.error) errorMessage = parsed.error;
-        } catch (e) {
-          // ignore
-        }
-
-        toast({
-          title: "Erro ao processar consulta",
-          description: errorMessage,
-          variant: "destructive",
-        });
-        navigate("/dashboard");
-      } finally {
-        setLoading(false);
+      if (error) {
+        throw new Error(error.message || 'Erro na função gemini-consultation');
       }
-    };
+      // data pode já ter a estrutura { response, consultationId, profileType }
+      if (data?.error) {
+        throw new Error(data.error);
+      }
 
-    processConsultation();
-  }, [user, consultationData, navigate, toast]);
+      // **IMPORTANTE**: garantir que o formato esteja correto
+      const formatted = {
+        response: data.response ?? String(data),
+        consultationId: data.consultationId ?? data.id ?? '',
+        profileType: data.profileType ?? consultationData.profileType ?? 'patient'
+      };
 
+      setConsultationResponse(formatted);
+
+      toast({
+        title: "Consulta processada com sucesso!",
+        description: "A IA analisou suas informações e gerou uma resposta personalizada.",
+      });
+
+    } catch (err: any) {
+      console.error('Error processing consultation:', err);
+      // tenta extrair mensagem detalhada
+      const errMsg = err?.message ?? 'Tente novamente mais tarde.';
+      toast({
+        title: "Erro ao processar consulta",
+        description: errMsg,
+        variant: "destructive",
+      });
+      // Não redirecionar imediatamente em todos os erros — apenas em erros críticos se quiser
+      // navigate("/dashboard");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  processConsultation();
+}, [user, consultationData, navigate, toast]);
+  
   const copyToClipboard = async () => {
     if (consultationResponse?.response) {
       try {
