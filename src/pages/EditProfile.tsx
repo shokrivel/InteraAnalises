@@ -1,81 +1,84 @@
-// src/pages/EditProfile.tsx
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useAuth } from "@/contexts/AuthContext";
+import React, { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
-type Props = {
-  onClose: () => void;
-};
-
-const EditProfile = ({ onClose }: Props) => {
+const EditProfile = () => {
   const { user } = useAuth();
-  const [name, setName] = useState("");
-  const [city, setCity] = useState("");
-  const [address, setAddress] = useState("");
-  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  useEffect(() => {
-    const loadProfile = async () => {
-      if (!user) return;
-      const { data, error } = await supabase.from("profiles").select("name, city, address").eq("user_id", user.id).single();
-      if (data) {
-        setName(data.name || "");
-        setCity(data.city || "");
-        setAddress(data.address || "");
-      }
-    };
-    loadProfile();
-  }, [user]);
+  const [name, setName] = useState(user?.user_metadata?.name || "");
+  const [password, setPassword] = useState("");
 
-  const save = async () => {
+  const handleUpdateProfile = async () => {
     if (!user) return;
-    setLoading(true);
-    try {
-      const updates = {
-        user_id: user.id,
-        name,
-        city,
-        address,
-        updated_at: new Date().toISOString(),
-      };
-      const { error } = await supabase.from("profiles").upsert(updates);
-      if (error) throw error;
-      toast({ title: "Perfil atualizado", description: "Dados atualizados com sucesso." });
-      onClose();
-    } catch (err: any) {
-      console.error(err);
-      toast({ title: "Erro", description: err.message || "Não foi possível atualizar." , variant: "destructive"});
-    } finally {
-      setLoading(false);
+
+    const { error } = await supabase.auth.updateUser({
+      data: { name },
+    });
+
+    if (error) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Sucesso", description: "Perfil atualizado com sucesso!" });
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (!password) {
+      toast({ title: "Erro", description: "Digite uma nova senha.", variant: "destructive" });
+      return;
+    }
+
+    const { error } = await supabase.auth.updateUser({
+      password,
+    });
+
+    if (error) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Sucesso", description: "Senha alterada com sucesso!" });
+      setPassword("");
     }
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6">
-      <h3 className="text-lg font-semibold mb-4">Editar Perfil</h3>
-      <div className="space-y-3">
-        <div>
-          <label className="text-sm text-muted-foreground">Nome</label>
-          <Input value={name} onChange={(e) => setName(e.target.value)} />
-        </div>
-        <div>
-          <label className="text-sm text-muted-foreground">Endereço (rua, nº)</label>
-          <Input value={address} onChange={(e) => setAddress(e.target.value)} />
-        </div>
-        <div>
-          <label className="text-sm text-muted-foreground">Cidade</label>
-          <Input value={city} onChange={(e) => setCity(e.target.value)} />
-        </div>
-
-        <div className="flex gap-3 mt-4">
-          <Button onClick={save} disabled={loading}>Salvar</Button>
-          <Button variant="outline" onClick={onClose}>Cancelar</Button>
-        </div>
+    <div className="mt-6 space-y-6">
+      {/* Atualizar nome */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700">Nome</label>
+        <input
+          type="text"
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
       </div>
+
+      <button
+        onClick={handleUpdateProfile}
+        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+      >
+        Atualizar Perfil
+      </button>
+
+      {/* Alterar senha */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700">Nova senha</label>
+        <input
+          type="password"
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+      </div>
+
+      <button
+        onClick={handleChangePassword}
+        className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+      >
+        Alterar Senha
+      </button>
     </div>
   );
 };
