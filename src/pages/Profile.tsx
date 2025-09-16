@@ -1,68 +1,35 @@
 // src/pages/Profile.tsx
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import EditProfile from "@/pages/EditProfile"; // assume file path
-import ChangePassword from "@/components/ChangePassword";
+import EditProfile from "@/pages/EditProfile"; // edição de perfil
 import { useToast } from "@/hooks/use-toast";
 
 const Profile = () => {
-  const { user, loading } = useAuth();
-  const [showEdit, setShowEdit] = useState(false);
-  const [showChangePassword, setShowChangePassword] = useState(false);
+  const { user } = useAuth();
+  const [editing, setEditing] = useState(false);
   const { toast } = useToast();
 
-  useEffect(() => {
-    if (!loading && !user) {
-      // redirect handled elsewhere
-    }
-  }, [user, loading]);
+  if (!user) {
+    return <p>Carregando informações do perfil...</p>;
+  }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <Card>
-          <CardHeader>
-            <CardTitle>Meu Perfil</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div>
-                <div className="text-sm text-muted-foreground">Email</div>
-                <div className="font-medium">{user?.email}</div>
-              </div>
-              <div>
-                <div className="text-sm text-muted-foreground">User ID</div>
-                <div className="font-medium">{user?.id}</div>
-              </div>
-
-              <div className="flex gap-3">
-                <Button onClick={() => setShowEdit(true)}>Editar Perfil</Button>
-                <Button variant="outline" onClick={() => setShowChangePassword(true)}>Alterar Senha</Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Edit modal */}
-        {showEdit && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-            <div className="w-full max-w-2xl">
-              <EditProfile onClose={() => setShowEdit(false)} />
-            </div>
-          </div>
-        )}
-
-        {/* Change password modal */}
-        {showChangePassword && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-            <div className="w-full max-w-lg">
-              <ChangePassword onClose={() => setShowChangePassword(false)} />
-            </div>
-          </div>
-        )}
-      </div>
+    <div className="p-6">
+      {!editing ? (
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Perfil</h2>
+          <p><strong>Email:</strong> {user.email}</p>
+          <p><strong>Nome:</strong> {user.user_metadata?.full_name || "Não informado"}</p>
+          <button
+            onClick={() => setEditing(true)}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg"
+          >
+            Editar Perfil
+          </button>
+        </div>
+      ) : (
+        <EditProfile onClose={() => setEditing(false)} />
+      )}
     </div>
   );
 };
