@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { createClient } from "@supabase/supabase-js";
 
 interface HealthcareProvidersMapProps {
   userAddress?: string;
@@ -9,6 +10,12 @@ interface HealthcareProvidersMapProps {
 export default function HealthcareProvidersMap({ userAddress }: HealthcareProvidersMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const [providers, setProviders] = useState<any[]>([]);
+
+  // Cria cliente Supabase
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
 
   useEffect(() => {
     // Carregar script do Google Maps
@@ -34,15 +41,21 @@ export default function HealthcareProvidersMap({ userAddress }: HealthcareProvid
 
       async function fetchProviders(address: string) {
         try {
-          const res = await fetch('/api/find-healthcare-providers', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ address, keyword: "..." }) // ajuste o keyword conforme necessário
+          const { data, error } = await supabase.functions.invoke("find-healthcare-providers", {
+            body: { address, keyword: "healthcare" } // ajuste keyword conforme necessário
           });
-          const data = await res.json();
-          if (data?.providers) setProviders(data.providers);
-        } catch (error) {
-          console.error("Erro ao buscar provedores:", error);
+
+          if (error) {
+            console.error("Erro Supabase:", error);
+            return;
+          }
+
+          if (data?.providers) {
+            setProviders(data.providers);
+            console.log("Provedores recebidos:", data.providers); // verificar no console
+          }
+        } catch (err) {
+          console.error("Erro ao buscar provedores:", err);
         }
       }
 
@@ -62,7 +75,7 @@ export default function HealthcareProvidersMap({ userAddress }: HealthcareProvid
         });
       }
     }
-  }, [userAddress]);
+  }, [userAddress, supabase]);
 
   return (
     <div>
