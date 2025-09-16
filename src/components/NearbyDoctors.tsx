@@ -1,14 +1,11 @@
 // src/components/NearbyDoctors.tsx
 import React, { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface NearbyDoctorsProps {
-  prognosis?: string; // texto retornado pela IA (usado para extrair especialidade)
-  userAddress?: string; // endereço do cadastro (ex: "Rua X, Cidade, UF")
-  /**
-   * edgeFunctionUrl: URL pública da sua edge function 'find-healthcare-providers'
-   * se você estiver usando supabase.functions.invoke no frontend, substitua a chamada fetch abaixo.
-   */
-  edgeFunctionUrl?: string;
+  prognosis?: string;
+  userAddress?: string;
+  edgeFunctionUrl?: string | undefined;
 }
 
 type Provider = {
@@ -21,47 +18,29 @@ type Provider = {
 };
 
 const mapPrognosisToKeyword = (text?: string) => {
-  if (!text) return "doctor";
+  if (!text) return "médicos";
   const lower = text.toLowerCase();
   if (lower.includes("pele") || lower.includes("acne") || lower.includes("dermat")) return "dermatologista";
   if (lower.includes("coração") || lower.includes("pressão") || lower.includes("cardio")) return "cardiologista";
   if (lower.includes("pulmão") || lower.includes("asma") || lower.includes("pneumo")) return "pneumologista";
   if (lower.includes("estômago") || lower.includes("gastrite") || lower.includes("gastro")) return "gastroenterologista";
-  if (lower.includes("infec") || lower.includes("febre") || lower.includes("parasit")) return "infectologista";
+  if (lower.includes("infec") || lower.includes("parasit") || lower.includes("febre")) return "infectologista";
   if (lower.includes("sangue") || lower.includes("hemato") || lower.includes("hemoglob")) return "hematologista";
   if (lower.includes("sono") || lower.includes("psiqu")) return "psiquiatra";
   if (lower.includes("dor") && lower.includes("articula")) return "reumatologista";
   if (lower.includes("urina") || lower.includes("rim") || lower.includes("nefro")) return "nefrologista";
   if (lower.includes("olho") || lower.includes("visão") || lower.includes("oftalmo")) return "oftalmologista";
-  if (lower.includes("criança") || lower.includes("recém") || lower.includes("pedi")) return "pediatra";
-  // fallback
+  if (lower.includes("criança") || lower.includes("pedi")) return "pediatra";
   return "médicos";
 };
 
-export default function NearbyDoctors({ prognosis, userAddress, edgeFunctionUrl }: NearbyDoctorsProps) {
-  const [permissionState, setPermissionState] = useState<PermissionState | "unsupported">("unsupported");
-  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+export default function NearbyDoctors({ prognosis, userAddress }: NearbyDoctorsProps) {
   const [providers, setProviders] = useState<Provider[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
 
-  // Detecta permission api (opcional)
-  useEffect(() => {
-    if (!("permissions" in navigator)) {
-      setPermissionState("unsupported");
-      return;
-    }
-    try {
-      // @ts-ignore - PermissionName typing
-      navigator.permissions.query({ name: "geolocation" }).then((res: PermissionStatus) => {
-        setPermissionState(res.state);
-        res.onchange = () => setPermissionState(res.state);
-      });
-    } catch {
-      setPermissionState("unsupported");
-    }
-  }, []);
-
+  // Request single-shot location permission
   const requestLocation = () => {
     setError(null);
     if (!("geolocation" in navigator)) {
@@ -71,30 +50,29 @@ export default function NearbyDoctors({ prognosis, userAddress, edgeFunctionUrl 
     navigator.geolocation.getCurrentPosition(
       (position) => {
         setCoords({ lat: position.coords.latitude, lng: position.coords.longitude });
-        setPermissionState("granted");
       },
       (err) => {
         console.warn("getCurrentPosition erro:", err);
-        setPermissionState("denied");
+        setCoords(null);
         setError("Permissão de localização negada. Usaremos o endereço de cadastro, se disponível.");
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
   };
 
-  // Quando clicar em "Buscar especialistas", executa
+  useEffect(() => {
+    // se já houver coords automaticamente não faz nada
+  }, [coords]);
+
   const fetchProviders = async () => {
     setError(null);
     setProviders([]);
     setLoading(true);
-
     try {
       const keyword = mapPrognosisToKeyword(prognosis);
-      // Preferência 1: localização atual (coords)
-      // Preferência 2: endereço de cadastro (userAddress) — a edge function fará geocoding
       const body: any = {
         keyword,
-        radius: 15000
+        radius: 15000,
       };
       if (coords) {
         body.lat = coords.lat;
@@ -102,23 +80,21 @@ export default function NearbyDoctors({ prognosis, userAddress, edgeFunctionUrl 
       } else if (userAddress) {
         body.address = userAddress;
       } else {
-        // fallback - se nada, deixa o backend geocodificar com um local padrão (mas é melhor exigir userAddress)
         setError("Nenhuma localização disponível. Permita a localização ou informe um endereço no perfil.");
         setLoading(false);
         return;
       }
 
-      // Chama a edge function (altere a URL se usar supabase.functions.invoke)
-      const url = edgeFunctionUrl || "/.netlify/functions/find-healthcare-providers"; // ajustar conforme deploy
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+      // Usar Supabase Edge Function (mais seguro)
+      const { data, error } = await supabase.functions.invoke("find-healthcare-providers", {
+        body,
       });
 
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data?.error || `Erro ao buscar: ${res.statusText}`);
+      if (error) {
+        throw new Error(error.message || "Erro ao chamar find-healthcare-providers");
+      }
+      if (data?.error) {
+        throw new Error(data.error);
       }
 
       const providersFromApi = data.providers || [];
@@ -134,40 +110,28 @@ export default function NearbyDoctors({ prognosis, userAddress, edgeFunctionUrl 
       );
     } catch (err: any) {
       console.error(err);
-      setError(err.message || "Erro ao buscar profissionais.");
+      setError(err.message || "Erro ao buscar os profissionais de saúde");
     } finally {
       setLoading(false);
     }
   };
 
-  // Abre Google Maps com zoom e place_id
   const openGoogleMapsZoom = (placeId?: string, lat?: number, lng?: number) => {
-    if (!placeId && (!lat || !lng)) return;
     if (placeId) {
       window.open(`https://www.google.com/maps/place/?q=place_id:${placeId}`, "_blank");
-    } else {
+    } else if (lat && lng) {
       window.open(`https://www.google.com/maps/@${lat},${lng},17z`, "_blank");
     }
   };
 
   return (
     <div>
-      <h2 className="text-lg font-bold mt-6 mb-2">Especialistas recomendados</h2>
-
-      {/* Permissão / botão de solicitar localização */}
-      {permissionState === "granted" && <p className="text-green-600">Localização em tempo real ativada.</p>}
-      {permissionState === "prompt" && <p className="text-gray-600">Permita o acesso à sua localização para melhores resultados.</p>}
-      {permissionState === "denied" && <p className="text-red-600">Localização bloqueada. Usaremos o endereço do perfil se disponível.</p>}
-      {permissionState === "unsupported" && <p className="text-gray-600">Permissões não suportadas no navegador.</p>}
+      <h2 className="text-lg font-bold mt-6 mb-2">Médicos próximos</h2>
 
       <div className="flex gap-2 mt-2">
         <button onClick={requestLocation} className="px-4 py-2 bg-slate-600 text-white rounded">Permitir localização</button>
-        <button
-          onClick={fetchProviders}
-          disabled={loading}
-          className="px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-60"
-        >
-          {loading ? "Buscando..." : "Buscar especialistas próximos"}
+        <button onClick={fetchProviders} className="px-4 py-2 bg-blue-600 text-white rounded" disabled={loading}>
+          {loading ? "Buscando..." : "Buscar profissionais"}
         </button>
       </div>
 
@@ -182,10 +146,7 @@ export default function NearbyDoctors({ prognosis, userAddress, edgeFunctionUrl 
               {doc.rating !== null && <div className="text-xs mt-1">Nota: {doc.rating} ⭐ ({doc.userRatingsTotal})</div>}
             </div>
             <div className="flex flex-col gap-2">
-              <button
-                onClick={() => openGoogleMapsZoom(doc.placeId, doc.location?.lat, doc.location?.lng)}
-                className="text-sm px-3 py-1 border rounded"
-              >
+              <button onClick={() => openGoogleMapsZoom(doc.placeId, doc.location?.lat, doc.location?.lng)} className="text-sm px-3 py-1 border rounded">
                 Abrir no mapa
               </button>
             </div>
