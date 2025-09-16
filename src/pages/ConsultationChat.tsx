@@ -1,5 +1,5 @@
 // src/pages/ConsultationChat.tsx
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,15 +9,16 @@ import { Heart, ArrowLeft, Bot, User, Copy, CheckCheck, MapPin } from "lucide-re
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "../supabaseClient";
+import { supabase } from "@/integrations/supabase/client";
 import HealthcareProvidersMap from "@/components/maps/HealthcareProvidersMap";
 import NearbyDoctors from "@/components/NearbyDoctors";
 
 interface ConsultationResponse {
   response: string;
-  consultationId?: string;
-  recommendedSpecialty?: string; // opcional — ideal se a Edge Function retornar
+  consultationId: string;
   profileType?: string;
+  diagnosis?: string; // campo opcional que usamos como "prognosis"
+  userAddress?: string;
 }
 
 const ConsultationChat: React.FC = () => {
@@ -31,12 +32,10 @@ const ConsultationChat: React.FC = () => {
   const location = useLocation();
   const { toast } = useToast();
 
-  // consulta enviada pela página anterior (Consultation)
-  const consultationData = (location.state as any)?.consultationData;
+  const consultationData = location.state?.consultationData;
 
   useEffect(() => {
     if (!user || !consultationData) {
-      // se não tiver dados, volta ao dashboard (segurança)
       navigate("/dashboard");
       return;
     }
@@ -44,50 +43,44 @@ const ConsultationChat: React.FC = () => {
     const processConsultation = async () => {
       try {
         setLoading(true);
+        console.log("Sending consultation data to Gemini:", consultationData);
 
-        console.log("Sending consultation data to Gemini (edge function):", consultationData);
-
-        const { data, error } = await supabase.functions.invoke("gemini-consultation", {
+        const { data, error } = await supabase.functions.invoke('gemini-consultation', {
           body: {
-            consultationData,
-            userId: user.id,
-          },
+            consultationData: consultationData,
+            userId: user.id
+          }
         });
 
-        console.log("Gemini response (edge function):", data, "error:", error);
+        // Sempre setar o retorno, mesmo que haja warnings
+        if (data) {
+          // data pode conter: response, consultationId, diagnosis, userAddress, ...
+          setConsultationResponse(data as ConsultationResponse);
+        }
 
         if (error) {
-          throw new Error(error.message || "Erro na função do Supabase");
+          throw new Error(error.message || "Erro na função de consulta.");
         }
 
-        if (!data) {
-          throw new Error("Resposta vazia da função de IA");
+        if ((data as any)?.error) {
+          throw new Error((data as any).error);
         }
-
-        // esperamos que a função retorne: { response: string, consultationId?: string, recommendedSpecialty?: string }
-        setConsultationResponse({
-          response: data.response || "",
-          consultationId: data.consultationId,
-          recommendedSpecialty: data.recommendedSpecialty || undefined,
-          profileType: data.profileType || undefined,
-        });
 
         toast({
           title: "Consulta processada com sucesso!",
           description: "A IA analisou suas informações e gerou uma resposta personalizada.",
         });
-      } catch (error: any) {
-        console.error("Error processing consultation:", error);
 
-        let errorMessage = "Tente novamente mais tarde.";
-        if (error?.message) {
-          try {
-            const parsed = JSON.parse(error.message);
-            if (parsed?.error) errorMessage = parsed.error;
-            else errorMessage = error.message;
-          } catch {
-            errorMessage = error.message || errorMessage;
-          }
+      } catch (err: any) {
+        console.error('Error processing consultation:', err);
+
+        // tenta extrair mensagem específica (quando error.message for JSON)
+        let errorMessage = err?.message || "Tente novamente mais tarde.";
+        try {
+          const parsed = typeof err?.message === 'string' ? JSON.parse(err.message) : null;
+          if (parsed?.error) errorMessage = parsed.error;
+        } catch (e) {
+          // ignore
         }
 
         toast({
@@ -95,7 +88,6 @@ const ConsultationChat: React.FC = () => {
           description: errorMessage,
           variant: "destructive",
         });
-
         navigate("/dashboard");
       } finally {
         setLoading(false);
@@ -106,21 +98,29 @@ const ConsultationChat: React.FC = () => {
   }, [user, consultationData, navigate, toast]);
 
   const copyToClipboard = async () => {
-    if (!consultationResponse?.response) return;
-    try {
-      await navigator.clipboard.writeText(consultationResponse.response);
-      setCopied(true);
-      toast({ title: "Copiado", description: "Resposta copiada para a área de transferência." });
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      toast({ title: "Erro ao copiar", description: "Não foi possível copiar o texto.", variant: "destructive" });
+    if (consultationResponse?.response) {
+      try {
+        await navigator.clipboard.writeText(consultationResponse.response);
+        setCopied(true);
+        toast({
+          title: "Copiado!",
+          description: "Resposta copiada para a área de transferência.",
+        });
+        setTimeout(() => setCopied(false), 2000);
+      } catch {
+        toast({
+          title: "Erro ao copiar",
+          description: "Não foi possível copiar o texto.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
   const profileLabels: Record<string, string> = {
-    patient: "Paciente",
-    academic: "Acadêmico",
-    health_professional: "Profissional de Saúde",
+    patient: 'Paciente',
+    academic: 'Acadêmico',
+    health_professional: 'Profissional de Saúde'
   };
 
   if (loading) {
@@ -130,8 +130,12 @@ const ConsultationChat: React.FC = () => {
           <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto animate-pulse">
             <Bot className="w-8 h-8 text-primary" />
           </div>
-          <h2 className="text-xl font-semibold">Processando sua consulta...</h2>
-          <p className="text-muted-foreground">A IA está analisando suas informações e preparando uma resposta.</p>
+          <div className="space-y-2">
+            <h2 className="text-xl font-semibold">Processando sua consulta...</h2>
+            <p className="text-muted-foreground">
+              A IA está analisando suas informações e preparando uma resposta personalizada.
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -145,8 +149,12 @@ const ConsultationChat: React.FC = () => {
             <CardTitle>Erro na consulta</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground mb-4">Não foi possível processar sua consulta.</p>
-            <Button onClick={() => navigate("/dashboard")}>Voltar ao Dashboard</Button>
+            <p className="text-muted-foreground mb-4">
+              Não foi possível processar sua consulta.
+            </p>
+            <Button onClick={() => navigate("/dashboard")}>
+              Voltar ao Dashboard
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -155,11 +163,15 @@ const ConsultationChat: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* header */}
-      <header className="border-b border-border bg-card/50">
+      {/* Header */}
+      <header className="border-b border-border bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/80">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate("/dashboard")}
+            >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Voltar
             </Button>
@@ -168,15 +180,16 @@ const ConsultationChat: React.FC = () => {
             </div>
             <h1 className="text-xl font-bold text-foreground">Resultado da Consulta</h1>
           </div>
-
-          <Badge variant="secondary">{profile && profileLabels[profile.profile_type]}</Badge>
+          <Badge variant="secondary">
+            {profile && profileLabels[profile.profile_type]}
+          </Badge>
         </div>
       </header>
 
-      {/* content */}
+      {/* Chat Content */}
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto space-y-6">
-          {/* user summary */}
+          {/* User Message */}
           <div className="flex items-start space-x-3">
             <Avatar>
               <AvatarFallback>
@@ -193,17 +206,17 @@ const ConsultationChat: React.FC = () => {
                     </Badge>
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    <p>
-                      <strong>Consulta enviada:</strong> {consultationData ? Object.keys(consultationData).length : 0} campos
-                    </p>
-                    {consultationData?.symptoms && <p className="mt-2"><strong>Sintomas:</strong> {consultationData.symptoms}</p>}
+                    <p><strong>Consulta enviada:</strong> {Object.keys(consultationData || {}).length} campos preenchidos</p>
+                    {consultationData?.symptoms && (
+                      <p className="mt-2"><strong>Sintomas:</strong> {consultationData.symptoms}</p>
+                    )}
                   </div>
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* IA response */}
+          {/* AI Response */}
           <div className="flex items-start space-x-3">
             <Avatar>
               <AvatarFallback>
@@ -220,16 +233,27 @@ const ConsultationChat: React.FC = () => {
                         Gemini 2.5 Pro
                       </Badge>
                     </div>
-                    <Button variant="outline" size="sm" onClick={copyToClipboard} className="flex items-center space-x-2">
-                      {copied ? <CheckCheck className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={copyToClipboard}
+                      className="flex items-center space-x-2"
+                    >
+                      {copied ? (
+                        <CheckCheck className="w-4 h-4" />
+                      ) : (
+                        <Copy className="w-4 h-4" />
+                      )}
                       <span>{copied ? "Copiado" : "Copiar"}</span>
                     </Button>
                   </div>
 
                   <div className="prose prose-sm max-w-none">
-                    {consultationResponse.response.split("\n").map((paragraph, idx) => (
+                    {consultationResponse.response.split('\n').map((paragraph, index) => (
                       paragraph.trim() && (
-                        <p key={idx} className="mb-3 leading-relaxed">{paragraph.trim()}</p>
+                        <p key={index} className="mb-3 leading-relaxed">
+                          {paragraph.trim()}
+                        </p>
                       )
                     ))}
                   </div>
@@ -238,27 +262,35 @@ const ConsultationChat: React.FC = () => {
             </Card>
           </div>
 
-          {/* actions */}
+          {/* Actions */}
           <Card>
             <CardContent className="pt-6">
               <div className="text-center space-y-4">
                 <h3 className="font-medium">Próximos passos</h3>
                 <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                  <Button onClick={() => setShowMap(!showMap)} variant="outline" className="flex items-center gap-2">
+                  <Button
+                    onClick={() => setShowMap(!showMap)}
+                    variant="outline"
+                    className="flex items-center gap-2"
+                  >
                     <MapPin className="h-4 w-4" />
-                    {showMap ? "Ocultar Mapa" : "Ver Profissionais Próximos"}
+                    {showMap ? 'Ocultar Mapa' : 'Ver Profissionais Próximos'}
                   </Button>
-                  <Button onClick={() => navigate("/consultation")}>Nova Consulta</Button>
-                  <Button variant="outline" onClick={() => navigate("/dashboard")}>Voltar ao Dashboard</Button>
+                  <Button onClick={() => navigate("/consultation")}>
+                    Nova Consulta
+                  </Button>
+                  <Button variant="outline" onClick={() => navigate("/dashboard")}>
+                    Voltar ao Dashboard
+                  </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Esta consulta foi salva no seu histórico. ID: {consultationResponse.consultationId?.slice(0,8)}...
+                  Esta consulta foi salva no seu histórico. ID: {consultationResponse.consultationId?.slice(0, 8)}...
                 </p>
               </div>
             </CardContent>
           </Card>
 
-          {/* Map card */}
+          {/* Healthcare Providers Map */}
           {showMap && profile && (
             <Card>
               <CardContent className="p-6">
@@ -270,24 +302,26 @@ const ConsultationChat: React.FC = () => {
             </Card>
           )}
 
-          {/* Nearby doctors card (passes prognosis and user address) */}
+          {/* Nearby Doctors */}
           <Card>
             <CardHeader>
               <CardTitle>Profissionais de Saúde Recomendados</CardTitle>
             </CardHeader>
             <CardContent>
               <NearbyDoctors
-                prognosis={consultationResponse.recommendedSpecialty || consultationResponse.response || ""}
+                prognosis={consultationResponse?.diagnosis || consultationResponse?.response}
                 userAddress={profile?.address && profile?.city ? `${profile.address}, ${profile.city}` : undefined}
               />
             </CardContent>
           </Card>
 
-          {/* disclaimer */}
-          <Card className="border-amber-200 bg-amber-50">
-            <CardContent>
-              <p className="text-sm text-amber-800">
-                <strong>Importante:</strong> Esta resposta é gerada por IA para fins educativos. Não substitui consulta presencial.
+          {/* Disclaimer */}
+          <Card className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950">
+            <CardContent className="pt-6">
+              <p className="text-sm text-amber-800 dark:text-amber-200">
+                <strong>Importante:</strong> Esta resposta é gerada por inteligência artificial para fins educativos e informativos.
+                Não substitui o diagnóstico médico profissional. Em caso de emergência ou sintomas graves,
+                procure atendimento médico imediatamente.
               </p>
             </CardContent>
           </Card>

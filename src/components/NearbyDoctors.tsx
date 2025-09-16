@@ -1,86 +1,119 @@
 // src/components/NearbyDoctors.tsx
-import React, { useEffect, useState } from "react";
-import { supabase } from "@/supabaseClient";
+import React, { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface NearbyDoctorsProps {
-  prognosis?: string; // texto bruto da IA ou especialidade sugerida
-  userAddress?: string; // string "Rua X, Cidade"
+  prognosis?: string;
+  userAddress?: string;
 }
 
-const NearbyDoctors: React.FC<NearbyDoctorsProps> = ({ prognosis, userAddress }) => {
-  const [doctors, setDoctors] = useState<any[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
+interface Provider {
+  id: string;
+  name: string;
+  address?: string;
+  place_id?: string;
+  rating?: number;
+  user_ratings_total?: number;
+  lat?: number;
+  lng?: number;
+}
+
+function NearbyDoctors({ prognosis, userAddress }: NearbyDoctorsProps) {
+  const [doctors, setDoctors] = useState<Provider[]>([]);
+  const [error, setError] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
+  const [permissionState, setPermissionState] = useState<PermissionState | null>(null);
 
   useEffect(() => {
-    if (!navigator.geolocation) {
-      setError("Geolocalização não suportada pelo navegador.");
-      // fallback é tentar usar userAddress depois
-      return;
+    // Consulta inicial do estado de permissões (opcional)
+    if ("permissions" in navigator) {
+      (navigator as any).permissions.query({ name: "geolocation" }).then((res: any) => {
+        setPermissionState(res.state);
+        res.onchange = () => setPermissionState(res.state);
+      }).catch(() => setPermissionState(null));
     }
-
-    // Tenta pegar permissão (aparece prompt)
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-      },
-      (err) => {
-        console.warn("Geolocation error:", err.message);
-        setError("Permissão de localização negada ou indisponível.");
-        // não setamos fallback aqui — fetchSpecialists tentará usar userAddress
-      },
-      { enableHighAccuracy: false, timeout: 10000 }
-    );
   }, []);
 
-  // map prognosis (pt) -> keyword (en) ou specialty
-  const mapPrognosisToKeyword = (text?: string) => {
-    if (!text) return "doctor";
-    const lower = text.toLowerCase();
-    if (lower.includes("pele") || lower.includes("acne") || lower.includes("dermatite")) return "dermatologist";
-    if (lower.includes("coração") || lower.includes("pressão") || lower.includes("infarto")) return "cardiologist";
-    if (lower.includes("pulmão") || lower.includes("tosse") || lower.includes("asma") || lower.includes("pneumonia")) return "pulmonologist";
-    if (lower.includes("estômago") || lower.includes("gastrite") || lower.includes("dor abdominal")) return "gastroenterologist";
-    if (lower.includes("hidr") || lower.includes("urin") || lower.includes("rim")) return "urologist";
-    if (lower.includes("ansiedade") || lower.includes("depress")) return "psychiatrist";
-    if (lower.includes("olho") || lower.includes("visão")) return "ophthalmologist";
-    if (lower.includes("ouvido") || lower.includes("tontura")) return "otolaryngologist";
-    if (lower.includes("ossos") || lower.includes("fratura")) return "orthopedist";
-    if (lower.includes("criança") || lower.includes("pediatria")) return "pediatrician";
-    if (lower.includes("sangue") || lower.includes("hemograma") || lower.includes("hematologia")) return "hematologist";
-    // fallback
+  const mapPrognosisToSpecialty = (prog: string): string => {
+    if (!prog) return "doctor";
+    const lower = prog.toLowerCase();
+    if (lower.includes("pele") || lower.includes("acne") || lower.includes("derm")) return "dermatologist";
+    if (lower.includes("coração") || lower.includes("pressão") || lower.includes("cardio")) return "cardiologist";
+    if (lower.includes("pulmão") || lower.includes("asma") || lower.includes("pneumo")) return "pulmonologist";
+    if (lower.includes("estômago") || lower.includes("gastrite") || lower.includes("gastro")) return "gastroenterologist";
+    if (lower.includes("infec") || lower.includes("febre") || lower.includes("paras")) return "infectious disease specialist";
+    if (lower.includes("sangue") || lower.includes("hemat")) return "hematologist";
+    // adicionar outros mapeamentos conforme necessidade
     return "doctor";
   };
 
   const fetchSpecialists = async () => {
+    if (!prognosis) {
+      setError("Prognóstico não disponível para buscar especialistas.");
+      return;
+    }
+
     setLoading(true);
-    setError(null);
+    setError("");
     setDoctors([]);
 
+    const specialtyKeyword = mapPrognosisToSpecialty(prognosis);
+
+    // Tenta pegar localização atual
+    const tryUseCurrentLocation = (): Promise<{ lat: number; lng: number } | null> => {
+      return new Promise((resolve) => {
+        if (!navigator.geolocation) return resolve(null);
+        navigator.geolocation.getCurrentPosition(
+          (position) => resolve({ lat: position.coords.latitude, lng: position.coords.longitude }),
+          () => resolve(null),
+          { enableHighAccuracy: true, timeout: 10000 }
+        );
+      });
+    };
+
     try {
-      const keyword = mapPrognosisToKeyword(prognosis);
-      const payload: any = {
-        keyword,
-        radius: 15000,
+      const current = await tryUseCurrentLocation();
+
+      let payload: any = {
+        keyword: specialtyKeyword,
+        radius: 15000 // 15 km
       };
 
-      // prioriza location (geolocalização atual), se disponível
-      if (location) payload.location = location;
-      // se não tiver location, passa userAddress (edge function fará geocoding)
-      else if (userAddress) payload.address = userAddress;
+      if (current) {
+        payload.lat = current.lat;
+        payload.lng = current.lng;
+      } else if (userAddress) {
+        payload.address = userAddress;
+      } else {
+        // fallback - sem localização nem endereço
+        setError("Não foi possível obter sua localização e não há endereço cadastrado.");
+        setLoading(false);
+        return;
+      }
 
-      const { data, error: invokeError } = await supabase.functions.invoke("find-healthcare-providers", {
-        body: payload,
+      // Chama a edge function do Supabase (servidor)
+      const { data, error: invokeError } = await supabase.functions.invoke('find-healthcare-providers', {
+        body: payload
       });
 
       if (invokeError) throw invokeError;
-      if (data?.error) throw new Error(data.error);
+      if (!data) throw new Error("Sem dados retornados da função.");
 
-      setDoctors(data.providers || []);
+      const providers: Provider[] = (data.providers || []).map((p: any) => ({
+        id: p.place_id || p.id || p.uid,
+        name: p.name,
+        address: p.vicinity || p.formatted_address || p.address,
+        place_id: p.place_id,
+        rating: p.rating,
+        user_ratings_total: p.user_ratings_total,
+        lat: p.geometry?.location?.lat || p.lat,
+        lng: p.geometry?.location?.lng || p.lng
+      }));
+
+      setDoctors(providers);
     } catch (err: any) {
-      console.error("fetchSpecialists error:", err);
-      setError(err.message || "Erro ao buscar especialistas.");
+      console.error(err);
+      setError(err?.message || "Erro ao buscar os profissionais de saúde");
     } finally {
       setLoading(false);
     }
@@ -88,14 +121,19 @@ const NearbyDoctors: React.FC<NearbyDoctorsProps> = ({ prognosis, userAddress })
 
   return (
     <div>
-      <p className="text-sm text-muted-foreground mb-3">
-        Especialidade sugerida: <strong>{mapPrognosisToKeyword(prognosis)}</strong>
-      </p>
+      <h2 className="text-lg font-bold mt-6 mb-2">Especialistas recomendados na sua região</h2>
+
+      {permissionState === "prompt" && (
+        <p className="text-gray-600">Para localizar profissionais, permita o acesso à sua localização no navegador.</p>
+      )}
+      {permissionState === "denied" && (
+        <p className="text-red-600">Localização bloqueada. Habilite nas configurações do navegador.</p>
+      )}
 
       <button
         onClick={fetchSpecialists}
+        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 mt-2 disabled:bg-gray-400"
         disabled={loading}
-        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
       >
         {loading ? "Buscando..." : "Buscar especialistas próximos"}
       </button>
@@ -104,27 +142,30 @@ const NearbyDoctors: React.FC<NearbyDoctorsProps> = ({ prognosis, userAddress })
 
       {doctors.length > 0 && (
         <ul className="mt-4 space-y-2">
-          {doctors.map((d: any) => (
-            <li key={d.id || d.place_id} className="p-3 border rounded-md">
-              <strong>{d.name}</strong> <br />
-              <span>{d.address || d.vicinity}</span> <br />
-              {d.rating != null && <span>Nota: {d.rating} ⭐ ({d.reviewCount || 0} avaliações)</span>}
-              <div className="mt-2">
+          {doctors.map((doc) => (
+            <li key={doc.id} className="p-3 border rounded-md">
+              <strong>{doc.name}</strong> <br />
+              <span>{doc.address}</span> <br />
+              {doc.rating !== undefined && <span>Nota: {doc.rating} ⭐ ({doc.user_ratings_total || 0} avaliações)</span>}
+              <br />
+              {doc.place_id ? (
                 <a
-                  href={d.url || `https://www.google.com/maps/place/?q=place_id:${d.place_id || d.id}`}
+                  href={`https://www.google.com/maps/place/?q=place_id:${doc.place_id}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-blue-500 underline"
                 >
-                  Ver no mapa
+                  Ver no mapa / Abrir no Google Maps
                 </a>
-              </div>
+              ) : (
+                <span className="text-muted-foreground">Localização indisponível</span>
+              )}
             </li>
           ))}
         </ul>
       )}
     </div>
   );
-};
+}
 
 export default NearbyDoctors;
