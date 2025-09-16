@@ -1,5 +1,7 @@
 // src/pages/ConsultationChat.tsx
-import React, { useState, useEffect } from "react";
+import NearbyDoctors from "@/components/NearbyDoctors";
+import HealthcareProvidersMap from "@/components/maps/HealthcareProvidersMap";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,18 +12,14 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import HealthcareProvidersMap from "@/components/maps/HealthcareProvidersMap";
-import NearbyDoctors from "@/components/NearbyDoctors";
 
 interface ConsultationResponse {
   response: string;
   consultationId: string;
   profileType?: string;
-  diagnosis?: string; // campo opcional que usamos como "prognosis"
-  userAddress?: string;
 }
 
-const ConsultationChat: React.FC = () => {
+const ConsultationChat = () => {
   const [consultationResponse, setConsultationResponse] = useState<ConsultationResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
@@ -34,68 +32,64 @@ const ConsultationChat: React.FC = () => {
 
   const consultationData = location.state?.consultationData;
 
- // dentro de ConsultationChat.tsx -> useEffect
-useEffect(() => {
-  if (!user || !consultationData) {
-    navigate("/dashboard");
-    return;
-  }
-
-  const processConsultation = async () => {
-    try {
-      setLoading(true);
-      console.log('Sending consultation data to Gemini:', consultationData);
-
-      const { data, error } = await supabase.functions.invoke('gemini-consultation', {
-        body: {
-          consultationData: consultationData,
-          userId: user.id
-        }
-      });
-
-      console.log('Gemini response raw:', data, 'error:', error);
-
-      if (error) {
-        throw new Error(error.message || 'Erro na função gemini-consultation');
-      }
-      // data pode já ter a estrutura { response, consultationId, profileType }
-      if (data?.error) {
-        throw new Error(data.error);
-      }
-
-      // **IMPORTANTE**: garantir que o formato esteja correto
-      const formatted = {
-        response: data.response ?? String(data),
-        consultationId: data.consultationId ?? data.id ?? '',
-        profileType: data.profileType ?? consultationData.profileType ?? 'patient'
-      };
-
-      setConsultationResponse(formatted);
-
-      toast({
-        title: "Consulta processada com sucesso!",
-        description: "A IA analisou suas informações e gerou uma resposta personalizada.",
-      });
-
-    } catch (err: any) {
-      console.error('Error processing consultation:', err);
-      // tenta extrair mensagem detalhada
-      const errMsg = err?.message ?? 'Tente novamente mais tarde.';
-      toast({
-        title: "Erro ao processar consulta",
-        description: errMsg,
-        variant: "destructive",
-      });
-      // Não redirecionar imediatamente em todos os erros — apenas em erros críticos se quiser
-      // navigate("/dashboard");
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    if (!user || !consultationData) {
+      navigate("/dashboard");
+      return;
     }
-  };
 
-  processConsultation();
-}, [user, consultationData, navigate, toast]);
-  
+    const processConsultation = async () => {
+      try {
+        setLoading(true);
+        console.log("Sending consultation data to Gemini:", consultationData);
+
+        const { data, error } = await supabase.functions.invoke("gemini-consultation", {
+          body: {
+            consultationData,
+            userId: user.id,
+          },
+        });
+
+        console.log("Gemini response raw:", data, "error:", error);
+
+        if (error) {
+          throw new Error(error.message || "Erro na função gemini-consultation");
+        }
+
+        if (data?.error) {
+          throw new Error(data.error);
+        }
+
+        // padroniza o retorno
+        const formatted: ConsultationResponse = {
+          response: typeof data === "string" ? data : data.response ?? String(data),
+          consultationId: data.consultationId ?? data.id ?? "",
+          profileType: data.profileType ?? consultationData.profileType ?? "patient",
+        };
+
+        setConsultationResponse(formatted);
+
+        toast({
+          title: "Consulta processada com sucesso!",
+          description: "A IA analisou suas informações e gerou uma resposta personalizada.",
+        });
+      } catch (err: any) {
+        console.error("Error processing consultation:", err);
+        const errMsg = err?.message ?? "Tente novamente mais tarde.";
+        toast({
+          title: "Erro ao processar consulta",
+          description: errMsg,
+          variant: "destructive",
+        });
+        // NÃO forçar redirect para dashboard: usuário deve poder ver histórico salvo
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    processConsultation();
+  }, [user, consultationData, navigate, toast]);
+
   const copyToClipboard = async () => {
     if (consultationResponse?.response) {
       try {
@@ -116,10 +110,10 @@ useEffect(() => {
     }
   };
 
-  const profileLabels: Record<string, string> = {
-    patient: 'Paciente',
-    academic: 'Acadêmico',
-    health_professional: 'Profissional de Saúde'
+  const profileLabels: any = {
+    patient: "Paciente",
+    academic: "Acadêmico",
+    health_professional: "Profissional de Saúde",
   };
 
   if (loading) {
@@ -148,12 +142,8 @@ useEffect(() => {
             <CardTitle>Erro na consulta</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground mb-4">
-              Não foi possível processar sua consulta.
-            </p>
-            <Button onClick={() => navigate("/dashboard")}>
-              Voltar ao Dashboard
-            </Button>
+            <p className="text-muted-foreground mb-4">Não foi possível processar sua consulta.</p>
+            <Button onClick={() => navigate("/dashboard")}>Voltar ao Dashboard</Button>
           </CardContent>
         </Card>
       </div>
@@ -166,11 +156,7 @@ useEffect(() => {
       <header className="border-b border-border bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/80">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate("/dashboard")}
-            >
+            <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
               <ArrowLeft className="w-4 h-4 mr-2" />
               Voltar
             </Button>
@@ -179,9 +165,7 @@ useEffect(() => {
             </div>
             <h1 className="text-xl font-bold text-foreground">Resultado da Consulta</h1>
           </div>
-          <Badge variant="secondary">
-            {profile && profileLabels[profile.profile_type]}
-          </Badge>
+          <Badge variant="secondary">{profile && profileLabels[profile.profile_type]}</Badge>
         </div>
       </header>
 
@@ -205,10 +189,11 @@ useEffect(() => {
                     </Badge>
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    <p><strong>Consulta enviada:</strong> {Object.keys(consultationData || {}).length} campos preenchidos</p>
-                    {consultationData?.symptoms && (
-                      <p className="mt-2"><strong>Sintomas:</strong> {consultationData.symptoms}</p>
-                    )}
+                    <p>
+                      <strong>Consulta enviada:</strong> {Object.keys(consultationData || {}).length} campos
+                      preenchidos
+                    </p>
+                    {consultationData?.symptoms && <p className="mt-2"><strong>Sintomas:</strong> {String(consultationData.symptoms)}</p>}
                   </div>
                 </div>
               </CardContent>
@@ -232,29 +217,20 @@ useEffect(() => {
                         Gemini 2.5 Pro
                       </Badge>
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={copyToClipboard}
-                      className="flex items-center space-x-2"
-                    >
-                      {copied ? (
-                        <CheckCheck className="w-4 h-4" />
-                      ) : (
-                        <Copy className="w-4 h-4" />
-                      )}
+                    <Button variant="outline" size="sm" onClick={copyToClipboard} className="flex items-center space-x-2">
+                      {copied ? <CheckCheck className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                       <span>{copied ? "Copiado" : "Copiar"}</span>
                     </Button>
                   </div>
 
                   <div className="prose prose-sm max-w-none">
-                    {consultationResponse.response.split('\n').map((paragraph, index) => (
-                      paragraph.trim() && (
+                    {consultationResponse.response.split("\n").map((paragraph, index) =>
+                      paragraph.trim() ? (
                         <p key={index} className="mb-3 leading-relaxed">
                           {paragraph.trim()}
                         </p>
-                      )
-                    ))}
+                      ) : null
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -267,20 +243,12 @@ useEffect(() => {
               <div className="text-center space-y-4">
                 <h3 className="font-medium">Próximos passos</h3>
                 <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                  <Button
-                    onClick={() => setShowMap(!showMap)}
-                    variant="outline"
-                    className="flex items-center gap-2"
-                  >
+                  <Button onClick={() => setShowMap((s) => !s)} variant="outline" className="flex items-center gap-2">
                     <MapPin className="h-4 w-4" />
-                    {showMap ? 'Ocultar Mapa' : 'Ver Profissionais Próximos'}
+                    {showMap ? "Ocultar Mapa" : "Ver Profissionais Próximos"}
                   </Button>
-                  <Button onClick={() => navigate("/consultation")}>
-                    Nova Consulta
-                  </Button>
-                  <Button variant="outline" onClick={() => navigate("/dashboard")}>
-                    Voltar ao Dashboard
-                  </Button>
+                  <Button onClick={() => navigate("/consultation")}>Nova Consulta</Button>
+                  <Button variant="outline" onClick={() => navigate("/dashboard")}>Voltar ao Dashboard</Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Esta consulta foi salva no seu histórico. ID: {consultationResponse.consultationId?.slice(0, 8)}...
@@ -295,21 +263,23 @@ useEffect(() => {
               <CardContent className="p-6">
                 <HealthcareProvidersMap
                   userAddress={profile.address && profile.city ? `${profile.address}, ${profile.city}` : undefined}
-                  onClose={() => setShowMap(false)}
+                  // passamos também o prognóstico para o mapa filtrar por especialidade (se desejar)
+                  keyword={consultationResponse.response}
                 />
               </CardContent>
             </Card>
           )}
 
-          {/* Nearby Doctors */}
+          {/* Nearby Doctors (lista com botão para abrir mapa/zoom) */}
           <Card>
             <CardHeader>
               <CardTitle>Profissionais de Saúde Recomendados</CardTitle>
             </CardHeader>
             <CardContent>
               <NearbyDoctors
-                prognosis={consultationResponse?.diagnosis || consultationResponse?.response}
+                prognosis={consultationResponse.response}
                 userAddress={profile?.address && profile?.city ? `${profile.address}, ${profile.city}` : undefined}
+                edgeFunctionUrl={undefined} // usa supabase.functions.invoke internamente
               />
             </CardContent>
           </Card>
