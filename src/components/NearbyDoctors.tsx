@@ -1,179 +1,197 @@
-import React, { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { MapPin, Star, Phone, ExternalLink } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-
-interface HealthcareProvider {
-  name: string;
-  address: string;
-  rating?: number;
-  userRatingsTotal: number;
-  location: {
-    lat: number;
-    lng: number;
-  };
-  placeId: string;
-  types: string[];
-}
+// src/components/NearbyDoctors.tsx
+import React, { useState, useEffect } from "react";
 
 interface NearbyDoctorsProps {
-  prognosis?: string;
-  userAddress?: string;
+  prognosis?: string; // texto retornado pela IA (usado para extrair especialidade)
+  userAddress?: string; // endereço do cadastro (ex: "Rua X, Cidade, UF")
+  /**
+   * edgeFunctionUrl: URL pública da sua edge function 'find-healthcare-providers'
+   * se você estiver usando supabase.functions.invoke no frontend, substitua a chamada fetch abaixo.
+   */
+  edgeFunctionUrl?: string;
 }
 
-const NearbyDoctors: React.FC<NearbyDoctorsProps> = ({ prognosis, userAddress }) => {
-  const [providers, setProviders] = useState<HealthcareProvider[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [searchLocation, setSearchLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const { toast } = useToast();
+type Provider = {
+  name: string;
+  address?: string;
+  rating?: number | null;
+  userRatingsTotal?: number;
+  location?: { lat: number; lng: number } | null;
+  placeId?: string;
+};
 
+const mapPrognosisToKeyword = (text?: string) => {
+  if (!text) return "doctor";
+  const lower = text.toLowerCase();
+  if (lower.includes("pele") || lower.includes("acne") || lower.includes("dermat")) return "dermatologista";
+  if (lower.includes("coração") || lower.includes("pressão") || lower.includes("cardio")) return "cardiologista";
+  if (lower.includes("pulmão") || lower.includes("asma") || lower.includes("pneumo")) return "pneumologista";
+  if (lower.includes("estômago") || lower.includes("gastrite") || lower.includes("gastro")) return "gastroenterologista";
+  if (lower.includes("infec") || lower.includes("febre") || lower.includes("parasit")) return "infectologista";
+  if (lower.includes("sangue") || lower.includes("hemato") || lower.includes("hemoglob")) return "hematologista";
+  if (lower.includes("sono") || lower.includes("psiqu")) return "psiquiatra";
+  if (lower.includes("dor") && lower.includes("articula")) return "reumatologista";
+  if (lower.includes("urina") || lower.includes("rim") || lower.includes("nefro")) return "nefrologista";
+  if (lower.includes("olho") || lower.includes("visão") || lower.includes("oftalmo")) return "oftalmologista";
+  if (lower.includes("criança") || lower.includes("recém") || lower.includes("pedi")) return "pediatra";
+  // fallback
+  return "médicos";
+};
+
+export default function NearbyDoctors({ prognosis, userAddress, edgeFunctionUrl }: NearbyDoctorsProps) {
+  const [permissionState, setPermissionState] = useState<PermissionState | "unsupported">("unsupported");
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [providers, setProviders] = useState<Provider[]>([]);
+
+  // Detecta permission api (opcional)
   useEffect(() => {
-    const fetchNearbyProviders = async () => {
-      if (!userAddress) {
+    if (!("permissions" in navigator)) {
+      setPermissionState("unsupported");
+      return;
+    }
+    try {
+      // @ts-ignore - PermissionName typing
+      navigator.permissions.query({ name: "geolocation" }).then((res: PermissionStatus) => {
+        setPermissionState(res.state);
+        res.onchange = () => setPermissionState(res.state);
+      });
+    } catch {
+      setPermissionState("unsupported");
+    }
+  }, []);
+
+  const requestLocation = () => {
+    setError(null);
+    if (!("geolocation" in navigator)) {
+      setError("Geolocalização não disponível no seu navegador.");
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setCoords({ lat: position.coords.latitude, lng: position.coords.longitude });
+        setPermissionState("granted");
+      },
+      (err) => {
+        console.warn("getCurrentPosition erro:", err);
+        setPermissionState("denied");
+        setError("Permissão de localização negada. Usaremos o endereço de cadastro, se disponível.");
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  // Quando clicar em "Buscar especialistas", executa
+  const fetchProviders = async () => {
+    setError(null);
+    setProviders([]);
+    setLoading(true);
+
+    try {
+      const keyword = mapPrognosisToKeyword(prognosis);
+      // Preferência 1: localização atual (coords)
+      // Preferência 2: endereço de cadastro (userAddress) — a edge function fará geocoding
+      const body: any = {
+        keyword,
+        radius: 15000
+      };
+      if (coords) {
+        body.lat = coords.lat;
+        body.lng = coords.lng;
+      } else if (userAddress) {
+        body.address = userAddress;
+      } else {
+        // fallback - se nada, deixa o backend geocodificar com um local padrão (mas é melhor exigir userAddress)
+        setError("Nenhuma localização disponível. Permita a localização ou informe um endereço no perfil.");
+        setLoading(false);
         return;
       }
 
-      setLoading(true);
-      try {
-        const { data, error } = await supabase.functions.invoke('find-healthcare-providers', {
-          body: {
-            address: userAddress,
-            keyword: prognosis || '',
-            radius: 15000
-          }
-        });
+      // Chama a edge function (altere a URL se usar supabase.functions.invoke)
+      const url = edgeFunctionUrl || "/.netlify/functions/find-healthcare-providers"; // ajustar conforme deploy
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
 
-        if (error) {
-          throw error;
-        }
-
-        if (data?.providers) {
-          setProviders(data.providers);
-          setSearchLocation(data.searchLocation);
-        }
-      } catch (error: any) {
-        console.error('Error fetching nearby providers:', error);
-        toast({
-          title: "Erro ao buscar profissionais",
-          description: "Não foi possível encontrar profissionais próximos.",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || `Erro ao buscar: ${res.statusText}`);
       }
-    };
 
-    fetchNearbyProviders();
-  }, [userAddress, prognosis, toast]);
-
-  const openInGoogleMaps = (provider: HealthcareProvider) => {
-    const url = `https://www.google.com/maps/place/?q=place_id:${provider.placeId}`;
-    window.open(url, '_blank');
+      const providersFromApi = data.providers || [];
+      setProviders(
+        providersFromApi.map((p: any) => ({
+          name: p.name,
+          address: p.address,
+          rating: p.rating ?? null,
+          userRatingsTotal: p.userRatingsTotal ?? 0,
+          location: p.location ?? null,
+          placeId: p.placeId ?? p.id ?? null,
+        }))
+      );
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Erro ao buscar profissionais.");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  if (!userAddress) {
-    return (
-      <Card className="w-full">
-        <CardContent className="pt-6">
-          <div className="text-center text-muted-foreground">
-            <MapPin className="w-8 h-8 mx-auto mb-2 opacity-50" />
-            <p>Complete seu endereço no perfil para ver profissionais próximos.</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (loading) {
-    return (
-      <Card className="w-full">
-        <CardContent className="pt-6">
-          <div className="text-center">
-            <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-2"></div>
-            <p className="text-muted-foreground">Buscando profissionais próximos...</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (providers.length === 0) {
-    return (
-      <Card className="w-full">
-        <CardContent className="pt-6">
-          <div className="text-center text-muted-foreground">
-            <MapPin className="w-8 h-8 mx-auto mb-2 opacity-50" />
-            <p>Nenhum profissional encontrado na região.</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  // Abre Google Maps com zoom e place_id
+  const openGoogleMapsZoom = (placeId?: string, lat?: number, lng?: number) => {
+    if (!placeId && (!lat || !lng)) return;
+    if (placeId) {
+      window.open(`https://www.google.com/maps/place/?q=place_id:${placeId}`, "_blank");
+    } else {
+      window.open(`https://www.google.com/maps/@${lat},${lng},17z`, "_blank");
+    }
+  };
 
   return (
-    <div className="space-y-4">
-      {searchLocation && (
-        <div className="text-sm text-muted-foreground">
-          <MapPin className="w-4 h-4 inline mr-1" />
-          Encontrados {providers.length} profissionais próximos ao seu endereço
-        </div>
-      )}
-      
-      <div className="grid gap-4 md:grid-cols-2">
-        {providers.map((provider, index) => (
-          <Card key={provider.placeId || index} className="hover:shadow-md transition-shadow">
-            <CardHeader className="pb-3">
-              <div className="flex justify-between items-start">
-                <div className="flex-1">
-                  <CardTitle className="text-lg font-medium line-clamp-2">
-                    {provider.name}
-                  </CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1 flex items-center">
-                    <MapPin className="w-3 h-3 mr-1" />
-                    {provider.address}
-                  </p>
-                </div>
-                {provider.rating && (
-                  <div className="flex items-center space-x-1 ml-2">
-                    <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                    <span className="text-sm font-medium">{provider.rating.toFixed(1)}</span>
-                    <span className="text-xs text-muted-foreground">
-                      ({provider.userRatingsTotal})
-                    </span>
-                  </div>
-                )}
-              </div>
-            </CardHeader>
-            
-            <CardContent className="pt-0">
-              <div className="flex flex-wrap gap-1 mb-3">
-                {provider.types.slice(0, 3).map((type, idx) => (
-                  <Badge key={idx} variant="secondary" className="text-xs">
-                    {type.replace(/_/g, ' ')}
-                  </Badge>
-                ))}
-              </div>
-              
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => openInGoogleMaps(provider)}
-                  className="flex-1"
-                >
-                  <ExternalLink className="w-3 h-3 mr-1" />
-                  Ver no Maps
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+    <div>
+      <h2 className="text-lg font-bold mt-6 mb-2">Especialistas recomendados</h2>
+
+      {/* Permissão / botão de solicitar localização */}
+      {permissionState === "granted" && <p className="text-green-600">Localização em tempo real ativada.</p>}
+      {permissionState === "prompt" && <p className="text-gray-600">Permita o acesso à sua localização para melhores resultados.</p>}
+      {permissionState === "denied" && <p className="text-red-600">Localização bloqueada. Usaremos o endereço do perfil se disponível.</p>}
+      {permissionState === "unsupported" && <p className="text-gray-600">Permissões não suportadas no navegador.</p>}
+
+      <div className="flex gap-2 mt-2">
+        <button onClick={requestLocation} className="px-4 py-2 bg-slate-600 text-white rounded">Permitir localização</button>
+        <button
+          onClick={fetchProviders}
+          disabled={loading}
+          className="px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-60"
+        >
+          {loading ? "Buscando..." : "Buscar especialistas próximos"}
+        </button>
       </div>
+
+      {error && <p className="mt-3 text-red-600">{error}</p>}
+
+      <ul className="mt-4 space-y-3">
+        {providers.map((doc, idx) => (
+          <li key={idx} className="p-3 border rounded-md flex justify-between items-start">
+            <div>
+              <div className="font-semibold">{doc.name}</div>
+              <div className="text-sm text-muted-foreground">{doc.address}</div>
+              {doc.rating !== null && <div className="text-xs mt-1">Nota: {doc.rating} ⭐ ({doc.userRatingsTotal})</div>}
+            </div>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => openGoogleMapsZoom(doc.placeId, doc.location?.lat, doc.location?.lng)}
+                className="text-sm px-3 py-1 border rounded"
+              >
+                Abrir no mapa
+              </button>
+            </div>
+          </li>
+        ))}
+      </ul>
     </div>
   );
-};
-
-export default NearbyDoctors;
+}
