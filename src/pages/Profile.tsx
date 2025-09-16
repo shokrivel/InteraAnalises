@@ -444,14 +444,6 @@ const Profile = () => {
               )}
             </CardContent>
           </Card>
-
-          {/* Seção de Alterar Senha */}
-          <div className="mt-8">
-            <ChangePasswordSection />
-          </div>
-        </div>
-      </section>
-    </div>
   );
 };
 
