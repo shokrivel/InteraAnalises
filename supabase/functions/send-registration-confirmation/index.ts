@@ -6,7 +6,7 @@ import React from 'npm:react@18.3.1';
 import { RegistrationConfirmationEmail } from './_templates/registration-confirmation.tsx';
 
 const resend = new Resend(Deno.env.get('RESEND_API_KEY') as string);
-const hookSecret = Deno.env.get('SUPABASE_AUTH_WEBHOOK_SECRET') as string;
+const hookSecret = Deno.env.get('AUTH_WEBHOOK_SECRET') as string;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
