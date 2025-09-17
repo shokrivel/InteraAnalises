@@ -62,7 +62,7 @@ serve(async (req: Request) => {
       });
     }
 
-    const confirmationUrl = `${Deno.env.get('SUPABASE_URL')}/auth/v1/verify?token=${token}&type=${email_action_type}&redirect_to=${redirect_to}`;
+    const confirmationUrl = `${Deno.env.get('SUPABASE_URL')}/auth/v1/verify?token=${token}&type=${email_action_type}&redirect_to=${redirect_to || "https://interasaude.com.br/confirmado"}`;
 
     const html = await renderAsync(
       React.createElement(RegistrationConfirmationEmail, {
