@@ -16,11 +16,6 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [resendMessage, setResendMessage] = useState<{
-    type: "success" | "error" | null;
-    text: string;
-  }>({ type: null, text: "" });
-
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -54,13 +49,12 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
     }
   };
 
-  const handleResend = async () => {
-    setResendMessage({ type: null, text: "" });
-
-    if (!email.trim()) {
-      setResendMessage({
-        type: "error",
-        text: "Preencha o campo de e-mail antes de reenviar a confirmação.",
+  const handleResendConfirmation = async () => {
+    if (!email) {
+      toast({
+        title: "Aviso",
+        description: "Digite o e-mail antes de reenviar a confirmação.",
+        variant: "destructive",
       });
       return;
     }
@@ -71,11 +65,43 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
     });
 
     if (error) {
-      setResendMessage({ type: "error", text: error.message });
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      });
     } else {
-      setResendMessage({
-        type: "success",
-        text: `Um novo link de confirmação foi enviado para ${email}.`,
+      toast({
+        title: "E-mail reenviado",
+        description: "Verifique sua caixa de entrada para confirmar seu cadastro.",
+      });
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email) {
+      toast({
+        title: "Aviso",
+        description: "Digite o e-mail antes de solicitar a redefinição de senha.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+
+    if (error) {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "E-mail enviado",
+        description: "Verifique sua caixa de entrada para redefinir sua senha.",
       });
     }
   };
@@ -116,28 +142,26 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
         <Button type="submit" className="w-full" disabled={loading}>
           {loading ? "Entrando..." : "Entrar"}
         </Button>
+      </form>
 
+      {/* Ações adicionais sempre visíveis */}
+      <div className="flex flex-col space-y-2">
         <Button
-          type="button"
-          onClick={handleResend}
-          className="w-full"
-          variant="secondary"
+          variant="outline"
+          onClick={handleResendConfirmation}
+          disabled={loading}
         >
           Reenviar e-mail de confirmação
         </Button>
-
-        {resendMessage.type && (
-          <p
-            className={`text-sm mt-2 ${
-              resendMessage.type === "success"
-                ? "text-green-600"
-                : "text-red-600"
-            }`}
-          >
-            {resendMessage.text}
-          </p>
-        )}
-      </form>
+        <Button
+          variant="link"
+          className="text-sm text-blue-600"
+          onClick={handleForgotPassword}
+          disabled={loading}
+        >
+          Esqueci minha senha
+        </Button>
+      </div>
     </div>
   );
 };
