@@ -30,7 +30,7 @@ interface ConsultationRecord {
 
 const ConsultationHistory = () => {
   const { user, loading: authLoading } = useAuth();
-  const { hasAdminAccess } = useRole();
+  const { isAdmin } = useRole(); // Only admins can view all medical records
   const navigate = useNavigate();
   const { toast } = useToast();
   
@@ -61,8 +61,8 @@ const ConsultationHistory = () => {
         .select('*')
         .order('created_at', { ascending: false });
 
-      // Se o usuário não tem acesso admin, filtrar apenas suas consultas
-      if (!hasAdminAccess) {
+      // Only administrators can view all medical consultations for healthcare oversight
+      if (!isAdmin) {
         query = query.eq('user_id', user.id);
       }
 
@@ -256,7 +256,7 @@ const ConsultationHistory = () => {
               <MessageSquare className="w-4 h-4" />
               {filteredConsultations.length} de {consultations.length} consultas
             </Badge>
-            {hasAdminAccess && (
+            {isAdmin && (
               <Button variant="outline" size="sm" onClick={exportToCSV}>
                 <Download className="w-4 h-4 mr-2" />
                 Exportar CSV
