@@ -16,7 +16,11 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [unconfirmed, setUnconfirmed] = useState(false);
+  const [resendMessage, setResendMessage] = useState<{
+    type: "success" | "error" | null;
+    text: string;
+  }>({ type: null, text: "" });
+
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -24,7 +28,6 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
     e.preventDefault();
     setLoading(true);
     setError("");
-    setUnconfirmed(false);
 
     try {
       const { error } = await supabase.auth.signInWithPassword({
@@ -34,10 +37,6 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
 
       if (error) {
         setError(error.message);
-
-        if (error.message.includes("Email not confirmed")) {
-          setUnconfirmed(true); // ativa botão de reenviar
-        }
         return;
       }
 
@@ -56,21 +55,27 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
   };
 
   const handleResend = async () => {
+    setResendMessage({ type: null, text: "" });
+
+    if (!email.trim()) {
+      setResendMessage({
+        type: "error",
+        text: "Preencha o campo de e-mail antes de reenviar a confirmação.",
+      });
+      return;
+    }
+
     const { error } = await supabase.auth.resend({
       type: "signup",
       email: email.trim(),
     });
 
     if (error) {
-      toast({
-        title: "Erro ao reenviar",
-        description: error.message,
-        variant: "destructive",
-      });
+      setResendMessage({ type: "error", text: error.message });
     } else {
-      toast({
-        title: "E-mail reenviado!",
-        description: `Um novo link de confirmação foi enviado para ${email}.`,
+      setResendMessage({
+        type: "success",
+        text: `Um novo link de confirmação foi enviado para ${email}.`,
       });
     }
   };
@@ -112,20 +117,25 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
           {loading ? "Entrando..." : "Entrar"}
         </Button>
 
-        {unconfirmed && (
-          <div className="mt-3 text-center space-y-2">
-            <p className="text-sm text-red-500">
-              Sua conta ainda não foi confirmada.
-            </p>
-            <Button
-              type="button"
-              onClick={handleResend}
-              className="w-full"
-              variant="secondary"
-            >
-              Reenviar e-mail de confirmação
-            </Button>
-          </div>
+        <Button
+          type="button"
+          onClick={handleResend}
+          className="w-full"
+          variant="secondary"
+        >
+          Reenviar e-mail de confirmação
+        </Button>
+
+        {resendMessage.type && (
+          <p
+            className={`text-sm mt-2 ${
+              resendMessage.type === "success"
+                ? "text-green-600"
+                : "text-red-600"
+            }`}
+          >
+            {resendMessage.text}
+          </p>
         )}
       </form>
     </div>
