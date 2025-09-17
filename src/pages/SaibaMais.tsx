@@ -124,7 +124,7 @@ const SaibaMais = () => {
           
           <div className="flex items-center space-x-3">
             <img 
-              src="/logointerasaude.svg" 
+              src="/logo-interasaude-new.png" 
               alt="InteraSaúde Logo" 
               className="w-8 h-8"
             />
