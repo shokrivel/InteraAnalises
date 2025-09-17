@@ -126,9 +126,8 @@ const SaibaMais = () => {
             <img 
               src="/logo-interasaude-new.png" 
               alt="InteraSaúde Logo" 
-              className="w-8 h-8"
+              className="h-8"
             />
-            <h1 className="text-xl font-bold text-foreground">InteraSaúde</h1>
           </div>
         </div>
       </header>

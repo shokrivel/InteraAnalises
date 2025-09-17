@@ -126,10 +126,11 @@ const Consultation = () => {
             >
               <ArrowLeft className="w-4 h-4" />
             </Button>
-            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-              <Heart className="w-6 h-6 text-primary-foreground" />
-            </div>
-            <h1 className="text-2xl font-bold text-foreground">InteraSaúde</h1>
+            <img 
+              src="/logo-interasaude-new.png" 
+              alt="InteraSaúde Logo" 
+              className="h-10"
+            />
           </div>
           <Badge variant="secondary">
             {profileLabels[profile.profile_type]}

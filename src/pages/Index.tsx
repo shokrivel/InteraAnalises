@@ -30,9 +30,8 @@ const Index = () => {
             <img 
               src="/logo-interasaude-new.png" 
               alt="InteraSaúde Logo" 
-              className="w-10 h-10"
+              className="h-10"
             />
-            <h1 className="text-2xl font-bold text-foreground">InteraSaúde</h1>
           </div>
           
           {!loading && (

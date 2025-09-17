@@ -39,10 +39,11 @@ const Dashboard = () => {
       <header className="border-b border-border bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/80">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-              <Heart className="w-6 h-6 text-primary-foreground" />
-            </div>
-            <h1 className="text-2xl font-bold text-foreground">InteraSaúde</h1>
+            <img 
+              src="/logo-interasaude-new.png" 
+              alt="InteraSaúde Logo" 
+              className="h-10"
+            />
           </div>
           <div className="flex items-center gap-4">
             <Badge variant="secondary" className="flex items-center gap-2">

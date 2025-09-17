@@ -47,12 +47,11 @@ const AdminPanel = () => {
               <ArrowLeft className="w-4 h-4 mr-2" />
               Voltar
             </Button>
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <Heart className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <h1 className="text-xl font-bold text-foreground">
-              Painel {isAdmin ? 'Administrativo' : 'de Moderação'}
-            </h1>
+            <img 
+              src="/logo-interasaude-new.png" 
+              alt="InteraSaúde Logo" 
+              className="h-8"
+            />
           </div>
           <Badge variant={isAdmin ? "default" : "secondary"} className="flex items-center gap-2">
             {isAdmin ? <Crown className="w-4 h-4" /> : <Shield className="w-4 h-4" />}
