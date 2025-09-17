@@ -445,10 +445,12 @@ const Profile = () => {
             </CardContent>
           </Card>
 
-          {/* Seção de Alterar Senha */}
-          <div className="mt-8">
-            <ChangePasswordSection />
-          </div>
+          {/* Seção de Alterar Senha - apenas no modo editar */}
+          {isEditing && (
+            <div className="mt-8">
+              <ChangePasswordSection />
+            </div>
+          )}
         </div>
       </section>
     </div>
