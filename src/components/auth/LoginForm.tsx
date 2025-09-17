@@ -16,6 +16,7 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [unconfirmed, setUnconfirmed] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -23,6 +24,7 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setUnconfirmed(false);
 
     try {
       const { error } = await supabase.auth.signInWithPassword({
@@ -32,21 +34,44 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
 
       if (error) {
         setError(error.message);
+
+        if (error.message.includes("Email not confirmed")) {
+          setUnconfirmed(true); // ativa botão de reenviar
+        }
         return;
       }
 
       onSuccess();
-      navigate('/consultation');
-      
+      navigate("/consultation");
+
       toast({
         title: "Sucesso!",
         description: "Login realizado com sucesso",
       });
-
     } catch (err: any) {
       setError("Erro: " + err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email: email.trim(),
+    });
+
+    if (error) {
+      toast({
+        title: "Erro ao reenviar",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "E-mail reenviado!",
+        description: `Um novo link de confirmação foi enviado para ${email}.`,
+      });
     }
   };
 
@@ -58,7 +83,7 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
-        
+
         <div className="space-y-2">
           <Label htmlFor="email">E-mail</Label>
           <Input
@@ -70,7 +95,7 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
             required
           />
         </div>
-        
+
         <div className="space-y-2">
           <Label htmlFor="password">Senha</Label>
           <Input
@@ -82,14 +107,26 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
             required
           />
         </div>
-        
-        <Button 
-          type="submit" 
-          className="w-full" 
-          disabled={loading}
-        >
+
+        <Button type="submit" className="w-full" disabled={loading}>
           {loading ? "Entrando..." : "Entrar"}
         </Button>
+
+        {unconfirmed && (
+          <div className="mt-3 text-center space-y-2">
+            <p className="text-sm text-red-500">
+              Sua conta ainda não foi confirmada.
+            </p>
+            <Button
+              type="button"
+              onClick={handleResend}
+              className="w-full"
+              variant="secondary"
+            >
+              Reenviar e-mail de confirmação
+            </Button>
+          </div>
+        )}
       </form>
     </div>
   );
