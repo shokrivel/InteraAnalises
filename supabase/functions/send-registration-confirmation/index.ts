@@ -62,8 +62,8 @@ serve(async (req: Request) => {
       });
     }
 
-    const confirmationUrl = `${Deno.env.get('SUPABASE_URL')}/auth/v1/verify?token=${token_hash}&type=${email_action_type}&redirect_to=${redirect_to}`;
-    
+    const confirmationUrl = `${Deno.env.get('SUPABASE_URL')}/auth/v1/verify?token=${token}&type=${email_action_type}&redirect_to=${redirect_to}`;
+
     const html = await renderAsync(
       React.createElement(RegistrationConfirmationEmail, {
         userEmail: user.email,
