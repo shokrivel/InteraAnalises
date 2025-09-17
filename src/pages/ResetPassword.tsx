@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,23 +14,24 @@ const ResetPassword = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    // Verificar se há tokens de reset na URL
-    const accessToken = searchParams.get('access_token');
-    const refreshToken = searchParams.get('refresh_token');
-    
+    // Extrair tokens da hash da URL (#access_token=...&refresh_token=...)
+    const hash = window.location.hash.substring(1); // remove o #
+    const params = new URLSearchParams(hash);
+
+    const accessToken = params.get("access_token");
+    const refreshToken = params.get("refresh_token");
+
     if (accessToken && refreshToken) {
-      // Definir a sessão com os tokens recebidos
       supabase.auth.setSession({
         access_token: accessToken,
         refresh_token: refreshToken,
       });
     }
-  }, [searchParams]);
+  }, []);
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,7 +51,7 @@ const ResetPassword = () => {
 
     try {
       const { error } = await supabase.auth.updateUser({
-        password: password
+        password: password,
       });
 
       if (error) {
@@ -60,7 +61,7 @@ const ResetPassword = () => {
           title: "Senha redefinida com sucesso!",
           description: "Você será redirecionado para o dashboard.",
         });
-        
+
         // Redirecionar para o dashboard após 2 segundos
         setTimeout(() => {
           navigate("/dashboard");
@@ -91,9 +92,7 @@ const ResetPassword = () => {
             </div>
           </div>
           <CardTitle className="text-2xl font-bold">Redefinir Senha</CardTitle>
-          <CardDescription>
-            Digite sua nova senha abaixo
-          </CardDescription>
+          <CardDescription>Digite sua nova senha abaixo</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleResetPassword} className="space-y-4">
@@ -102,7 +101,7 @@ const ResetPassword = () => {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
-            
+
             <div className="space-y-2">
               <Label htmlFor="password">Nova senha</Label>
               <Input
@@ -115,7 +114,7 @@ const ResetPassword = () => {
                 minLength={6}
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="confirm-password">Confirmar senha</Label>
               <Input
@@ -128,7 +127,7 @@ const ResetPassword = () => {
                 minLength={6}
               />
             </div>
-            
+
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Atualizando..." : "Atualizar Senha"}
             </Button>
