@@ -52,24 +52,51 @@ serve(async (req) => {
 
     console.log('User profile:', profile);
 
+    // Get user profile with full location info
+    const { data: fullProfile, error: fullProfileError } = await supabaseAdmin
+      .from('profiles')
+      .select('profile_type, name, address, city')
+      .eq('user_id', actualUserId)
+      .single();
+
+    if (fullProfileError) {
+      console.error('Error fetching full profile:', fullProfileError);
+      throw new Error('Erro ao buscar perfil do usuário');
+    }
+
+    console.log('User profile:', fullProfile);
+
     // Create system prompt based on user profile
     let systemPrompt = '';
     let responseLevel = '';
 
-    switch (profile.profile_type) {
+    const baseSystemPrompt = `Você é um assistente especializado em saúde, com foco em Parasitologia, Bioquímica e Hematologia. Suas respostas devem sempre se basear em literatura científica confiável (PubMed, LILACS, Science Direct e periódicos indexados). Respeite os limites de tempo das fontes: até 5 anos para Bioquímica/Hematologia e até 10 anos para Parasitologia.
+
+IMPORTANTE: Ao final da sua resposta, você DEVE incluir um campo JSON com a especialidade médica mais apropriada baseada nos sintomas apresentados. Use este formato exato:
+
+**ESPECIALIDADE_SUGERIDA:** {"specialty": "nome_da_especialidade"}
+
+Use uma dessas especialidades: "Clínico Geral", "Cardiologista", "Dermatologista", "Pneumologista", "Gastroenterologista", "Neurologista", "Ortopedista", "Psiquiatra", "Ginecologista", "Urologista", "Oftalmologista", "Otorrinolaringologista", "Endocrinologista", "Hematologista", "Infectologista", "Reumatologista", "Oncologista", "Pediatra".`;
+
+    switch (fullProfile.profile_type) {
       case 'patient':
-        systemPrompt = `Você é um assistente especializado em saúde, com foco em Parasitologia, Bioquímica e Hematologia. Suas respostas devem sempre se basear em literatura científica confiável (PubMed, LILACS, Science Direct e periódicos indexados). Respeite os limites de tempo das fontes: até 5 anos para Bioquímica/Hematologia e até 10 anos para Parasitologia. Utilizar nomes populares e colocar o nome técnico entre parênteses, por exemplo: exame de sangue (Hemograma). Respostas resumidas (até ~1500 tokens), tom acolhedor e natural, com temperatura simulada de 0,6–0,7. Referências não são obrigatórias. Evite termos técnicos complexos. Forneça explicações educativas e, quando apropriado, 
-        recomende buscar acompanhamento médico presencial. Seja empático e cuidadoso. Após sugerir hipóteses diagnósticas, sempre indique profissionais da saúde próximos (médicos, farmacêuticos, biomédicos, laboratórios), utilizando a localização cadastrada pelo usuário. Essa etapa deve integrar-se com a Google Maps API. Se o perfil não for informado, solicite que o usuário selecione o perfil antes de gerar a resposta.`;
+        systemPrompt = `${baseSystemPrompt}
+
+Utilizar nomes populares e colocar o nome técnico entre parênteses, por exemplo: exame de sangue (Hemograma). Respostas resumidas (até ~1500 tokens), tom acolhedor e natural, com temperatura simulada de 0,6–0,7. Referências não são obrigatórias. Evite termos técnicos complexos. Forneça explicações educativas e, quando apropriado, recomende buscar acompanhamento médico presencial. Seja empático e cuidadoso.`;
         responseLevel = 'Paciente';
         break;
       
       case 'academic':
-        systemPrompt = `Você é um assistente especializado em saúde, com foco em Parasitologia, Bioquímica e Hematologia. Suas respostas devem sempre se basear em literatura científica confiável (PubMed, LILACS, Science Direct e periódicos indexados) para atender os estudantes de medicina e ciências da saúde. Respeite os limites de tempo das fontes: até 5 anos para Bioquímica/Hematologia e até 10 anos para Parasitologia. linguagem técnica intermediária, estilo de resumo científico. Respostas mais detalhadas (até ~2500 tokens), tom objetivo e técnico, com temperatura simulada de 0,5–0,6. Referências devem ser citadas de forma resumida no formato (Autor, Ano, Periódico). Após sugerir hipóteses diagnósticas, sempre indique profissionais da saúde próximos (médicos, farmacêuticos, biomédicos, laboratórios), utilizando a localização cadastrada pelo usuário. Essa etapa deve integrar-se com a Google Maps API. Se o perfil não for informado, solicite que o usuário selecione o perfil antes de gerar a resposta.`;
+        systemPrompt = `${baseSystemPrompt}
+
+Linguagem técnica intermediária, estilo de resumo científico. Respostas mais detalhadas (até ~2500 tokens), tom objetivo e técnico, com temperatura simulada de 0,5–0,6. Referências devem ser citadas de forma resumida no formato (Autor, Ano, Periódico).`;
         responseLevel = 'Acadêmico';
         break;
       
       case 'health_professional':
-        systemPrompt = `Você é um assistente especializado em saúde, com foco em Parasitologia, Bioquímica e Hematologia. Suas respostas devem sempre se basear em literatura científica confiável (PubMed, LILACS, Science Direct e periódicos indexados) para atender profissionais de saúde. Respeite os limites de tempo das fontes: até 5 anos para Bioquímica/Hematologia e até 10 anos para Parasitologia. linguagem científica avançada, com detalhamento técnico e terminologia específica. Respostas completas (até ~3500 tokens), tom focado e preciso, com temperatura simulada de 0,4–0,5. Referências obrigatórias em padrão ABNT, utilizando somente fontes atuais (até 5 anos para bioquímica/hematologia e até 10 anos para parasitologia). Após sugerir hipóteses diagnósticas, sempre indique profissionais da saúde próximos (médicos, farmacêuticos, biomédicos, laboratórios), utilizando a localização cadastrada pelo usuário. Essa etapa deve integrar-se com a Google Maps API. Se o perfil não for informado, solicite que o usuário selecione o perfil antes de gerar a resposta.`;
+        systemPrompt = `${baseSystemPrompt}
+
+Linguagem científica avançada, com detalhamento técnico e terminologia específica. Respostas completas (até ~3500 tokens), tom focado e preciso, com temperatura simulada de 0,4–0,5. Referências obrigatórias em padrão ABNT, utilizando somente fontes atuais (até 5 anos para bioquímica/hematologia e até 10 anos para parasitologia).`;
         responseLevel = 'Profissional de Saúde';
         break;
     }
@@ -127,7 +154,7 @@ NOVAS INFORMAÇÕES (Data: ${currentDate}):
 Analisando o histórico completo, forneça um novo prognóstico considerando a evolução do quadro.`;
     } else {
       // Regular consultation
-      consultationContext = `Paciente: ${profile.name}\nNível de resposta: ${responseLevel}\n\nDados da consulta:\n`;
+      consultationContext = `Paciente: ${fullProfile.name}\nNível de resposta: ${responseLevel}\n\nDados da consulta:\n`;
       
       if (symptoms && symptoms.length > 0) {
         consultationContext += `Sintomas: ${symptoms.join(', ')}\n`;
@@ -209,6 +236,60 @@ Analisando o histórico completo, forneça um novo prognóstico considerando a e
       throw new Error('Resposta inválida da API do Gemini');
     }
 
+    // Extract suggested specialty from AI response
+    let suggestedSpecialty = 'Clínico Geral'; // Default
+    let specialists = [];
+
+    try {
+      const specialtyMatch = aiResponse.match(/\*\*ESPECIALIDADE_SUGERIDA:\*\*\s*(\{[^}]+\})/);
+      if (specialtyMatch) {
+        const specialtyData = JSON.parse(specialtyMatch[1]);
+        suggestedSpecialty = specialtyData.specialty || 'Clínico Geral';
+        console.log('Extracted specialty:', suggestedSpecialty);
+      }
+    } catch (error) {
+      console.log('Could not extract specialty, using default:', error);
+    }
+
+    // Get user location and find nearby specialists
+    const userAddress = fullProfile.address && fullProfile.city 
+      ? `${fullProfile.address}, ${fullProfile.city}` 
+      : fullProfile.city || '';
+
+    if (userAddress) {
+      try {
+        console.log('Searching for specialists near:', userAddress);
+        
+        const { data: specialistsData, error: specialistsError } = await supabaseAdmin.functions.invoke(
+          'find-healthcare-providers',
+          {
+            body: {
+              address: userAddress,
+              keyword: suggestedSpecialty,
+              radius: 15000 // 15km default
+            }
+          }
+        );
+
+        if (!specialistsError && specialistsData?.providers) {
+          specialists = specialistsData.providers.slice(0, 5).map((provider: any) => ({
+            name: provider.name,
+            address: provider.address,
+            rating: provider.rating,
+            userRatingsTotal: provider.userRatingsTotal,
+            location: provider.location,
+            placeId: provider.placeId,
+            specialty: suggestedSpecialty
+          }));
+          
+          console.log(`Found ${specialists.length} specialists for ${suggestedSpecialty}`);
+        }
+      } catch (error) {
+        console.error('Error finding specialists:', error);
+        // Continue without specialists - don't fail the consultation
+      }
+    }
+
     // Save consultation to database
     const { data: consultationRecord, error: saveError } = await supabaseAdmin
       .from('consultation_history')
@@ -219,8 +300,9 @@ Analisando o histórico completo, forneça um novo prognóstico considerando a e
         symptom_duration: actualConsultationData.symptom_duration ? parseInt(actualConsultationData.symptom_duration) : null,
         exam_results: Object.keys(actualConsultationData).length > 0 ? actualConsultationData : null,
         epidemiological_info: {
-          profile_type: profile.profile_type,
-          consultation_fields: actualConsultationData
+          profile_type: fullProfile.profile_type,
+          consultation_fields: actualConsultationData,
+          suggested_specialty: suggestedSpecialty
         },
         attachments: attachments,
         consulta_original_id: consulta_original_id || null,
@@ -239,7 +321,9 @@ Analisando o histórico completo, forneça um novo prognóstico considerando a e
     return new Response(JSON.stringify({ 
       response: aiResponse,
       consultationId: consultationRecord?.id,
-      profileType: profile.profile_type 
+      profileType: fullProfile.profile_type,
+      specialists: specialists,
+      suggestedSpecialty: suggestedSpecialty
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

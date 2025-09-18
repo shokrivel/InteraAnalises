@@ -1,30 +1,42 @@
-import NearbyDoctors from "../components/NearbyDoctors";
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Heart, ArrowLeft, Bot, User, Copy, CheckCheck, MapPin } from "lucide-react";
+import { ArrowLeft, Bot, User, Copy, CheckCheck, MapPin, Star, Navigation, Map } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import HealthcareProvidersMap from "@/components/maps/HealthcareProvidersMap";
 
+interface Specialist {
+  name: string;
+  address: string;
+  rating: number;
+  userRatingsTotal: number;
+  location: { lat: number; lng: number };
+  placeId: string;
+  specialty: string;
+}
+
 interface ConsultationResponse {
   response: string;
-  consultationId: string;
-  profileType: string;
-  suggestedSpecialty?: string; // ← Especialidade inferida pela IA
+  consultationId?: string;
+  profileType?: string;
+  suggestedSpecialty?: string;
+  specialists?: Specialist[];
 }
 
 const ConsultationChat = () => {
-  const [consultationResponse, setConsultationResponse] = useState<ConsultationResponse | null>(null);
+  const [aiResponse, setAiResponse] = useState<ConsultationResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [copied, setCopied] = useState(false);
   const [showMap, setShowMap] = useState(false);
-  const [providers, setProviders] = useState<any[]>([]); // ← lista de especialistas buscados no Supabase
+  const [copied, setCopied] = useState(false);
+  const [specialists, setSpecialists] = useState<Specialist[]>([]);
+  const [radiusFilter, setRadiusFilter] = useState(15);
+  const [ratingFilter, setRatingFilter] = useState(0);
   const { user } = useAuth();
   const { profile } = useProfile();
   const navigate = useNavigate();
@@ -57,39 +69,20 @@ const ConsultationChat = () => {
         if (error) throw new Error(error.message);
         if (data.error) throw new Error(data.error);
 
-        setConsultationResponse(data);
-
-        // 👉 Ponto 1: extrair diagnóstico/especialidade
-        const extractedSpecialty = data.suggestedSpecialty || "Clínico Geral";
-
-        // 👉 Ponto 2: chamar Supabase para buscar especialistas próximos
-        if (profile?.address && profile?.city) {
-          const userAddress = `${profile.address}, ${profile.city}`;
-          console.log("📍 Buscando especialistas próximos:", extractedSpecialty, "em", userAddress);
-
-          const { data: providerData, error: providerError } =
-            await supabase.functions.invoke("find-healthcare-providers", {
-              body: {
-                address: userAddress,
-                keyword: extractedSpecialty,
-              },
-            });
-
-          if (providerError) {
-            console.error("Erro na busca de especialistas:", providerError);
-          } else {
-            console.log("👩‍⚕️ Especialistas encontrados:", providerData?.providers || []);
-            setProviders(providerData?.providers || []);
+        if (data.response) {
+          setAiResponse(data);
+          
+          // Set specialists if available
+          if (data.specialists && data.specialists.length > 0) {
+            setSpecialists(data.specialists);
           }
+        } else {
+          throw new Error("Não foi possível obter uma resposta da IA.");
         }
-
-        // 👉 Ponto 3: abrir o mapa automaticamente
-        setShowMap(true);
 
         toast({
           title: "Consulta processada com sucesso!",
-          description:
-            "A IA analisou suas informações e gerou uma resposta personalizada.",
+          description: "A IA analisou suas informações e gerou uma resposta personalizada.",
         });
       } catch (error: any) {
         console.error("Erro ao processar consulta:", error);
@@ -107,29 +100,43 @@ const ConsultationChat = () => {
     processConsultation();
   }, [user, consultationData, navigate, toast, profile]);
 
-  const copyToClipboard = async () => {
-    if (consultationResponse?.response) {
-      try {
-        await navigator.clipboard.writeText(consultationResponse.response);
-        setCopied(true);
-        toast({
-          title: "Copiado!",
-          description: "Resposta copiada para a área de transferência.",
-        });
-        setTimeout(() => setCopied(false), 2000);
-      } catch (error) {
-        toast({
-          title: "Erro ao copiar",
-          description: "Não foi possível copiar o texto.",
-          variant: "destructive",
-        });
-      }
+  const copyToClipboard = () => {
+    if (aiResponse?.response) {
+      navigator.clipboard.writeText(aiResponse.response);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     }
   };
 
+  const openGoogleMaps = (specialist: Specialist) => {
+    const url = `https://www.google.com/maps/place/?q=place_id:${specialist.placeId}`;
+    window.open(url, '_blank');
+  };
+
+  const openDirections = (specialist: Specialist) => {
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${specialist.location.lat},${specialist.location.lng}&destination_place_id=${specialist.placeId}`;
+    window.open(url, '_blank');
+  };
+
+  const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number) => {
+    const R = 6371; // Earth's radius in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
+  const filteredSpecialists = specialists.filter(specialist => {
+    if (specialist.rating < ratingFilter) return false;
+    return true;
+  });
+
   const profileLabels = {
     patient: "Paciente",
-    academic: "Acadêmico",
+    academic: "Acadêmico", 
     health_professional: "Profissional de Saúde",
   };
 
@@ -162,7 +169,7 @@ const ConsultationChat = () => {
     );
   }
 
-  if (!consultationResponse) {
+  if (!aiResponse) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Card className="max-w-md">
@@ -251,7 +258,7 @@ const ConsultationChat = () => {
                     <div className="flex items-center space-x-2">
                       <span className="font-medium">InteraSaúde AI</span>
                       <Badge variant="secondary" className="text-xs">
-                        Gemini 2.5 Pro
+                        Gemini 1.5 Flash
                       </Badge>
                     </div>
                     <Button
@@ -270,7 +277,7 @@ const ConsultationChat = () => {
                   </div>
 
                   <div className="prose prose-sm max-w-none">
-                    {consultationResponse.response
+                    {aiResponse.response
                       .split("\n")
                       .map(
                         (paragraph, index) =>
@@ -286,20 +293,151 @@ const ConsultationChat = () => {
             </Card>
           </div>
 
+          {/* Specialists Section */}
+          {specialists.length > 0 && (
+            <div className="mt-8">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-semibold text-foreground">
+                  Especialistas próximos recomendados
+                </h3>
+                <span className="text-sm text-muted-foreground bg-secondary px-3 py-1 rounded-full">
+                  {aiResponse?.suggestedSpecialty}
+                </span>
+              </div>
+
+              {/* Filters */}
+              <div className="flex gap-4 mb-6 p-4 bg-secondary/50 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium">Avaliação mínima:</label>
+                  <select
+                    value={ratingFilter}
+                    onChange={(e) => setRatingFilter(Number(e.target.value))}
+                    className="px-3 py-1 border rounded-md bg-background"
+                  >
+                    <option value={0}>Todas</option>
+                    <option value={3}>3+ estrelas</option>
+                    <option value={4}>4+ estrelas</option>
+                    <option value={4.5}>4.5+ estrelas</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Specialists Grid */}
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-1">
+                {filteredSpecialists.map((specialist, index) => (
+                  <Card 
+                    key={specialist.placeId} 
+                    className={`transition-all duration-200 hover:shadow-lg ${
+                      index === 0 ? 'border-primary border-2 bg-primary/5' : 'hover:border-primary/50'
+                    }`}
+                  >
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <CardTitle className="text-lg flex items-center gap-2">
+                            {specialist.name}
+                            {index === 0 && (
+                              <span className="text-xs bg-primary text-primary-foreground px-2 py-1 rounded-full">
+                                Mais próximo
+                              </span>
+                            )}
+                          </CardTitle>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {specialist.specialty}
+                          </p>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="flex items-start gap-2">
+                        <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                        <p className="text-sm text-foreground">{specialist.address}</p>
+                      </div>
+                      
+                      {specialist.rating && (
+                        <div className="flex items-center gap-2">
+                          <div className="flex">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Star
+                                key={star}
+                                className={`h-4 w-4 ${
+                                  star <= specialist.rating
+                                    ? 'text-yellow-400 fill-current'
+                                    : 'text-gray-300'
+                                }`}
+                              />
+                            ))}
+                          </div>
+                          <span className="text-sm font-medium">{specialist.rating}</span>
+                          <span className="text-sm text-muted-foreground">
+                            ({specialist.userRatingsTotal} avaliações)
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="flex gap-2 pt-2">
+                        <Button
+                          onClick={() => openGoogleMaps(specialist)}
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                        >
+                          <MapPin className="h-4 w-4 mr-2" />
+                          Ver no Maps
+                        </Button>
+                        <Button
+                          onClick={() => openDirections(specialist)}
+                          variant="default"
+                          size="sm"
+                          className="flex-1"
+                        >
+                          <Navigation className="h-4 w-4 mr-2" />
+                          Iniciar rota
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {filteredSpecialists.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <MapPin className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p>Nenhum especialista encontrado com os filtros aplicados.</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Map display */}
+          {showMap && specialists.length > 0 && (
+            <div className="mt-6">
+              <h3 className="text-lg font-semibold mb-4">Mapa interativo</h3>
+              <HealthcareProvidersMap
+                userAddress={profile?.address && profile?.city ? `${profile.address}, ${profile.city}` : undefined}
+                keyword={aiResponse?.suggestedSpecialty}
+                onClose={() => setShowMap(false)}
+              />
+            </div>
+          )}
+
           {/* Actions */}
           <Card>
             <CardContent className="pt-6">
               <div className="text-center space-y-4">
                 <h3 className="font-medium">Próximos passos</h3>
                 <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                  <Button
-                    onClick={() => setShowMap(!showMap)}
-                    variant="outline"
-                    className="flex items-center gap-2"
-                  >
-                    <MapPin className="h-4 w-4" />
-                    {showMap ? "Ocultar Mapa" : "Ver Profissionais Próximos"}
-                  </Button>
+                  {/* Button to show/hide map */}
+                  {specialists.length > 0 && (
+                    <Button
+                      onClick={() => setShowMap(!showMap)}
+                      variant="outline"
+                      className="gap-2"
+                    >
+                      <Map className="h-4 w-4" />
+                      {showMap ? 'Ocultar' : 'Ver'} Mapa Interativo
+                    </Button>
+                  )}
                   <Button onClick={() => navigate("/consultation")}>
                     Nova Consulta
                   </Button>
@@ -309,52 +447,11 @@ const ConsultationChat = () => {
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Esta consulta foi salva no seu histórico. ID:{" "}
-                  {consultationResponse.consultationId?.slice(0, 8)}...
+                  {aiResponse.consultationId?.slice(0, 8)}...
                 </p>
               </div>
             </CardContent>
           </Card>
-
-          {/* Healthcare Providers Map */}
-          {showMap && profile && consultationResponse && (
-            <Card>
-              <CardContent className="p-6">
-                <HealthcareProvidersMap
-                  userAddress={
-                    profile.address && profile.city
-                      ? `${profile.address}, ${profile.city}`
-                      : undefined
-                  }
-                  keyword={consultationResponse.suggestedSpecialty} // ← keyword da IA
-                  onClose={() => setShowMap(false)}
-                />
-
-                {/* Debug: lista de especialistas */}
-                {providers.length > 0 && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-                    {providers.map((prov, idx) => (
-                      <Card key={idx} className="border">
-                        <CardHeader>
-                          <CardTitle>{prov.name}</CardTitle>
-                          <p className="text-sm text-muted-foreground">
-                            {consultationResponse.suggestedSpecialty}
-                          </p>
-                        </CardHeader>
-                        <CardContent>
-                          <p>{prov.address}</p>
-                          {prov.rating && (
-                            <p className="mt-2">
-                              ⭐ {prov.rating} ({prov.userRatingsTotal} avaliações)
-                            </p>
-                          )}
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
 
           {/* Disclaimer */}
           <Card className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950">
