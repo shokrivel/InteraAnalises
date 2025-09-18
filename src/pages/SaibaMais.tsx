@@ -13,29 +13,56 @@ interface PageContent {
   url_imagem?: string;
 }
 
+interface SaibaMaisCard {
+  id: string;
+  titulo: string;
+  descricao?: string;
+  url_imagem: string;
+  ordem: number;
+  ativo: boolean;
+}
+
 const SaibaMais = () => {
   const [content, setContent] = useState<PageContent | null>(null);
+  const [cards, setCards] = useState<SaibaMaisCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchContent = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-        const { data, error } = await supabase
+        
+        // Fetch page content
+        const { data: pageData, error: pageError } = await supabase
           .from('paginas_conteudo')
           .select('*')
           .eq('slug', 'saiba-mais')
-          .single();
+          .maybeSingle();
 
-        if (error) {
-          console.error('Error fetching page content:', error);
+        if (pageError && pageError.code !== 'PGRST116') {
+          console.error('Error fetching page content:', pageError);
           setError('Erro ao carregar o conteúdo da página.');
           return;
         }
 
-        setContent(data);
+        if (pageData) {
+          setContent(pageData);
+        }
+
+        // Fetch cards
+        const { data: cardsData, error: cardsError } = await (supabase as any)
+          .from('saiba_mais_cards')
+          .select('*')
+          .eq('ativo', true)
+          .order('ordem', { ascending: true });
+
+        if (cardsError) {
+          console.error('Error fetching cards:', cardsError);
+        } else {
+          setCards(cardsData || []);
+        }
       } catch (err) {
         console.error('Unexpected error:', err);
         setError('Erro inesperado ao carregar o conteúdo.');
@@ -44,7 +71,7 @@ const SaibaMais = () => {
       }
     };
 
-    fetchContent();
+    fetchData();
   }, []);
 
   if (loading) {
@@ -185,6 +212,35 @@ const SaibaMais = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Image Cards Section */}
+          {cards.length > 0 && (
+            <div className="mt-8 space-y-6">
+              <h2 className="text-2xl font-bold text-center">Recursos Adicionais</h2>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {cards.map((card) => (
+                  <Card key={card.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                    <div className="aspect-video w-full overflow-hidden">
+                      <img 
+                        src={card.url_imagem} 
+                        alt={card.titulo}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = "/placeholder.svg";
+                        }}
+                      />
+                    </div>
+                    <CardContent className="p-4">
+                      <h3 className="font-semibold text-lg mb-2">{card.titulo}</h3>
+                      {card.descricao && (
+                        <p className="text-muted-foreground text-sm">{card.descricao}</p>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </main>
     </div>

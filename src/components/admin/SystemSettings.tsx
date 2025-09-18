@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Settings, Database, Bell, Shield, Save, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import SaibaMaisManagement from "./SaibaMaisManagement";
 
 const SystemSettings = () => {
   const { toast } = useToast();
@@ -107,9 +108,10 @@ const SystemSettings = () => {
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="general" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="general">Geral</TabsTrigger>
             <TabsTrigger value="ai">IA</TabsTrigger>
+            <TabsTrigger value="content">Conteúdo</TabsTrigger>
             <TabsTrigger value="notifications">Notificações</TabsTrigger>
             <TabsTrigger value="security">Segurança</TabsTrigger>
           </TabsList>
@@ -219,6 +221,11 @@ const SystemSettings = () => {
               {loading ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
               Salvar Configurações de IA
             </Button>
+          </TabsContent>
+
+          {/* Content Management */}
+          <TabsContent value="content" className="space-y-6">
+            <SaibaMaisManagement />
           </TabsContent>
 
           {/* Notification Settings */}
