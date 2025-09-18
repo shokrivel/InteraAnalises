@@ -123,26 +123,25 @@ const Dashboard = () => {
               </CardContent>
             </Card>
 
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-              <CardHeader>
-                <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
-                  <User className="w-6 h-6 text-primary" />
-                </div>
-                <CardTitle>Perfil</CardTitle>
-                <CardDescription>
-                  Gerencie suas informações pessoais e preferências
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button 
-                  variant="outline" 
-                  className="w-full"
-                  onClick={() => navigate("/profile")}
-                >
-                  Ver Perfil
-                </Button>
-              </CardContent>
-            </Card>
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+  <CardHeader>
+    <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
+      <User className="w-6 h-6 text-primary" />
+    </div>
+    <CardTitle>Perfil</CardTitle>
+    <CardDescription>
+      Gerencie suas informações pessoais e preferências
+    </CardDescription>
+  </CardHeader>
+  <CardContent>
+    <Button 
+      className="w-full"
+      onClick={() => navigate("/profile")}
+    >
+      Ver Perfil
+    </Button>
+  </CardContent>
+</Card>
 
             {/* Admin Panel Card - Only visible to admins */}
             {isAdmin && (
