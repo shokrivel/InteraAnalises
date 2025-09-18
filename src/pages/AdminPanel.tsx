@@ -1,5 +1,4 @@
-import ModeratorPanel from "@/components/ModeratorPanel";
-import { useState } from "react";
+import React, { Suspense, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +10,10 @@ import { useRole } from "@/hooks/useRole";
 import FieldsManagement from "@/components/admin/FieldsManagement";
 import UserManagement from "@/components/admin/UserManagement";
 import SystemSettings from "@/components/admin/SystemSettings";
+
+// lazy import para prevenir erro se o componente faltar no bundle
+const ModeratorPanel = React.lazy(() => import("../components/ModeratorPanel"));
+
  
 const AdminPanel = () => {
   const { user } = useAuth();
