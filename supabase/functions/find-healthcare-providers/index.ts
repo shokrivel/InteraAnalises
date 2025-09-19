@@ -93,16 +93,32 @@ const formattedResults = (placesData.results || []).map((place)=>({
     specialty: providerType // <-- adiciona especialidade inferida
   }));
 
-return new Response(JSON.stringify({
-  providers: formattedResults,
-  searchLocation: {
-    lat: searchLat,
-    lng: searchLng
-  }
-}), {
-  status: 200,
-  headers: {
-    "Content-Type": "application/json",
-    ...corsHeaders
+    return new Response(JSON.stringify({
+      providers: formattedResults,
+      searchLocation: {
+        lat: searchLat,
+        lng: searchLng
+      }
+    }), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+        ...corsHeaders
+      }
+    });
+
+  } catch (error) {
+    console.error("Error in find-healthcare-providers:", error);
+    return new Response(JSON.stringify({ 
+      error: error.message,
+      providers: [],
+      searchLocation: null
+    }), {
+      status: 500,
+      headers: {
+        "Content-Type": "application/json",
+        ...corsHeaders
+      }
+    });
   }
 });
