@@ -1,3 +1,5 @@
+Vou te encaminhar o código do consultation chat:
+
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -98,7 +100,7 @@ const ConsultationChat = () => {
     };
 
     processConsultation();
-  }, [user, consultationData, navigate, toast]);
+  }, [user, consultationData, navigate, toast, profile]);
 
   const copyToClipboard = () => {
     if (aiResponse?.response) {
@@ -139,18 +141,6 @@ const ConsultationChat = () => {
     academic: "Acadêmico", 
     health_professional: "Profissional de Saúde",
   };
-
-const getResponseForProfile = (text: string, profileKey: string) => {
-  const label = profileLabels[profileKey]; // "Paciente", "Acadêmico" ou "Profissional de Saúde"
-
-  const regex = new RegExp(
-    `\\*\\*Para o ${label}:\\*\\*([\\s\\S]*?)(?=\\*\\*Para|\\*\\*ESPECIALIDADE|$)`,
-    "i"
-  );
-
-  const match = text.match(regex);
-  return match ? match[1].trim() : null;
-};
 
   if (loading) {
     return (
@@ -289,17 +279,17 @@ const getResponseForProfile = (text: string, profileKey: string) => {
                   </div>
 
                   <div className="prose prose-sm max-w-none">
-  {getResponseForProfile()
-    .split("\n")
-    .map(
-      (paragraph, index) =>
-        paragraph.trim() && (
-          <p key={index} className="mb-3 leading-relaxed">
-            {paragraph.trim()}
-          </p>
-        )
-    )}
-</div>
+                    {aiResponse.response
+                      .split("\n")
+                      .map(
+                        (paragraph, index) =>
+                          paragraph.trim() && (
+                            <p key={index} className="mb-3 leading-relaxed">
+                              {paragraph.trim()}
+                            </p>
+                          )
+                      )}
+                  </div>
                 </div>
               </CardContent>
             </Card>
