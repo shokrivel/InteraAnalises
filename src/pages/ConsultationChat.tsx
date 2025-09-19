@@ -98,7 +98,7 @@ const ConsultationChat = () => {
     };
 
     processConsultation();
-  }, [user, consultationData, navigate, toast, profile]);
+  }, [user, consultationData, navigate, toast]);
 
   const copyToClipboard = () => {
     if (aiResponse?.response) {
@@ -139,6 +139,18 @@ const ConsultationChat = () => {
     academic: "Acadêmico", 
     health_professional: "Profissional de Saúde",
   };
+
+const getResponseForProfile = (text: string, profileKey: string) => {
+  const label = profileLabels[profileKey]; // "Paciente", "Acadêmico" ou "Profissional de Saúde"
+
+  const regex = new RegExp(
+    `\\*\\*Para o ${label}:\\*\\*([\\s\\S]*?)(?=\\*\\*Para|\\*\\*ESPECIALIDADE|$)`,
+    "i"
+  );
+
+  const match = text.match(regex);
+  return match ? match[1].trim() : null;
+};
 
   if (loading) {
     return (
@@ -277,17 +289,17 @@ const ConsultationChat = () => {
                   </div>
 
                   <div className="prose prose-sm max-w-none">
-                    {aiResponse.response
-                      .split("\n")
-                      .map(
-                        (paragraph, index) =>
-                          paragraph.trim() && (
-                            <p key={index} className="mb-3 leading-relaxed">
-                              {paragraph.trim()}
-                            </p>
-                          )
-                      )}
-                  </div>
+  {getResponseForProfile()
+    .split("\n")
+    .map(
+      (paragraph, index) =>
+        paragraph.trim() && (
+          <p key={index} className="mb-3 leading-relaxed">
+            {paragraph.trim()}
+          </p>
+        )
+    )}
+</div>
                 </div>
               </CardContent>
             </Card>
