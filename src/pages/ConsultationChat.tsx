@@ -415,7 +415,7 @@ const ConsultationChat = () => {
               <h3 className="text-lg font-semibold mb-4">Mapa interativo</h3>
               <HealthcareProvidersMap
                 userAddress={profile?.address && profile?.city ? `${profile.address}, ${profile.city}` : undefined}
-                keyword={aiResponse?.suggestedSpecialty}
+                providers={specialists}
                 onClose={() => setShowMap(false)}
               />
             </div>

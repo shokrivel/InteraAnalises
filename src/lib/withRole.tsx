@@ -18,14 +18,14 @@ export function withRole<P>(Component: React.ComponentType<P>, allowedRoles: str
           return;
         }
         const { data, error } = await supabase
-          .from("profiles")
+          .from("user_roles")
           .select("role")
           .eq("user_id", user.id)
           .single();
         if (!mounted) return;
         if (error) {
           console.error("withRole fetch error:", error);
-          setRole(null);
+          setRole("user"); // default role
           setLoading(false);
           return;
         }
