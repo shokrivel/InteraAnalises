@@ -40,7 +40,7 @@ const Dashboard = () => {
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <img 
-              src="/src/assets/interasaude-logo.svg" 
+              src="/src/assets/interasaude-logo.png" 
               alt="InteraSaúde Logo" 
               className="h-10"
             />
