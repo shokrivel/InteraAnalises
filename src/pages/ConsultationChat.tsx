@@ -1,5 +1,3 @@
-Vou te encaminhar o código do consultation chat:
-
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
