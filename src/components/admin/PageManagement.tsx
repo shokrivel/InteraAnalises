@@ -295,14 +295,13 @@ const PageManagement = () => {
               <div className="space-y-2">
                 <Label htmlFor="parent">Página Pai (Opcional)</Label>
                 <Select
-                  value={newPageData.parent_id || ''}
+                  value={newPageData.parent_id || undefined}
                   onValueChange={(value) => setNewPageData(prev => ({ ...prev, parent_id: value || undefined }))}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione uma página pai" />
+                    <SelectValue placeholder="Selecione uma página pai ou deixe vazio para página principal" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Página principal</SelectItem>
                     {flattenPages(pages).map((page) => (
                       <SelectItem key={page.id} value={page.id}>
                         {page.title}
