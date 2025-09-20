@@ -4,12 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Heart, Users, Settings, FileText, Shield, Crown } from "lucide-react";
+import { ArrowLeft, Heart, Users, Settings, FileText, Shield, Crown, Layout } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/hooks/useRole";
 import FieldsManagement from "@/components/admin/FieldsManagement";
 import UserManagement from "@/components/admin/UserManagement";
 import SystemSettings from "@/components/admin/SystemSettings";
+import PageManagement from "@/components/admin/PageManagement";
+import SaibaMaisManagement from "@/components/admin/SaibaMaisManagement";
 
 const AdminPanel = () => {
   const { user } = useAuth();
@@ -48,7 +50,7 @@ const AdminPanel = () => {
               Voltar
             </Button>
             <img 
-              src="/logo-interasaude-new.png" 
+              src="/src/assets/interasaude-logo.svg" 
               alt="InteraSaúde Logo" 
               className="h-8"
             />
@@ -64,9 +66,10 @@ const AdminPanel = () => {
       <section className="py-8 px-4">
         <div className="container mx-auto max-w-6xl">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-4' : 'grid-cols-3'}`}>
+            <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-5' : 'grid-cols-4'}`}>
               <TabsTrigger value="overview">Visão Geral</TabsTrigger>
               <TabsTrigger value="users">Usuários</TabsTrigger>
+              <TabsTrigger value="pages">Páginas</TabsTrigger>
               <TabsTrigger value="fields">Campos</TabsTrigger>
               {isAdmin && <TabsTrigger value="settings">Configurações</TabsTrigger>}
             </TabsList>
@@ -90,6 +93,26 @@ const AdminPanel = () => {
                      >
                        Gerenciar Usuários
                      </Button>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
+                      <Layout className="w-6 h-6 text-primary" />
+                    </div>
+                    <CardTitle>Gerenciar Páginas</CardTitle>
+                    <CardDescription>
+                      Crie e gerencie páginas informativas e interativas do site
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setActiveTab('pages')}
+                    >
+                      Gerenciar Páginas
+                    </Button>
                   </CardContent>
                 </Card>
 
@@ -139,6 +162,10 @@ const AdminPanel = () => {
 
             <TabsContent value="users">
               <UserManagement />
+            </TabsContent>
+
+            <TabsContent value="pages">
+              <PageManagement />
             </TabsContent>
 
             <TabsContent value="fields">

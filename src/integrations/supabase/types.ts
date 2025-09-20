@@ -112,6 +112,97 @@ export type Database = {
           },
         ]
       }
+      page_components: {
+        Row: {
+          component_type: string
+          content: Json
+          created_at: string
+          id: string
+          is_active: boolean
+          order_index: number
+          page_id: string
+          updated_at: string
+        }
+        Insert: {
+          component_type: string
+          content?: Json
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          order_index?: number
+          page_id: string
+          updated_at?: string
+        }
+        Update: {
+          component_type?: string
+          content?: Json
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          order_index?: number
+          page_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "page_components_page_id_fkey"
+            columns: ["page_id"]
+            isOneToOne: false
+            referencedRelation: "pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pages: {
+        Row: {
+          content: Json
+          created_at: string
+          created_by: string
+          id: string
+          is_active: boolean
+          order_index: number
+          page_type: string
+          parent_id: string | null
+          slug: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content?: Json
+          created_at?: string
+          created_by: string
+          id?: string
+          is_active?: boolean
+          order_index?: number
+          page_type: string
+          parent_id?: string | null
+          slug: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          content?: Json
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_active?: boolean
+          order_index?: number
+          page_type?: string
+          parent_id?: string | null
+          slug?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pages_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       paginas_conteudo: {
         Row: {
           conteudo_texto: string
@@ -178,6 +269,39 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
           zip_code?: string | null
+        }
+        Relationships: []
+      }
+      saiba_mais_cards: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          descricao: string | null
+          id: string
+          ordem: number
+          titulo: string
+          updated_at: string
+          url_imagem: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          ordem?: number
+          titulo: string
+          updated_at?: string
+          url_imagem: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          ordem?: number
+          titulo?: string
+          updated_at?: string
+          url_imagem?: string
         }
         Relationships: []
       }
