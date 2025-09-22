@@ -549,10 +549,36 @@ ${consultationData.epidemiological_info ? `Informações epidemiológicas: ${JSO
       }
     }
 
-    console.log(`Extracted specialty: ${suggestedSpecialty} (confidence: ${confidence})`);
+    // Map specialty to search keyword
+    const mapSpecialtyToKeyword = (specialty: string): string => {
+      const lower = specialty.toLowerCase();
+      if (lower.includes('cardio')) return 'cardiologist';
+      if (lower.includes('dermat')) return 'dermatologist';
+      if (lower.includes('gineco')) return 'gynecologist';
+      if (lower.includes('neuro')) return 'neurologist';
+      if (lower.includes('ortop')) return 'orthopedist';
+      if (lower.includes('pedi')) return 'pediatrician';
+      if (lower.includes('psiq')) return 'psychiatrist';
+      if (lower.includes('oftalmo')) return 'ophthalmologist';
+      if (lower.includes('otorr')) return 'otolaryngologist';
+      if (lower.includes('urolog')) return 'urologist';
+      if (lower.includes('gastro')) return 'gastroenterologist';
+      if (lower.includes('pneumo')) return 'pulmonologist';
+      if (lower.includes('reuma')) return 'rheumatologist';
+      if (lower.includes('nefro')) return 'nephrologist';
+      if (lower.includes('endocr')) return 'endocrinologist';
+      return 'doctor';
+    };
+
+    const specialtyKeyword = mapSpecialtyToKeyword(suggestedSpecialty);
+
+    console.log(`Extracted specialty: ${suggestedSpecialty} -> keyword: ${specialtyKeyword} (confidence: ${confidence})`);
 
     // Search for nearby specialists
     let specialists = [];
+    let searchPerformed = false;
+    
+    // Try with user address first
     if (profile?.address && profile?.city) {
       const userAddress = `${profile.address}, ${profile.city}`;
       console.log(`Searching for specialists near: ${userAddress}`);
@@ -560,19 +586,48 @@ ${consultationData.epidemiological_info ? `Informações epidemiológicas: ${JSO
       try {
         const specialistResponse = await supabaseClient.functions.invoke('find-healthcare-providers', {
           body: {
-            userAddress,
-            keyword: suggestedSpecialty.toLowerCase(),
-            maxResults: 5
+            address: userAddress,
+            keyword: specialtyKeyword,
+            radius: 15000
+          }
+        });
+
+        console.log('Specialist response:', specialistResponse);
+        searchPerformed = true;
+
+        if (specialistResponse.data?.providers) {
+          specialists = specialistResponse.data.providers.slice(0, 5);
+          console.log(`Found ${specialists.length} specialists for ${suggestedSpecialty} near ${userAddress}`);
+        } else {
+          console.log('No providers found in response:', specialistResponse.data);
+        }
+      } catch (error) {
+        console.error('Error finding specialists with address:', error);
+      }
+    }
+    
+    // Fallback: try with just city if full address didn't work or wasn't available
+    if (!searchPerformed && profile?.city) {
+      console.log(`Fallback: Searching for specialists in city: ${profile.city}`);
+      
+      try {
+        const specialistResponse = await supabaseClient.functions.invoke('find-healthcare-providers', {
+          body: {
+            address: profile.city,
+            keyword: specialtyKeyword,
+            radius: 25000 // Increase radius for city search
           }
         });
 
         if (specialistResponse.data?.providers) {
-          specialists = specialistResponse.data.providers;
-          console.log(`Found ${specialists.length} specialists for ${suggestedSpecialty}`);
+          specialists = specialistResponse.data.providers.slice(0, 5);
+          console.log(`Found ${specialists.length} specialists for ${suggestedSpecialty} in ${profile.city}`);
         }
       } catch (error) {
-        console.error('Error finding specialists:', error);
+        console.error('Error finding specialists with city:', error);
       }
+    } else if (!searchPerformed) {
+      console.log('No address or city available for user, skipping specialist search');
     }
 
     // Save consultation to database with audit trail
