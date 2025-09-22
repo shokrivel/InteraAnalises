@@ -198,7 +198,7 @@ const ConsultationChat = () => {
               Voltar
             </Button>
             <img 
-              src="/logo-interasaude-new.png" 
+              src="/src/assets/interasaude-logo.png" 
               alt="InteraSaúde Logo" 
               className="h-8"
             />

@@ -50,7 +50,7 @@ const AdminPanel = () => {
               Voltar
             </Button>
             <img 
-              src="/src/assets/interasaude-logo.svg" 
+              src="/src/assets/interasaude-logo.png" 
               alt="InteraSaúde Logo" 
               className="h-8"
             />

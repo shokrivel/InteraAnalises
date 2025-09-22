@@ -151,7 +151,7 @@ const SaibaMais = () => {
           
           <div className="flex items-center space-x-3">
             <img 
-              src="/logo-interasaude-new.png" 
+              src="/src/assets/interasaude-logo.png" 
               alt="InteraSaúde Logo" 
               className="h-8"
             />
