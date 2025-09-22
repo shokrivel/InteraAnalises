@@ -18,20 +18,51 @@ type Provider = {
 };
 
 const mapPrognosisToKeyword = (text?: string) => {
-  if (!text) return "médicos";
+  if (!text) return "doctor";
   const lower = text.toLowerCase();
-  if (lower.includes("pele") || lower.includes("acne") || lower.includes("dermat")) return "dermatologista";
-  if (lower.includes("coração") || lower.includes("pressão") || lower.includes("cardio")) return "cardiologista";
-  if (lower.includes("pulmão") || lower.includes("asma") || lower.includes("pneumo")) return "pneumologista";
-  if (lower.includes("estômago") || lower.includes("gastrite") || lower.includes("gastro")) return "gastroenterologista";
-  if (lower.includes("infec") || lower.includes("parasit") || lower.includes("febre")) return "infectologista";
-  if (lower.includes("sangue") || lower.includes("hemato") || lower.includes("hemoglob")) return "hematologista";
-  if (lower.includes("sono") || lower.includes("psiqu")) return "psiquiatra";
-  if (lower.includes("dor") && lower.includes("articula")) return "reumatologista";
-  if (lower.includes("urina") || lower.includes("rim") || lower.includes("nefro")) return "nefrologista";
-  if (lower.includes("olho") || lower.includes("visão") || lower.includes("oftalmo")) return "oftalmologista";
-  if (lower.includes("criança") || lower.includes("pedi")) return "pediatra";
-  return "médicos";
+  
+  // Cardiology
+  if (lower.includes("coração") || lower.includes("pressão") || lower.includes("cardio")) return "cardiologist";
+  
+  // Dermatology
+  if (lower.includes("pele") || lower.includes("acne") || lower.includes("dermat")) return "dermatologist";
+  
+  // Neurology
+  if (lower.includes("cabeça") || lower.includes("enxaqueca") || lower.includes("neuro")) return "neurologist";
+  
+  // Gastroenterology - symptoms related to consultation
+  if (lower.includes("estômago") || lower.includes("gastrite") || lower.includes("gastro") || 
+      lower.includes("náusea") || lower.includes("vômito") || lower.includes("enjoo")) return "gastroenterologist";
+  
+  // General Medicine
+  if (lower.includes("medicina geral") || lower.includes("clínico geral") || lower.includes("febre") || 
+      lower.includes("dor") || lower.includes("mal-estar")) return "general practitioner";
+  
+  // Pulmonology
+  if (lower.includes("pulmão") || lower.includes("asma") || lower.includes("pneumo") || lower.includes("respiração")) return "pulmonologist";
+  
+  // Infectious diseases
+  if (lower.includes("infec") || lower.includes("parasit") || lower.includes("febre")) return "infectious disease specialist";
+  
+  // Hematology
+  if (lower.includes("sangue") || lower.includes("hemato") || lower.includes("hemoglob")) return "hematologist";
+  
+  // Psychiatry
+  if (lower.includes("sono") || lower.includes("psiqu") || lower.includes("mental")) return "psychiatrist";
+  
+  // Rheumatology
+  if (lower.includes("dor") && lower.includes("articula") || lower.includes("reuma")) return "rheumatologist";
+  
+  // Nephrology
+  if (lower.includes("urina") || lower.includes("rim") || lower.includes("nefro")) return "nephrologist";
+  
+  // Ophthalmology
+  if (lower.includes("olho") || lower.includes("visão") || lower.includes("oftalmo")) return "ophthalmologist";
+  
+  // Pediatrics
+  if (lower.includes("criança") || lower.includes("pedi") || lower.includes("infantil")) return "pediatrician";
+  
+  return "doctor";
 };
 
 export default function NearbyDoctors({ prognosis, userAddress }: NearbyDoctorsProps) {

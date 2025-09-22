@@ -549,24 +549,67 @@ ${consultationData.epidemiological_info ? `Informações epidemiológicas: ${JSO
       }
     }
 
-    // Map specialty to search keyword
+    // Map specialty to search keyword - Portuguese to English mapping
     const mapSpecialtyToKeyword = (specialty: string): string => {
       const lower = specialty.toLowerCase();
-      if (lower.includes('cardio')) return 'cardiologist';
-      if (lower.includes('dermat')) return 'dermatologist';
-      if (lower.includes('gineco')) return 'gynecologist';
-      if (lower.includes('neuro')) return 'neurologist';
-      if (lower.includes('ortop')) return 'orthopedist';
-      if (lower.includes('pedi')) return 'pediatrician';
-      if (lower.includes('psiq')) return 'psychiatrist';
-      if (lower.includes('oftalmo')) return 'ophthalmologist';
-      if (lower.includes('otorr')) return 'otolaryngologist';
-      if (lower.includes('urolog')) return 'urologist';
-      if (lower.includes('gastro')) return 'gastroenterologist';
-      if (lower.includes('pneumo')) return 'pulmonologist';
-      if (lower.includes('reuma')) return 'rheumatologist';
-      if (lower.includes('nefro')) return 'nephrologist';
-      if (lower.includes('endocr')) return 'endocrinologist';
+      
+      // Cardiology
+      if (lower.includes('cardio') || lower.includes('coração') || lower.includes('pressão')) return 'cardiologist';
+      
+      // Dermatology
+      if (lower.includes('dermat') || lower.includes('pele') || lower.includes('acne')) return 'dermatologist';
+      
+      // Neurology
+      if (lower.includes('neuro') || lower.includes('cabeça') || lower.includes('enxaqueca') || lower.includes('dor de cabeça')) return 'neurologist';
+      
+      // Gastroenterology
+      if (lower.includes('gastro') || lower.includes('estômago') || lower.includes('náusea') || lower.includes('vômito') || lower.includes('enjoo') || lower.includes('digestão')) return 'gastroenterologist';
+      
+      // General Medicine - common symptoms
+      if (lower.includes('medicina geral') || lower.includes('clínico geral') || lower.includes('febre') || lower.includes('dor') || lower.includes('mal-estar')) return 'general practitioner';
+      
+      // Gynecology
+      if (lower.includes('gineco') || lower.includes('mulher')) return 'gynecologist';
+      
+      // Orthopedics
+      if (lower.includes('ortop') || lower.includes('osso') || lower.includes('fratura')) return 'orthopedist';
+      
+      // Pediatrics
+      if (lower.includes('pedi') || lower.includes('criança') || lower.includes('infantil')) return 'pediatrician';
+      
+      // Psychiatry
+      if (lower.includes('psiq') || lower.includes('mental') || lower.includes('ansiedade') || lower.includes('depressão')) return 'psychiatrist';
+      
+      // Psychology
+      if (lower.includes('psico') || lower.includes('terapia')) return 'psychologist';
+      
+      // Ophthalmology
+      if (lower.includes('oftalmo') || lower.includes('olho') || lower.includes('visão')) return 'ophthalmologist';
+      
+      // ENT (Otolaryngology)
+      if (lower.includes('otorr') || lower.includes('ouvido') || lower.includes('nariz') || lower.includes('garganta')) return 'otolaryngologist';
+      
+      // Urology
+      if (lower.includes('urolog') || lower.includes('urina') || lower.includes('rim')) return 'urologist';
+      
+      // Pulmonology
+      if (lower.includes('pneumo') || lower.includes('pulmão') || lower.includes('respiração')) return 'pulmonologist';
+      
+      // Rheumatology
+      if (lower.includes('reuma') || lower.includes('articulação') || lower.includes('artrite')) return 'rheumatologist';
+      
+      // Nephrology
+      if (lower.includes('nefro') || lower.includes('rim')) return 'nephrologist';
+      
+      // Endocrinology
+      if (lower.includes('endocr') || lower.includes('diabetes') || lower.includes('hormônio')) return 'endocrinologist';
+      
+      // Infectious diseases
+      if (lower.includes('infect') || lower.includes('infecção')) return 'infectious disease specialist';
+      
+      // Emergency medicine
+      if (lower.includes('emergência') || lower.includes('urgência')) return 'emergency medicine';
+      
       return 'doctor';
     };
 

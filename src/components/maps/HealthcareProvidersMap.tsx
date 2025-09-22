@@ -37,7 +37,7 @@ export default function HealthcareProvidersMap({ userAddress, providers: initial
         initMap();
       } else {
         const script = document.createElement("script");
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY}&libraries=places,geometry`;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyDFake_key_for_development&libraries=places,geometry`;
         script.async = true;
         script.onload = initMap;
         document.head.appendChild(script);
