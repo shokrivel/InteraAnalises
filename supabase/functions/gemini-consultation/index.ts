@@ -102,29 +102,42 @@ class ScientificAPIsService {
     return sanitized;
   }
 
-  // Fetch from PMC OAI-PMH
-  async fetchFromPMC(scientificQuery: ScientificQuery): Promise<Article[]> {
+  // Fetch from PubMed using eUtils API (more reliable than PMC OAI)
+  async fetchFromPubMed(scientificQuery: ScientificQuery): Promise<Article[]> {
     try {
       const sanitizedQuery = this.sanitizeQuery(scientificQuery.query);
-      const fromDate = `${scientificQuery.year_min}-01-01`;
-      const toDate = `${new Date().getFullYear()}-12-31`;
+      const currentYear = new Date().getFullYear();
+      const fromYear = scientificQuery.year_min;
       
-      const url = `https://www.pubmedcentral.nih.gov/oai/oai.cgi?verb=ListRecords&set=pmc-open&metadataPrefix=pmc&from=${fromDate}&until=${toDate}&query=${encodeURIComponent(sanitizedQuery)}`;
+      // Step 1: Search for articles using eSearch
+      const searchUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${encodeURIComponent(sanitizedQuery)}+AND+${fromYear}:${currentYear}[dp]&retmax=50&retmode=json&sort=relevance`;
       
-      console.log('Fetching from PMC:', url);
+      console.log('Fetching from PubMed eSearch:', searchUrl);
       
-      const response = await fetch(url);
-      const xmlText = await response.text();
+      const searchResponse = await fetch(searchUrl);
+      const searchData = await searchResponse.json();
       
-      return this.parsePMCXML(xmlText);
+      if (!searchData.esearchresult?.idlist?.length) {
+        console.log('No PubMed articles found');
+        return [];
+      }
+      
+      // Step 2: Fetch article details using eFetch
+      const ids = searchData.esearchresult.idlist.slice(0, 20).join(',');
+      const fetchUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=${ids}&retmode=xml`;
+      
+      const fetchResponse = await fetch(fetchUrl);
+      const xmlText = await fetchResponse.text();
+      
+      return this.parsePubMedXML(xmlText);
     } catch (error) {
-      console.error('PMC API error:', error);
+      console.error('PubMed API error:', error);
       return [];
     }
   }
 
-  // Fetch from Springer Open Access
-  async fetchFromSpringerOpen(scientificQuery: ScientificQuery): Promise<Article[]> {
+  // Fetch from Springer Nature API (improved error handling)
+  async fetchFromSpringerNature(scientificQuery: ScientificQuery): Promise<Article[]> {
     try {
       if (!this.springerApiKey) {
         console.log('Springer API key not configured');
@@ -132,180 +145,240 @@ class ScientificAPIsService {
       }
 
       const sanitizedQuery = this.sanitizeQuery(scientificQuery.query);
-      const url = `https://api.springernature.com/openaccess/jats?q=${encodeURIComponent(sanitizedQuery)}&p=1&s=50&api_key=${this.springerApiKey}`;
+      const url = `https://api.springernature.com/meta/v2/json?q=${encodeURIComponent(sanitizedQuery)}&s=50&p=1&api_key=${this.springerApiKey}`;
       
-      console.log('Fetching from Springer Open Access');
+      console.log('Fetching from Springer Nature Meta API');
       
-      const response = await fetch(url);
-      const data = await response.json();
+      const response = await fetch(url, {
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'InteraSaude-Medical-Assistant/1.0'
+        }
+      });
       
-      return this.parseSpringerResponse(data);
-    } catch (error) {
-      console.error('Springer Open Access API error:', error);
-      return [];
-    }
-  }
-
-  // Fetch from Springer Meta
-  async fetchFromSpringerMeta(scientificQuery: ScientificQuery): Promise<Article[]> {
-    try {
-      if (!this.springerApiKey) {
-        console.log('Springer API key not configured');
-        return [];
+      if (!response.ok) {
+        throw new Error(`Springer API error: ${response.status} ${response.statusText}`);
       }
-
-      const sanitizedQuery = this.sanitizeQuery(scientificQuery.query);
-      const url = `https://api.springernature.com/meta/v2/json?q=${encodeURIComponent(sanitizedQuery)}&p=1&s=50&api_key=${this.springerApiKey}`;
       
-      console.log('Fetching from Springer Meta');
-      
-      const response = await fetch(url);
       const data = await response.json();
-      
-      return this.parseSpringerMetaResponse(data);
+      return this.parseSpringerNatureResponse(data);
     } catch (error) {
-      console.error('Springer Meta API error:', error);
+      console.error('Springer Nature API error:', error);
       return [];
     }
   }
 
-  // Parse PMC XML response (simplified)
-  private parsePMCXML(xmlText: string): Article[] {
+  // Fetch medical books from Google Books API (fallback for reliable sources)
+  async fetchMedicalBooks(scientificQuery: ScientificQuery): Promise<Article[]> {
+    try {
+      const sanitizedQuery = this.sanitizeQuery(scientificQuery.query);
+      const medicalQuery = `${sanitizedQuery} medical diagnosis treatment textbook`;
+      const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(medicalQuery)}&subject=Medical&orderBy=newest&maxResults=20&langRestrict=pt&langRestrict=en`;
+      
+      console.log('Fetching medical books from Google Books API');
+      
+      const response = await fetch(url);
+      const data = await response.json();
+      
+      return this.parseGoogleBooksResponse(data, scientificQuery.year_min);
+    } catch (error) {
+      console.error('Google Books API error:', error);
+      return [];
+    }
+  }
+
+  // Parse PubMed XML response
+  private parsePubMedXML(xmlText: string): Article[] {
     const articles: Article[] = [];
     
     try {
-      // Basic XML parsing - in production use a proper XML parser
-      const recordMatches = xmlText.match(/<record>(.*?)<\/record>/gs);
+      // Extract PubmedArticle elements
+      const articleMatches = xmlText.match(/<PubmedArticle>(.*?)<\/PubmedArticle>/gs);
       
-      if (recordMatches) {
-        recordMatches.slice(0, 10).forEach((record, index) => {
-          const titleMatch = record.match(/<article-title>(.*?)<\/article-title>/s);
-          const abstractMatch = record.match(/<abstract>(.*?)<\/abstract>/s);
-          const journalMatch = record.match(/<journal-title>(.*?)<\/journal-title>/s);
-          const yearMatch = record.match(/<year>(\d{4})<\/year>/);
-          const doiMatch = record.match(/<article-id pub-id-type="doi">(.*?)<\/article-id>/);
+      if (articleMatches) {
+        articleMatches.slice(0, 15).forEach((article, index) => {
+          const titleMatch = article.match(/<ArticleTitle>(.*?)<\/ArticleTitle>/s);
+          const abstractMatch = article.match(/<AbstractText[^>]*>(.*?)<\/AbstractText>/s);
+          const journalMatch = article.match(/<Title>(.*?)<\/Title>/s);
+          const yearMatch = article.match(/<PubDate>.*?<Year>(\d{4})<\/Year>/s);
+          const pmidMatch = article.match(/<PMID[^>]*>(\d+)<\/PMID>/);
+          const doiMatch = article.match(/<ArticleId IdType="doi">(.*?)<\/ArticleId>/);
           
           if (titleMatch) {
             articles.push({
-              id: `pmc_${index}`,
+              id: `pubmed_${pmidMatch ? pmidMatch[1] : index}`,
               title: this.cleanXMLText(titleMatch[1]),
-              authors: this.extractAuthorsFromPMC(record),
-              journal: journalMatch ? this.cleanXMLText(journalMatch[1]) : 'PMC Journal',
+              authors: this.extractAuthorsFromPubMed(article),
+              journal: journalMatch ? this.cleanXMLText(journalMatch[1]) : 'PubMed Journal',
               year: yearMatch ? parseInt(yearMatch[1]) : new Date().getFullYear(),
               doi: doiMatch ? doiMatch[1] : undefined,
-              abstract: abstractMatch ? this.cleanXMLText(abstractMatch[1]).substring(0, 500) : '',
-              source: 'PMC'
+              abstract: abstractMatch ? this.cleanXMLText(abstractMatch[1]).substring(0, 800) : '',
+              source: 'PubMed'
             });
           }
         });
       }
     } catch (error) {
-      console.error('Error parsing PMC XML:', error);
+      console.error('Error parsing PubMed XML:', error);
     }
     
     return articles;
   }
 
-  // Parse Springer Open Access response
-  private parseSpringerResponse(data: any): Article[] {
+  // Parse Google Books response for medical textbooks
+  private parseGoogleBooksResponse(data: any, yearMin: number): Article[] {
+    const articles: Article[] = [];
+    
+    try {
+      if (data.items) {
+        data.items.forEach((item: any, index: number) => {
+          const volumeInfo = item.volumeInfo;
+          const publishedYear = volumeInfo.publishedDate ? new Date(volumeInfo.publishedDate).getFullYear() : 2020;
+          
+          // Filter by publication year (2020+)
+          if (publishedYear >= yearMin) {
+            articles.push({
+              id: `book_${item.id || index}`,
+              title: volumeInfo.title || 'Medical Reference',
+              authors: volumeInfo.authors || ['Unknown Author'],
+              journal: volumeInfo.publisher || 'Medical Publisher',
+              year: publishedYear,
+              abstract: volumeInfo.description ? volumeInfo.description.substring(0, 500) : 'Medical textbook reference',
+              source: 'Medical Books'
+            });
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error parsing Google Books response:', error);
+    }
+    
+    return articles;
+  }
+
+  // Parse Springer Nature response (unified method)
+  private parseSpringerNatureResponse(data: any): Article[] {
     const articles: Article[] = [];
     
     try {
       if (data.records) {
-        data.records.slice(0, 10).forEach((record: any, index: number) => {
+        data.records.slice(0, 15).forEach((record: any, index: number) => {
+          const publishYear = record.publicationDate ? new Date(record.publicationDate).getFullYear() : new Date().getFullYear();
+          
           articles.push({
-            id: `springer_open_${index}`,
-            title: record.title || 'No title',
-            authors: record.creators ? record.creators.map((c: any) => c.creator || c) : [],
-            journal: record.publicationName || 'Springer Journal',
-            year: record.publicationDate ? new Date(record.publicationDate).getFullYear() : new Date().getFullYear(),
+            id: `springer_${record.doi?.replace(/[^a-zA-Z0-9]/g, '_') || index}`,
+            title: record.title || 'Springer Article',
+            authors: this.extractSpringerAuthors(record),
+            journal: record.publicationName || record.journalTitle || 'Springer Journal',
+            year: publishYear,
             doi: record.doi,
             abstract: record.abstract || record.description || '',
-            source: 'Springer Open Access'
+            source: 'Springer Nature'
           });
         });
       }
     } catch (error) {
-      console.error('Error parsing Springer Open response:', error);
+      console.error('Error parsing Springer Nature response:', error);
     }
     
     return articles;
   }
 
-  // Parse Springer Meta response
-  private parseSpringerMetaResponse(data: any): Article[] {
-    const articles: Article[] = [];
-    
-    try {
-      if (data.records) {
-        data.records.slice(0, 10).forEach((record: any, index: number) => {
-          articles.push({
-            id: `springer_meta_${index}`,
-            title: record.title || 'No title',
-            authors: record.creators ? record.creators.map((c: any) => c.creator || c) : [],
-            journal: record.publicationName || 'Springer Journal',
-            year: record.publicationDate ? new Date(record.publicationDate).getFullYear() : new Date().getFullYear(),
-            doi: record.doi,
-            abstract: record.abstract || record.description || '',
-            source: 'Springer Meta'
-          });
-        });
-      }
-    } catch (error) {
-      console.error('Error parsing Springer Meta response:', error);
+  private extractSpringerAuthors(record: any): string[] {
+    if (record.creators && Array.isArray(record.creators)) {
+      return record.creators.map((creator: any) => creator.creator || creator.name || creator).slice(0, 5);
     }
-    
-    return articles;
+    if (record.authors && Array.isArray(record.authors)) {
+      return record.authors.map((author: any) => author.name || author).slice(0, 5);
+    }
+    return ['Unknown Author'];
   }
 
-  private cleanXMLText(text: string): string {
-    return text.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
-  }
-
-  private extractAuthorsFromPMC(record: string): string[] {
-    const authorMatches = record.match(/<name>(.*?)<\/name>/gs);
+  private extractAuthorsFromPubMed(article: string): string[] {
+    const authorMatches = article.match(/<Author[^>]*>(.*?)<\/Author>/gs);
     const authors: string[] = [];
     
     if (authorMatches) {
       authorMatches.forEach(authorMatch => {
-        const surnameMatch = authorMatch.match(/<surname>(.*?)<\/surname>/);
-        const givenNamesMatch = authorMatch.match(/<given-names>(.*?)<\/given-names>/);
+        const lastNameMatch = authorMatch.match(/<LastName>(.*?)<\/LastName>/);
+        const foreNameMatch = authorMatch.match(/<ForeName>(.*?)<\/ForeName>/);
+        const initialsMatch = authorMatch.match(/<Initials>(.*?)<\/Initials>/);
         
-        if (surnameMatch) {
-          const surname = this.cleanXMLText(surnameMatch[1]);
-          const givenNames = givenNamesMatch ? this.cleanXMLText(givenNamesMatch[1]) : '';
-          authors.push(`${givenNames} ${surname}`.trim());
+        if (lastNameMatch) {
+          const lastName = this.cleanXMLText(lastNameMatch[1]);
+          const firstName = foreNameMatch ? this.cleanXMLText(foreNameMatch[1]) : 
+                           initialsMatch ? this.cleanXMLText(initialsMatch[1]) : '';
+          authors.push(`${firstName} ${lastName}`.trim());
         }
       });
     }
     
-    return authors.slice(0, 5); // Limit to 5 authors
+    return authors.slice(0, 5);
   }
 
-  // Fetch articles from all sources
+  // Fetch articles from all sources with fallback strategy
   async fetchAllArticles(scientificQuery: ScientificQuery): Promise<Article[]> {
     console.log('Fetching articles with query:', scientificQuery);
     
-    const [pmcArticles, springerOpenArticles, springerMetaArticles] = await Promise.allSettled([
-      this.fetchFromPMC(scientificQuery),
-      this.fetchFromSpringerOpen(scientificQuery),
-      this.fetchFromSpringerMeta(scientificQuery)
+    const [pubmedArticles, springerArticles, medicalBooks] = await Promise.allSettled([
+      this.fetchFromPubMed(scientificQuery),
+      this.fetchFromSpringerNature(scientificQuery),
+      this.fetchMedicalBooks(scientificQuery)
     ]);
 
     let allArticles: Article[] = [];
 
-    if (pmcArticles.status === 'fulfilled') {
-      allArticles = allArticles.concat(pmcArticles.value);
+    if (pubmedArticles.status === 'fulfilled') {
+      allArticles = allArticles.concat(pubmedArticles.value);
+      console.log(`PubMed: ${pubmedArticles.value.length} articles`);
+    } else {
+      console.error('PubMed fetch failed:', pubmedArticles.reason);
     }
-    if (springerOpenArticles.status === 'fulfilled') {
-      allArticles = allArticles.concat(springerOpenArticles.value);
+    
+    if (springerArticles.status === 'fulfilled') {
+      allArticles = allArticles.concat(springerArticles.value);
+      console.log(`Springer: ${springerArticles.value.length} articles`);
+    } else {
+      console.error('Springer fetch failed:', springerArticles.reason);
     }
-    if (springerMetaArticles.status === 'fulfilled') {
-      allArticles = allArticles.concat(springerMetaArticles.value);
+    
+    if (medicalBooks.status === 'fulfilled') {
+      allArticles = allArticles.concat(medicalBooks.value);
+      console.log(`Medical Books: ${medicalBooks.value.length} articles`);
+    } else {
+      console.error('Medical Books fetch failed:', medicalBooks.reason);
     }
 
-    console.log(`Fetched ${allArticles.length} total articles`);
+    console.log(`Fetched ${allArticles.length} total articles from all sources`);
+    
+    // If no articles found, try a broader search
+    if (allArticles.length === 0) {
+      console.log('No articles found, trying broader search...');
+      const broaderQuery = {
+        ...scientificQuery,
+        query: this.generateBroaderQuery(scientificQuery.query)
+      };
+      
+      const fallbackResults = await Promise.allSettled([
+        this.fetchFromPubMed(broaderQuery),
+        this.fetchMedicalBooks(broaderQuery)
+      ]);
+      
+      if (fallbackResults[0].status === 'fulfilled') {
+        allArticles = allArticles.concat(fallbackResults[0].value);
+      }
+      if (fallbackResults[1].status === 'fulfilled') {
+        allArticles = allArticles.concat(fallbackResults[1].value);
+      }
+    }
+
     return allArticles;
+  }
+
+  private generateBroaderQuery(originalQuery: string): string {
+    // Extract key medical terms and create broader search
+    const terms = originalQuery.split(' AND ');
+    return terms.slice(0, 2).join(' OR '); // Take first 2 terms with OR
   }
 
   // Normalize and filter articles
@@ -365,25 +438,50 @@ class ScientificAPIsService {
     return score;
   }
 
-  // Format articles for Gemini context
+  // Format articles for Gemini context with diagnostic focus
   formatArticlesForGemini(articles: Article[]): string {
     if (articles.length === 0) {
-      return "Nenhum artigo científico encontrado para os sintomas relatados.";
+      return "ATENÇÃO: Nenhuma evidência científica específica foi encontrada nas bases de dados consultadas (PubMed, Springer Nature, Livros Médicos 2020+). A análise será baseada em conhecimento médico geral.";
     }
 
-    let formattedText = "ARTIGOS CIENTÍFICOS PARA ANÁLISE:\n\n";
+    let formattedText = `EVIDÊNCIAS CIENTÍFICAS ENCONTRADAS (${articles.length} fontes):\n\n`;
     
-    articles.forEach((article, index) => {
-      formattedText += `${index + 1}. TÍTULO: ${article.title}\n`;
-      formattedText += `   AUTORES: ${article.authors.join(', ')}\n`;
-      formattedText += `   REVISTA: ${article.journal}\n`;
-      formattedText += `   ANO: ${article.year}\n`;
-      if (article.doi) {
-        formattedText += `   DOI: ${article.doi}\n`;
-      }
-      formattedText += `   RESUMO: ${article.abstract}\n`;
-      formattedText += `   FONTE: ${article.source}\n\n`;
-    });
+    // Group by source type
+    const pubmedArticles = articles.filter(a => a.source === 'PubMed');
+    const springerArticles = articles.filter(a => a.source === 'Springer Nature');
+    const bookArticles = articles.filter(a => a.source === 'Medical Books');
+    
+    if (pubmedArticles.length > 0) {
+      formattedText += `=== ESTUDOS CLÍNICOS (PubMed) - ${pubmedArticles.length} artigos ===\n`;
+      pubmedArticles.forEach((article, index) => {
+        formattedText += `${index + 1}. ${article.title}\n`;
+        formattedText += `   Autores: ${article.authors.join(', ')}\n`;
+        formattedText += `   Revista: ${article.journal} (${article.year})\n`;
+        if (article.doi) formattedText += `   DOI: ${article.doi}\n`;
+        formattedText += `   Resumo: ${article.abstract}\n\n`;
+      });
+    }
+    
+    if (springerArticles.length > 0) {
+      formattedText += `=== PESQUISAS SPRINGER NATURE - ${springerArticles.length} artigos ===\n`;
+      springerArticles.forEach((article, index) => {
+        formattedText += `${index + 1}. ${article.title}\n`;
+        formattedText += `   Autores: ${article.authors.join(', ')}\n`;
+        formattedText += `   Publicação: ${article.journal} (${article.year})\n`;
+        if (article.doi) formattedText += `   DOI: ${article.doi}\n`;
+        formattedText += `   Resumo: ${article.abstract}\n\n`;
+      });
+    }
+    
+    if (bookArticles.length > 0) {
+      formattedText += `=== LIVROS MÉDICOS ESPECIALIZADOS (2020+) - ${bookArticles.length} referências ===\n`;
+      bookArticles.forEach((article, index) => {
+        formattedText += `${index + 1}. ${article.title}\n`;
+        formattedText += `   Autores: ${article.authors.join(', ')}\n`;
+        formattedText += `   Editora: ${article.journal} (${article.year})\n`;
+        formattedText += `   Descrição: ${article.abstract}\n\n`;
+      });
+    }
 
     return formattedText;
   }
