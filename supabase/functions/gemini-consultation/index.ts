@@ -658,7 +658,7 @@ ${consultationData.epidemiological_info ? `Informações epidemiológicas: ${JSO
 
     const aiResponseText = geminiData.candidates[0].content.parts[0].text;
 
-    // Extract specialty suggestion
+    // Extract specialty suggestion for internal use (hidden from user)
     let suggestedSpecialty = 'Clínico Geral';
     let confidence = 0.5;
     
@@ -672,6 +672,9 @@ ${consultationData.epidemiological_info ? `Informações epidemiológicas: ${JSO
         console.error('Error parsing specialty suggestion:', error);
       }
     }
+
+    // Remove the specialty suggestion line from the response shown to user
+    const cleanedResponse = aiResponseText.replace(/\*\*ESPECIALIDADE_SUGERIDA:\*\*[^\n]*\n?/g, '').trim();
 
     // Map specialty to search keyword - Portuguese to English mapping
     const mapSpecialtyToKeyword = (specialty: string): string => {
@@ -806,7 +809,7 @@ ${consultationData.epidemiological_info ? `Informações epidemiológicas: ${JSO
       family_symptoms: consultationData.family_symptoms || false,
       epidemiological_info: consultationData.epidemiological_info || null,
       exam_results: consultationData.exam_results || null,
-      ai_response: aiResponseText,
+      ai_response: cleanedResponse, // Store cleaned response in database too
       attachments: attachments || [],
       status: 'finalizada'
     };
@@ -843,9 +846,9 @@ ${consultationData.epidemiological_info ? `Informações epidemiológicas: ${JSO
       console.log('Scientific articles audit:', auditData);
     }
 
-    // Return response with scientific evidence and specialists
+    // Return response with cleaned text (specialty suggestion hidden from user)
     return new Response(JSON.stringify({
-      response: aiResponseText,
+      response: cleanedResponse, // Use cleaned response without specialty line
       consultationId: savedConsultation.id,
       profileType: profile?.profile_type || 'patient',
       specialists,
