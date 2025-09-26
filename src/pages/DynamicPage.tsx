@@ -147,7 +147,7 @@ const DynamicPage = () => {
               Voltar
             </Button>
             <img 
-              src="/src/assets/interasaude-logo.png" 
+              src={interasaudeLogo} 
               alt="InteraSaúde Logo" 
               className="h-8"
             />

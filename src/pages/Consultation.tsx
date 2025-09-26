@@ -127,7 +127,7 @@ const Consultation = () => {
               <ArrowLeft className="w-4 h-4" />
             </Button>
             <img 
-              src="/src/assets/interasaude-logo.png" 
+              src={interasaudeLogo} 
               alt="InteraSaúde Logo" 
               className="h-10"
             />
