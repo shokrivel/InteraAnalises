@@ -112,6 +112,42 @@ export type Database = {
           },
         ]
       }
+      healthcare_roles: {
+        Row: {
+          assigned_by: string | null
+          created_at: string
+          department: string | null
+          healthcare_role: Database["public"]["Enums"]["healthcare_role"]
+          id: string
+          license_number: string | null
+          updated_at: string
+          user_id: string
+          valid_until: string | null
+        }
+        Insert: {
+          assigned_by?: string | null
+          created_at?: string
+          department?: string | null
+          healthcare_role: Database["public"]["Enums"]["healthcare_role"]
+          id?: string
+          license_number?: string | null
+          updated_at?: string
+          user_id: string
+          valid_until?: string | null
+        }
+        Update: {
+          assigned_by?: string | null
+          created_at?: string
+          department?: string | null
+          healthcare_role?: Database["public"]["Enums"]["healthcare_role"]
+          id?: string
+          license_number?: string | null
+          updated_at?: string
+          user_id?: string
+          valid_until?: string | null
+        }
+        Relationships: []
+      }
       page_components: {
         Row: {
           component_type: string
@@ -233,6 +269,42 @@ export type Database = {
         }
         Relationships: []
       }
+      profile_access_logs: {
+        Row: {
+          access_reason: string | null
+          access_type: string
+          accessed_by: string | null
+          accessed_profile_id: string
+          created_at: string
+          department: string | null
+          id: string
+          ip_address: unknown | null
+          user_agent: string | null
+        }
+        Insert: {
+          access_reason?: string | null
+          access_type: string
+          accessed_by?: string | null
+          accessed_profile_id: string
+          created_at?: string
+          department?: string | null
+          id?: string
+          ip_address?: unknown | null
+          user_agent?: string | null
+        }
+        Update: {
+          access_reason?: string | null
+          access_type?: string
+          accessed_by?: string | null
+          accessed_profile_id?: string
+          created_at?: string
+          department?: string | null
+          id?: string
+          ip_address?: unknown | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           address: string
@@ -331,6 +403,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_access_healthcare_data: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
       can_manage_roles: {
         Args: { _user_id: string }
         Returns: boolean
@@ -343,12 +419,23 @@ export type Database = {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
       }
+      has_healthcare_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["healthcare_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
         Returns: boolean
+      }
+      log_profile_access: {
+        Args: { _access_type: string; _profile_id: string; _reason?: string }
+        Returns: undefined
       }
     }
     Enums: {
@@ -362,6 +449,10 @@ export type Database = {
         | "date"
         | "aglomerado"
         | "file_upload"
+      healthcare_role:
+        | "healthcare_professional"
+        | "healthcare_admin"
+        | "system_admin"
       user_profile_type: "patient" | "academic" | "health_professional"
     }
     CompositeTypes: {
@@ -500,6 +591,11 @@ export const Constants = {
         "date",
         "aglomerado",
         "file_upload",
+      ],
+      healthcare_role: [
+        "healthcare_professional",
+        "healthcare_admin",
+        "system_admin",
       ],
       user_profile_type: ["patient", "academic", "health_professional"],
     },
