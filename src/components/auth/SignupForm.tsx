@@ -109,7 +109,7 @@ const SignupForm = ({ onSuccess }: SignupFormProps) => {
 
         toast({
           title: "Conta criada com sucesso!",
-          description: "Verifique seu e-mail para confirmar a conta",
+          description: "Verifique seu e-mail para confirmar seu cadastro. O link de confirmação irá redirecioná-lo para a página inicial.",
         });
         onSuccess();
       }

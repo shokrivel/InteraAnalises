@@ -59,9 +59,13 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
       return;
     }
 
+    setLoading(true);
     const { error } = await supabase.auth.resend({
       type: "signup",
       email: email.trim(),
+      options: {
+        emailRedirectTo: `${window.location.origin}/`,
+      }
     });
 
     if (error) {
@@ -72,10 +76,11 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
       });
     } else {
       toast({
-        title: "E-mail reenviado",
-        description: "Verifique sua caixa de entrada para confirmar seu cadastro.",
+        title: "E-mail reenviado com sucesso!",
+        description: "Verifique sua caixa de entrada para confirmar seu cadastro. O link irá redirecioná-lo para a página inicial.",
       });
     }
+    setLoading(false);
   };
 
   const handleForgotPassword = async () => {

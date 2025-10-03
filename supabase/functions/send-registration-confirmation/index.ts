@@ -62,7 +62,9 @@ serve(async (req: Request) => {
       });
     }
 
-    const confirmationUrl = `${Deno.env.get('SUPABASE_URL')}/auth/v1/verify?token=${token}&type=${email_action_type}&redirect_to=${redirect_to || "https://interasaude.com.br/confirmado"}`;
+    // Use the redirect_to from the request or fallback to a default homepage
+    const finalRedirectTo = redirect_to || 'https://37217826-4f0d-4f8d-967e-c6060e63a013.lovableproject.com/';
+    const confirmationUrl = `${Deno.env.get('SUPABASE_URL')}/auth/v1/verify?token=${token_hash}&type=${email_action_type}&redirect_to=${encodeURIComponent(finalRedirectTo)}`;
 
     const html = await renderAsync(
       React.createElement(RegistrationConfirmationEmail, {
