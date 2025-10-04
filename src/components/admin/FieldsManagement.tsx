@@ -36,7 +36,7 @@ const FieldsManagement = () => {
   const [editingField, setEditingField] = useState<ConsultationField | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const { toast } = useToast();
-  const { isAdmin, isModerator } = useRole();
+  const { isAdmin, isModerator, hasAdminAccess } = useRole();
 
   const [formData, setFormData] = useState({
     field_name: '',
@@ -228,41 +228,20 @@ const FieldsManagement = () => {
         <CardTitle className="flex items-center gap-2">
           <FileText className="w-5 h-5" />
           Campos da Consulta
-          {isModerator && !isAdmin && (
-            <Badge variant="secondary" className="ml-2">
-              <Lock className="w-3 h-3 mr-1" />
-              Acesso Limitado
-            </Badge>
-          )}
         </CardTitle>
         <CardDescription>
-          {isAdmin 
-            ? "Configure os campos que serão exibidos no formulário de consulta" 
-            : "Visualize os campos da consulta (acesso limitado)"
-          }
+          Configure os campos que serão exibidos no formulário de consulta
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="flex items-center justify-between">
-          {isAdmin && (
-            <Button onClick={handleCreate} disabled={isCreating || editingField !== null}>
-              <Plus className="w-4 h-4 mr-2" />
-              Novo Campo
-            </Button>
-          )}
-          {!isAdmin && (
-            <div className="bg-muted/50 border rounded-lg p-4 text-center w-full">
-              <Lock className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
-              <p className="text-sm text-muted-foreground">
-                Moderadores podem visualizar os campos mas não podem criar ou editar.
-                <br />
-                Entre em contato com um administrador para fazer alterações.
-              </p>
-            </div>
-          )}
+          <Button onClick={handleCreate} disabled={isCreating || editingField !== null}>
+            <Plus className="w-4 h-4 mr-2" />
+            Novo Campo
+          </Button>
         </div>
 
-        {(isCreating || editingField) && isAdmin && (
+        {(isCreating || editingField) && (
           <Card>
             <CardHeader>
               <CardTitle>
@@ -520,7 +499,7 @@ const FieldsManagement = () => {
                         </Badge>
                       </td>
                       <td className="p-4 align-middle">
-                        {isAdmin ? (
+                        {hasAdminAccess ? (
                           <div className="flex gap-2">
                             <Button
                               variant="outline"

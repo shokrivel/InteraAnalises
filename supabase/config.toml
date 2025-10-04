@@ -66,3 +66,6 @@ verify_jwt = true
 
 [functions.find-healthcare-providers]
 verify_jwt = true
+
+[functions.get-users-emails]
+verify_jwt = true

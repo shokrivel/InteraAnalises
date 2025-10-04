@@ -67,10 +67,30 @@ const UserManagement = () => {
       // Create a map of user roles
       const roleMap = new Map(roles?.map(role => [role.user_id, role.role]) || []);
 
-      // Combine data (in a real app, you'd get email from auth.users via admin API)
+      // Fetch user emails via edge function
+      const userIds = profiles?.map(p => p.user_id) || [];
+      let emailMap = new Map<string, string>();
+
+      if (userIds.length > 0) {
+        try {
+          const { data: emailData, error: emailError } = await supabase.functions.invoke('get-users-emails', {
+            body: { userIds }
+          });
+
+          if (!emailError && emailData?.userEmails) {
+            emailMap = new Map(Object.entries(emailData.userEmails));
+          }
+        } catch (emailFetchError) {
+          console.error('Error fetching emails:', emailFetchError);
+          // Continue without emails rather than failing entirely
+        }
+      }
+
+      // Combine all data
       const usersWithRoles = profiles?.map(profile => ({
         ...profile,
         user_role: roleMap.get(profile.user_id) || 'user',
+        user_email: emailMap.get(profile.user_id) || 'Email não disponível',
       })) || [];
 
       setUsers(usersWithRoles);
