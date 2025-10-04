@@ -435,7 +435,7 @@ export type Database = {
       }
       log_profile_access: {
         Args: { _access_type: string; _profile_id: string; _reason?: string }
-        Returns: undefined
+        Returns: boolean
       }
     }
     Enums: {
