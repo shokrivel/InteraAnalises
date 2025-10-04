@@ -108,16 +108,34 @@ const UserManagement = () => {
 
   const updateUserRole = async (userId: string, newRole: 'admin' | 'moderator' | 'user') => {
     try {
-      const { error } = await supabase
+      // Check if user already has a role
+      const { data: existingRole, error: checkError } = await supabase
         .from('user_roles')
-        .upsert({ 
-          user_id: userId, 
-          role: newRole 
-        }, { 
-          onConflict: 'user_id' 
-        });
+        .select('id, role')
+        .eq('user_id', userId)
+        .maybeSingle();
 
-      if (error) throw error;
+      if (checkError) throw checkError;
+
+      if (existingRole) {
+        // Update existing role
+        const { error: updateError } = await supabase
+          .from('user_roles')
+          .update({ role: newRole })
+          .eq('user_id', userId);
+
+        if (updateError) throw updateError;
+      } else {
+        // Insert new role
+        const { error: insertError } = await supabase
+          .from('user_roles')
+          .insert({ 
+            user_id: userId, 
+            role: newRole 
+          });
+
+        if (insertError) throw insertError;
+      }
 
       // Update local state
       setUsers(users.map(user => 
@@ -134,7 +152,7 @@ const UserManagement = () => {
       console.error('Error updating user role:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível atualizar o papel do usuário",
+        description: error.message || "Não foi possível atualizar o papel do usuário",
         variant: "destructive",
       });
     }
