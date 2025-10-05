@@ -14,13 +14,6 @@ const Index = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    console.log('Index: checking auth state', { user: !!user, loading });
-    if (!loading && user) {
-      console.log('Index: redirecting to dashboard');
-      navigate('/dashboard', { replace: true });
-    }
-  }, [user, loading, navigate]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -38,8 +31,8 @@ const Index = () => {
           {!loading && (
             user ? (
               <div className="flex items-center gap-4">
-                <Button variant="outline" onClick={() => navigate('/profile')}>
-                  Meu Perfil
+                <Button variant="outline" onClick={() => navigate('/dashboard')}>
+                  Dashboard
                 </Button>
                 <Button 
                   variant="ghost" 

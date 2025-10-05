@@ -36,7 +36,7 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
       }
 
       onSuccess();
-      navigate("/consultation");
+      navigate("/");
 
       toast({
         title: "Sucesso!",
