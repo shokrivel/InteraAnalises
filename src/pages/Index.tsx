@@ -31,11 +31,11 @@ const Index = () => {
           {!loading && (
             user ? (
               <div className="flex items-center gap-4">
-                <Button variant="outline" onClick={() => navigate('/dashboard')}>
+                <Button onClick={() => navigate('/dashboard')}>
                   Dashboard
                 </Button>
                 <Button 
-                  variant="ghost" 
+                  variant="outline" 
                   onClick={() => {
                     console.log('🚪 Force logout - clearing all auth data');
                     
