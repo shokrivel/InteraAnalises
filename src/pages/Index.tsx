@@ -17,8 +17,8 @@ const Index = () => {
   useEffect(() => {
     console.log('Index: checking auth state', { user: !!user, loading });
     if (!loading && user) {
-      console.log('Index: redirecting to profile');
-      navigate('/profile', { replace: true });
+      console.log('Index: redirecting to dashboard');
+      navigate('/dashboard', { replace: true });
     }
   }, [user, loading, navigate]);
 
