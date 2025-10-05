@@ -130,7 +130,8 @@ const Consultation = () => {
             <img 
               src={interasaudeLogo} 
               alt="InteraSaúde Logo" 
-              className="h-10"
+              className="h-10 cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={() => navigate("/")}
             />
           </div>
           <Badge variant="secondary">

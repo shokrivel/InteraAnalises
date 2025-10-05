@@ -201,7 +201,8 @@ const ConsultationChat = () => {
             <img 
               src={interasaudeLogo} 
               alt="InteraSaúde Logo" 
-              className="h-8"
+              className="h-8 cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={() => navigate("/")}
             />
           </div>
           <Badge variant="secondary">
