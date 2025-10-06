@@ -261,18 +261,30 @@ const PageManagement = () => {
                 <Input
                   id="title"
                   value={newPageData.title}
-                  onChange={(e) => setNewPageData(prev => ({ ...prev, title: e.target.value }))}
+                  onChange={(e) => {
+                    const title = e.target.value;
+                    const slug = title
+                      .toLowerCase()
+                      .normalize('NFD')
+                      .replace(/[\u0300-\u036f]/g, '')
+                      .replace(/[^\w\s-]/g, '')
+                      .replace(/\s+/g, '-')
+                      .replace(/-+/g, '-')
+                      .trim();
+                    setNewPageData(prev => ({ ...prev, title, slug }));
+                  }}
                   placeholder="Digite o título da página"
                 />
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="slug">URL da Página</Label>
+                <Label htmlFor="slug">URL da Página (gerada automaticamente)</Label>
                 <Input
                   id="slug"
                   value={newPageData.slug}
-                  onChange={(e) => setNewPageData(prev => ({ ...prev, slug: e.target.value }))}
+                  disabled
                   placeholder="url-da-pagina"
+                  className="bg-muted"
                 />
               </div>
 

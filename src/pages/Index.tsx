@@ -4,15 +4,77 @@ import interasaudeLogo from "@/assets/interasaude-logo.png";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Heart, Microscope, Droplet, Users, Shield, BookOpen } from "lucide-react";
+import { Heart, Microscope, Droplet, Users, Shield, BookOpen, Menu } from "lucide-react";
 import AuthDialog from "@/components/auth/AuthDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+} from "@/components/ui/navigation-menu";
+
+interface Page {
+  id: string;
+  title: string;
+  slug: string;
+  parent_id?: string;
+  children?: Page[];
+}
 
 const Index = () => {
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
+  const [menuPages, setMenuPages] = useState<Page[]>([]);
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    fetchMenuPages();
+  }, []);
+
+  const fetchMenuPages = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('pages')
+        .select('id, title, slug, parent_id')
+        .eq('is_active', true)
+        .order('order_index');
+
+      if (error) throw error;
+
+      const organized = organizePages((data || []) as Page[]);
+      setMenuPages(organized);
+    } catch (error) {
+      console.error('Error fetching menu pages:', error);
+    }
+  };
+
+  const organizePages = (pages: Page[]): Page[] => {
+    const pageMap = new Map<string, Page>();
+    const rootPages: Page[] = [];
+
+    pages.forEach(page => {
+      pageMap.set(page.id, { ...page, children: [] });
+    });
+
+    pages.forEach(page => {
+      const pageWithChildren = pageMap.get(page.id)!;
+      
+      if (page.parent_id) {
+        const parent = pageMap.get(page.parent_id);
+        if (parent) {
+          parent.children!.push(pageWithChildren);
+        }
+      } else {
+        rootPages.push(pageWithChildren);
+      }
+    });
+
+    return rootPages;
+  };
 
 
   return (
@@ -20,12 +82,56 @@ const Index = () => {
       {/* Header */}
       <header className="border-b border-border bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/80">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
+          <div className="flex flex-col gap-2">
             <img 
               src={interasaudeLogo} 
               alt="InteraSaúde Logo" 
-              className="h-10"
+              className="h-10 cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={() => navigate("/")}
             />
+            
+            {menuPages.length > 0 && (
+              <NavigationMenu>
+                <NavigationMenuList>
+                  <NavigationMenuItem>
+                    <NavigationMenuTrigger className="h-8 px-2 gap-1">
+                      <Menu className="h-4 w-4" />
+                      <span className="text-sm">Menu</span>
+                    </NavigationMenuTrigger>
+                    <NavigationMenuContent>
+                      <ul className="grid w-[400px] gap-3 p-4">
+                        {menuPages.map((page) => (
+                          <li key={page.id}>
+                            <NavigationMenuLink asChild>
+                              <a
+                                href={`/page/${page.slug}`}
+                                className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                              >
+                                <div className="text-sm font-medium leading-none">{page.title}</div>
+                                {page.children && page.children.length > 0 && (
+                                  <ul className="mt-2 ml-4 space-y-1">
+                                    {page.children.map((child) => (
+                                      <li key={child.id}>
+                                        <a
+                                          href={`/page/${child.slug}`}
+                                          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                                        >
+                                          {child.title}
+                                        </a>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
+                              </a>
+                            </NavigationMenuLink>
+                          </li>
+                        ))}
+                      </ul>
+                    </NavigationMenuContent>
+                  </NavigationMenuItem>
+                </NavigationMenuList>
+              </NavigationMenu>
+            )}
           </div>
           
           {!loading && (
