@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ConsultationField } from "@/hooks/useConsultationFields";
 import AglomeradoField from "./AglomeradoField";
 import FileUploadField from "./FileUploadField";
+import ImcField from "./ImcField";
 
 interface DynamicFieldProps {
   field: ConsultationField;
@@ -101,6 +102,9 @@ const DynamicField = ({ field, value, onChange, required }: DynamicFieldProps) =
       case 'file_upload':
         return <FileUploadField field={field} value={value || []} onChange={onChange} required={required} />;
 
+      case 'imc':
+        return <ImcField field={field} value={value} onChange={onChange} required={required} />;
+
       default:
         return (
           <Input
@@ -113,8 +117,8 @@ const DynamicField = ({ field, value, onChange, required }: DynamicFieldProps) =
     }
   };
 
-  // For checkbox, aglomerado and file_upload fields, don't render a separate wrapper
-  if (field.field_type === 'checkbox' || field.field_type === 'aglomerado' || field.field_type === 'file_upload') {
+  // For checkbox, aglomerado, file_upload and imc fields, don't render a separate wrapper
+  if (field.field_type === 'checkbox' || field.field_type === 'aglomerado' || field.field_type === 'file_upload' || field.field_type === 'imc') {
     return (
       <div className="space-y-2">
         {renderField()}
