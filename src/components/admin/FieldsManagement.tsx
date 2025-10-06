@@ -36,6 +36,7 @@ const FieldsManagement = () => {
   const [loading, setLoading] = useState(true);
   const [editingField, setEditingField] = useState<ConsultationField | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [draggedField, setDraggedField] = useState<ConsultationField | null>(null);
   const { toast } = useToast();
   const { isAdmin, isModerator, hasAdminAccess } = useRole();
 
@@ -215,6 +216,61 @@ const FieldsManagement = () => {
     }));
   };
 
+  const handleDragStart = (field: ConsultationField) => {
+    setDraggedField(field);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = async (targetField: ConsultationField) => {
+    if (!draggedField || draggedField.id === targetField.id) {
+      setDraggedField(null);
+      return;
+    }
+
+    const draggedIndex = fields.findIndex(f => f.id === draggedField.id);
+    const targetIndex = fields.findIndex(f => f.id === targetField.id);
+
+    const reorderedFields = [...fields];
+    reorderedFields.splice(draggedIndex, 1);
+    reorderedFields.splice(targetIndex, 0, draggedField);
+
+    // Update field_order for all affected fields
+    const updates = reorderedFields.map((field, index) => ({
+      id: field.id,
+      field_order: index
+    }));
+
+    try {
+      // Update all fields in parallel
+      await Promise.all(
+        updates.map(update =>
+          supabase
+            .from('consultation_fields')
+            .update({ field_order: update.field_order })
+            .eq('id', update.id)
+        )
+      );
+
+      toast({
+        title: "Ordem atualizada",
+        description: "A ordem dos campos foi atualizada com sucesso.",
+      });
+
+      fetchFields();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao reordenar campos",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+
+    setDraggedField(null);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -292,16 +348,6 @@ const FieldsManagement = () => {
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="field_order">Ordem</Label>
-                  <Input
-                    id="field_order"
-                    type="number"
-                    value={formData.field_order}
-                    onChange={(e) => setFormData(prev => ({ ...prev, field_order: parseInt(e.target.value) || 0 }))}
-                  />
                 </div>
               </div>
 
@@ -473,7 +519,14 @@ const FieldsManagement = () => {
                   </tr>
                 ) : (
                   fields.map((field) => (
-                    <tr key={field.id} className="border-b transition-colors hover:bg-muted/50">
+                    <tr 
+                      key={field.id} 
+                      className="border-b transition-colors hover:bg-muted/50 cursor-move"
+                      draggable={hasAdminAccess && !editingField && !isCreating}
+                      onDragStart={() => handleDragStart(field)}
+                      onDragOver={handleDragOver}
+                      onDrop={() => handleDrop(field)}
+                    >
                       <td className="p-4 align-middle font-medium">
                         {field.field_name}
                       </td>

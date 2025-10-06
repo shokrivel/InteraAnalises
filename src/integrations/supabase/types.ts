@@ -449,6 +449,7 @@ export type Database = {
         | "date"
         | "aglomerado"
         | "file_upload"
+        | "imc"
       healthcare_role:
         | "healthcare_professional"
         | "healthcare_admin"
@@ -591,6 +592,7 @@ export const Constants = {
         "date",
         "aglomerado",
         "file_upload",
+        "imc",
       ],
       healthcare_role: [
         "healthcare_professional",
