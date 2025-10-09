@@ -437,6 +437,10 @@ export type Database = {
         Args: { _access_type: string; _profile_id: string; _reason?: string }
         Returns: boolean
       }
+      log_profile_select: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
