@@ -57,6 +57,7 @@ const FieldsManagement = () => {
 
   const fetchFields = async () => {
     try {
+      // Fetch all consultation fields with proper type conversion
       const { data, error } = await supabase
         .from('consultation_fields')
         .select('*')
