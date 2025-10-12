@@ -29,7 +29,7 @@ export const useUserRole = () => {
         const { data, error } = await supabase
           .from('user_roles')
           .select('role')
-          .eq('user_id', user.id)
+          .eq('user_id', user.id as any)
           .single();
 
         if (error) {
@@ -40,7 +40,7 @@ export const useUserRole = () => {
             setError(error.message);
           }
         } else {
-          setUserRole(data.role);
+          setUserRole((data as any).role);
         }
       } catch (err) {
         setError('Erro ao buscar role do usuário');

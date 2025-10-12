@@ -65,10 +65,10 @@ const UserManagement = () => {
       }
 
       // Create a map of user roles
-      const roleMap = new Map(roles?.map(role => [role.user_id, role.role]) || []);
+      const roleMap = new Map((roles || []).map((role: any) => [role.user_id, role.role]));
 
       // Fetch user emails via edge function
-      const userIds = profiles?.map(p => p.user_id) || [];
+      const userIds = ((profiles as any[]) || []).map((p: any) => p.user_id);
       let emailMap = new Map<string, string>();
 
       if (userIds.length > 0) {
@@ -87,11 +87,11 @@ const UserManagement = () => {
       }
 
       // Combine all data
-      const usersWithRoles = profiles?.map(profile => ({
+      const usersWithRoles = ((profiles as any[]) || []).map((profile: any) => ({
         ...profile,
         user_role: roleMap.get(profile.user_id) || 'user',
         user_email: emailMap.get(profile.user_id) || 'Email não disponível',
-      })) || [];
+      }));
 
       setUsers(usersWithRoles);
     } catch (error: any) {
@@ -112,7 +112,7 @@ const UserManagement = () => {
       const { data: existingRole, error: checkError } = await supabase
         .from('user_roles')
         .select('id, role')
-        .eq('user_id', userId)
+        .eq('user_id', userId as any)
         .maybeSingle();
 
       if (checkError) throw checkError;
@@ -121,8 +121,8 @@ const UserManagement = () => {
         // Update existing role
         const { error: updateError } = await supabase
           .from('user_roles')
-          .update({ role: newRole })
-          .eq('user_id', userId);
+          .update({ role: newRole } as any)
+          .eq('user_id', userId as any);
 
         if (updateError) throw updateError;
       } else {
@@ -132,7 +132,7 @@ const UserManagement = () => {
           .insert({ 
             user_id: userId, 
             role: newRole 
-          });
+          } as any);
 
         if (insertError) throw insertError;
       }

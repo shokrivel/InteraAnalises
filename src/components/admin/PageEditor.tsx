@@ -57,11 +57,11 @@ const PageEditor = ({ page, isOpen, onClose, onSave }: PageEditorProps) => {
       const { data, error } = await supabase
         .from('page_components')
         .select('*')
-        .eq('page_id', page.id)
+        .eq('page_id', page.id as any)
         .order('order_index');
 
       if (error) throw error;
-      setComponents((data || []) as PageComponent[]);
+      setComponents((data || []) as unknown as PageComponent[]);
     } catch (error) {
       console.error('Error fetching page components:', error);
       toast.error('Erro ao carregar componentes da página');
@@ -75,10 +75,10 @@ const PageEditor = ({ page, isOpen, onClose, onSave }: PageEditorProps) => {
         .update({
           title: pageData.title,
           slug: pageData.slug,
-          content: pageData.content,
+          content: pageData.content as any,
           is_active: pageData.is_active
-        })
-        .eq('id', pageData.id);
+        } as any)
+        .eq('id', pageData.id as any);
 
       if (error) throw error;
 
@@ -102,7 +102,7 @@ const PageEditor = ({ page, isOpen, onClose, onSave }: PageEditorProps) => {
 
       const { error } = await supabase
         .from('page_components')
-        .insert(newComponent);
+        .insert(newComponent as any);
 
       if (error) throw error;
 
@@ -118,8 +118,8 @@ const PageEditor = ({ page, isOpen, onClose, onSave }: PageEditorProps) => {
     try {
       const { error } = await supabase
         .from('page_components')
-        .update(updates)
-        .eq('id', componentId);
+        .update(updates as any)
+        .eq('id', componentId as any);
 
       if (error) throw error;
 
@@ -135,7 +135,7 @@ const PageEditor = ({ page, isOpen, onClose, onSave }: PageEditorProps) => {
       const { error } = await supabase
         .from('page_components')
         .delete()
-        .eq('id', componentId);
+        .eq('id', componentId as any);
 
       if (error) throw error;
 

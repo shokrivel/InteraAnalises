@@ -112,8 +112,8 @@ const SignupForm = ({ onSuccess }: SignupFormProps) => {
             city: formData.city,
             address: formData.address,
             zip_code: formData.zipCode,
-            profile_type: formData.profileType
-          });
+            profile_type: formData.profileType as any
+          } as any);
 
         if (profileError) {
           console.error('❌ Erro ao criar perfil:', profileError);

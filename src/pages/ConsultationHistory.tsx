@@ -64,7 +64,7 @@ const ConsultationHistory = () => {
 
       // Only administrators can view all medical consultations for healthcare oversight
       if (!isAdmin) {
-        query = query.eq('user_id', user.id);
+        query = query.eq('user_id', user.id as any);
       }
 
       const { data, error } = await query;
@@ -77,7 +77,7 @@ const ConsultationHistory = () => {
           variant: "destructive",
         });
       } else {
-        setConsultations(data || []);
+        setConsultations((data || []) as unknown as ConsultationRecord[]);
       }
     } catch (err) {
       console.error('Unexpected error:', err);

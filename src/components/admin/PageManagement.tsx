@@ -56,7 +56,7 @@ const PageManagement = () => {
       if (error) throw error;
 
       // Organize pages into hierarchy
-      const organized = organizePages((data || []) as Page[]);
+      const organized = organizePages((data || []) as unknown as Page[]);
       setPages(organized);
     } catch (error) {
       console.error('Error fetching pages:', error);
@@ -102,12 +102,12 @@ const PageManagement = () => {
         .insert({
           title: newPageData.title,
           slug: newPageData.slug,
-          page_type: newPageData.page_type,
+          page_type: newPageData.page_type as any,
           parent_id: newPageData.parent_id || null,
-          content: newPageData.content,
+          content: newPageData.content as any,
           created_by: user.id,
           order_index: 0
-        });
+        } as any);
 
       if (error) throw error;
 
@@ -136,7 +136,7 @@ const PageManagement = () => {
       const { error } = await supabase
         .from('pages')
         .delete()
-        .eq('id', pageId);
+        .eq('id', pageId as any);
 
       if (error) throw error;
 

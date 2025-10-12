@@ -33,14 +33,14 @@ export const useProfile = () => {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', user.id as any)
         .maybeSingle();
 
       if (error) {
         console.error('Error fetching profile:', error);
         setError(error.message);
       } else {
-        setProfile(data);
+        setProfile(data as unknown as Profile);
         setError(null);
       }
     } catch (err) {

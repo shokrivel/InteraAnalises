@@ -20,7 +20,7 @@ export function withRole<P>(Component: React.ComponentType<P>, allowedRoles: str
         const { data, error } = await supabase
           .from("user_roles")
           .select("role")
-          .eq("user_id", user.id)
+          .eq("user_id", user.id as any)
           .single();
         if (!mounted) return;
         if (error) {
@@ -29,7 +29,7 @@ export function withRole<P>(Component: React.ComponentType<P>, allowedRoles: str
           setLoading(false);
           return;
         }
-        setRole(data?.role || "user");
+        setRole((data as any)?.role || "user");
         setLoading(false);
       };
       fetchRole();

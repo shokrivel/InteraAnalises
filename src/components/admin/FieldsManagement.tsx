@@ -63,7 +63,7 @@ const FieldsManagement = () => {
         .order('field_order', { ascending: true });
 
       if (error) throw error;
-      setFields(data || []);
+      setFields((data || []) as unknown as ConsultationField[]);
     } catch (error: any) {
       toast({
         title: "Erro ao carregar campos",
@@ -125,14 +125,14 @@ const FieldsManagement = () => {
           .from('consultation_fields')
           .update({
             field_label: formData.field_label,
-            field_type: formData.field_type,
-            field_options: formData.field_options,
-            required_for_levels: formData.required_for_levels,
-            visible_for_levels: formData.visible_for_levels,
+            field_type: formData.field_type as any,
+            field_options: formData.field_options as any,
+            required_for_levels: formData.required_for_levels as any,
+            visible_for_levels: formData.visible_for_levels as any,
             field_order: formData.field_order,
             is_active: formData.is_active
-          })
-          .eq('id', editingField.id);
+          } as any)
+          .eq('id', editingField.id as any);
 
         if (error) throw error;
 
@@ -146,13 +146,13 @@ const FieldsManagement = () => {
           .insert({
             field_name: formData.field_name,
             field_label: formData.field_label,
-            field_type: formData.field_type,
-            field_options: formData.field_options,
-            required_for_levels: formData.required_for_levels,
-            visible_for_levels: formData.visible_for_levels,
+            field_type: formData.field_type as any,
+            field_options: formData.field_options as any,
+            required_for_levels: formData.required_for_levels as any,
+            visible_for_levels: formData.visible_for_levels as any,
             field_order: formData.field_order,
             is_active: formData.is_active
-          });
+          } as any);
 
         if (error) throw error;
 
@@ -182,7 +182,7 @@ const FieldsManagement = () => {
       const { error } = await supabase
         .from('consultation_fields')
         .delete()
-        .eq('id', fieldId);
+        .eq('id', fieldId as any);
 
       if (error) throw error;
 
@@ -249,8 +249,8 @@ const FieldsManagement = () => {
         updates.map(update =>
           supabase
             .from('consultation_fields')
-            .update({ field_order: update.field_order })
-            .eq('id', update.id)
+            .update({ field_order: update.field_order } as any)
+            .eq('id', update.id as any)
         )
       );
 

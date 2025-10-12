@@ -59,7 +59,7 @@ const SaibaMaisManagement = () => {
       const { data, error } = await supabase
         .from('paginas_conteudo')
         .select('*')
-        .eq('slug', 'saiba-mais')
+        .eq('slug', 'saiba-mais' as any)
         .maybeSingle();
 
       if (error && error.code !== 'PGRST116') {
@@ -68,10 +68,10 @@ const SaibaMaisManagement = () => {
       }
 
       if (data) {
-        setPageContent(data);
-        setPageTitle(data.titulo);
-        setPageText(data.conteudo_texto);
-        setPageImage(data.url_imagem || "");
+        setPageContent(data as unknown as PageContent);
+        setPageTitle((data as any).titulo);
+        setPageText((data as any).conteudo_texto);
+        setPageImage((data as any).url_imagem || "");
       }
     } catch (err) {
       console.error('Unexpected error:', err);
@@ -80,7 +80,7 @@ const SaibaMaisManagement = () => {
 
   const fetchCards = async () => {
     try {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('saiba_mais_cards')
         .select('*')
         .order('ordem', { ascending: true });
@@ -90,7 +90,7 @@ const SaibaMaisManagement = () => {
         return;
       }
 
-      setCards(data || []);
+      setCards((data || []) as unknown as SaibaMaisCard[]);
     } catch (err) {
       console.error('Unexpected error:', err);
     }
@@ -110,14 +110,14 @@ const SaibaMaisManagement = () => {
       if (pageContent) {
         const { error } = await supabase
           .from('paginas_conteudo')
-          .update(contentData)
-          .eq('id', pageContent.id);
+          .update(contentData as any)
+          .eq('id', pageContent.id as any);
 
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from('paginas_conteudo')
-          .insert(contentData);
+          .insert(contentData as any);
 
         if (error) throw error;
       }
@@ -153,16 +153,16 @@ const SaibaMaisManagement = () => {
       };
 
       if (editingCard) {
-        const { error } = await (supabase as any)
+        const { error } = await supabase
           .from('saiba_mais_cards')
-          .update(cardData)
-          .eq('id', editingCard.id);
+          .update(cardData as any)
+          .eq('id', editingCard.id as any);
 
         if (error) throw error;
       } else {
-        const { error } = await (supabase as any)
+        const { error } = await supabase
           .from('saiba_mais_cards')
-          .insert(cardData);
+          .insert(cardData as any);
 
         if (error) throw error;
       }
@@ -193,10 +193,10 @@ const SaibaMaisManagement = () => {
     }
 
     try {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('saiba_mais_cards')
         .delete()
-        .eq('id', id);
+        .eq('id', id as any);
 
       if (error) throw error;
 

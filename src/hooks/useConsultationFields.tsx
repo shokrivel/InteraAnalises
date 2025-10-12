@@ -29,7 +29,7 @@ export const useConsultationFields = () => {
       const { data, error } = await supabase
         .from('consultation_fields')
         .select('*')
-        .eq('is_active', true)
+        .eq('is_active', true as any)
         .order('field_order', { ascending: true });
 
       if (error) {
@@ -37,10 +37,10 @@ export const useConsultationFields = () => {
       } else {
         // Filter fields based on user's profile type
         const userProfileType = profile?.profile_type || 'patient';
-        const visibleFields = data.filter(field => 
+        const visibleFields = (data as any[]).filter((field: any) => 
           field.visible_for_levels.includes(userProfileType)
         );
-        setFields(visibleFields);
+        setFields(visibleFields as unknown as ConsultationField[]);
         setError(null);
       }
     } catch (err) {

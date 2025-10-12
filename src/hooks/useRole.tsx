@@ -27,14 +27,14 @@ export const useRole = () => {
         const { data, error } = await supabase
           .from('user_roles')
           .select('*')
-          .eq('user_id', user.id)
+          .eq('user_id', user.id as any)
           .maybeSingle();
 
         if (error) {
           console.error('Error fetching user role:', error);
           setError(error.message);
         } else {
-          setUserRole(data);
+          setUserRole(data as any);
         }
       } catch (err) {
         console.error('Unexpected error fetching user role:', err);
