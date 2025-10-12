@@ -71,11 +71,13 @@ const SignupForm = ({ onSuccess }: SignupFormProps) => {
     }
 
     try {
+      console.log('🔵 Iniciando cadastro para:', formData.email);
+      
       const { error: signUpError, data } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/`,
+          emailRedirectTo: "https://interasaude.com.br",
           data: {
             name: formData.name,
             birth_date: formData.birthDate,
@@ -87,9 +89,19 @@ const SignupForm = ({ onSuccess }: SignupFormProps) => {
         }
       });
 
+      console.log('📧 Resposta do signUp:', { 
+        error: signUpError, 
+        userId: data?.user?.id,
+        userEmail: data?.user?.email,
+        confirmationSent: data?.user?.confirmation_sent_at
+      });
+
       if (signUpError) {
+        console.error('❌ Erro no signUp:', signUpError);
         setError(signUpError.message);
       } else if (data.user) {
+        console.log('✅ Usuário criado com sucesso:', data.user.id);
+        
         // Create profile
         const { error: profileError } = await supabase
           .from('profiles')
@@ -104,7 +116,9 @@ const SignupForm = ({ onSuccess }: SignupFormProps) => {
           });
 
         if (profileError) {
-          console.error('Profile creation error:', profileError);
+          console.error('❌ Erro ao criar perfil:', profileError);
+        } else {
+          console.log('✅ Perfil criado com sucesso');
         }
 
         toast({
@@ -114,6 +128,7 @@ const SignupForm = ({ onSuccess }: SignupFormProps) => {
         onSuccess();
       }
     } catch (err) {
+      console.error('❌ Erro inesperado no cadastro:', err);
       setError("Erro inesperado. Tente novamente.");
     } finally {
       setLoading(false);
