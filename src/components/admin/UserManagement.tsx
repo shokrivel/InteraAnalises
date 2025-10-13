@@ -37,6 +37,7 @@ const UserManagement = () => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
+      console.log('🔍 Fetching users...');
       
       // Fetch profiles with user roles
       const { data: profiles, error: profilesError } = await supabase
@@ -51,7 +52,11 @@ const UserManagement = () => {
         `)
         .order('created_at', { ascending: false });
 
+      console.log('📊 Profiles fetched:', profiles?.length, 'profiles');
+      console.log('📋 Profile data:', profiles);
+
       if (profilesError) {
+        console.error('❌ Profile fetch error:', profilesError);
         throw profilesError;
       }
 
@@ -60,28 +65,38 @@ const UserManagement = () => {
         .from('user_roles')
         .select('user_id, role');
 
+      console.log('👥 Roles fetched:', roles?.length, 'roles');
+      console.log('🎭 Roles data:', roles);
+
       if (rolesError) {
+        console.error('❌ Roles fetch error:', rolesError);
         throw rolesError;
       }
 
       // Create a map of user roles
       const roleMap = new Map((roles || []).map((role: any) => [role.user_id, role.role]));
+      console.log('🗺️ Role map created:', roleMap);
 
       // Fetch user emails via edge function
       const userIds = ((profiles as any[]) || []).map((p: any) => p.user_id);
       let emailMap = new Map<string, string>();
 
       if (userIds.length > 0) {
+        console.log('📧 Fetching emails for', userIds.length, 'users');
         try {
           const { data: emailData, error: emailError } = await supabase.functions.invoke('get-users-emails', {
             body: { userIds }
           });
 
+          console.log('📬 Email data received:', emailData);
+          console.log('❌ Email error:', emailError);
+
           if (!emailError && emailData?.userEmails) {
             emailMap = new Map(Object.entries(emailData.userEmails));
+            console.log('✅ Email map created:', emailMap);
           }
         } catch (emailFetchError) {
-          console.error('Error fetching emails:', emailFetchError);
+          console.error('❌ Error fetching emails:', emailFetchError);
           // Continue without emails rather than failing entirely
         }
       }
@@ -93,7 +108,9 @@ const UserManagement = () => {
         user_email: emailMap.get(profile.user_id) || 'Email não disponível',
       }));
 
+      console.log('✨ Final users with roles:', usersWithRoles);
       setUsers(usersWithRoles);
+      console.log('✅ Users state updated, total:', usersWithRoles.length);
     } catch (error: any) {
       console.error('Error fetching users:', error);
       toast({
