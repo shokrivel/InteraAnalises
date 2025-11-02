@@ -438,6 +438,23 @@ class ScientificAPIsService {
     return score;
   }
 
+  // Helper to clean XML/HTML text safely
+  private cleanXMLText(text: string): string {
+    try {
+      return text
+        .replace(/<[^>]+>/g, '') // strip tags
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&amp;/g, '&')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/\s+/g, ' ')
+        .trim();
+    } catch (_) {
+      return text ?? '';
+    }
+  }
+
   // Format articles for Gemini context with diagnostic focus
   formatArticlesForGemini(articles: Article[]): string {
     if (articles.length === 0) {
@@ -498,13 +515,13 @@ serve(async (req) => {
     // Validate environment variables
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    const googleAiApiKey = Deno.env.get('GOOGLE_AI_API_KEY');
+    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
     
-    if (!supabaseUrl || !supabaseServiceRoleKey || !googleAiApiKey) {
+    if (!supabaseUrl || !supabaseServiceRoleKey || !lovableApiKey) {
       console.error('Missing required environment variables:', {
         hasSupabaseUrl: !!supabaseUrl,
         hasSupabaseKey: !!supabaseServiceRoleKey,
-        hasGoogleAiKey: !!googleAiApiKey
+        hasLovableKey: !!lovableApiKey
       });
       throw new Error('Missing required environment variables');
     }
@@ -657,34 +674,46 @@ ${consultationData.epidemiological_info ? `Informações epidemiológicas: ${JSO
       requestParts.push(...imageParts);
     }
 
-    console.log(`Sending request to Gemini API with ${requestParts.length} parts...`);
+    console.log(`Calling Lovable AI Gateway...`);
 
-    // Call Gemini API
-    const geminiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${Deno.env.get('GOOGLE_AI_API_KEY')}`,
+    // Call Lovable AI Gateway (OpenAI-compatible)
+    const aiResponse = await fetch(
+      'https://ai.gateway.lovable.dev/v1/chat/completions',
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${Deno.env.get('LOVABLE_API_KEY')}`
+        },
         body: JSON.stringify({
-          contents: [{ parts: requestParts }],
-          generationConfig: {
-            temperature: 0.7,
-            topK: 40,
-            topP: 0.95,
-            maxOutputTokens: 2048,
-          }
+          model: 'google/gemini-2.5-flash',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: `${articlesContext}\n\n${consultationContext}${imageParts.length > 0 ? '\n\n[Imagens anexadas: analisar se relevante.]' : ''}` }
+          ]
         })
       }
     );
 
-    const geminiData = await geminiResponse.json();
-    console.log('Gemini API response:', geminiData);
-
-    if (!geminiData.candidates?.[0]?.content?.parts?.[0]?.text) {
-      throw new Error('Invalid response from Gemini API');
+    if (!aiResponse.ok) {
+      const errText = await aiResponse.text();
+      console.error('AI gateway HTTP error:', aiResponse.status, errText);
+      if (aiResponse.status === 429) {
+        throw new Error('Limite de requisições atingido. Tente novamente em instantes.');
+      }
+      if (aiResponse.status === 402) {
+        throw new Error('Créditos de IA insuficientes. Por favor, adicione créditos.');
+      }
+      throw new Error('AI gateway error');
     }
 
-    const aiResponseText = geminiData.candidates[0].content.parts[0].text;
+    const aiJson = await aiResponse.json();
+    console.log('AI gateway response:', aiJson);
+
+    const aiResponseText = aiJson.choices?.[0]?.message?.content;
+    if (!aiResponseText) {
+      throw new Error('Invalid AI response');
+    }
 
     // Extract specialty suggestion for internal use (hidden from user)
     let suggestedSpecialty = 'Clínico Geral';
