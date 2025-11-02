@@ -493,20 +493,48 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+    console.log('=== START gemini-consultation ===');
+    
+    // Validate environment variables
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const googleAiApiKey = Deno.env.get('GOOGLE_AI_API_KEY');
+    
+    if (!supabaseUrl || !supabaseServiceRoleKey || !googleAiApiKey) {
+      console.error('Missing required environment variables:', {
+        hasSupabaseUrl: !!supabaseUrl,
+        hasSupabaseKey: !!supabaseServiceRoleKey,
+        hasGoogleAiKey: !!googleAiApiKey
+      });
+      throw new Error('Missing required environment variables');
+    }
+
+    const supabaseClient = createClient(supabaseUrl, supabaseServiceRoleKey);
 
     const { consultationData, userId, attachments, reopenData } = await req.json();
-    console.log('Request body received:', { consultationData, userId });
+    console.log('Request body received:', { 
+      consultationData, 
+      userId, 
+      hasAttachments: !!attachments,
+      hasReopenData: !!reopenData 
+    });
 
-    // Get user profile
-    const { data: profile } = await supabaseClient
+    // Get user profile with proper error handling
+    const { data: profile, error: profileError } = await supabaseClient
       .from('profiles')
       .select('profile_type, name, address, city')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
+
+    if (profileError) {
+      console.error('Error fetching profile:', profileError);
+      throw new Error(`Failed to fetch user profile: ${profileError.message}`);
+    }
+
+    if (!profile) {
+      console.error('Profile not found for user:', userId);
+      throw new Error('User profile not found');
+    }
 
     console.log('User profile:', profile);
 
