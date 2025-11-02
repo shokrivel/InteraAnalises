@@ -30,23 +30,28 @@ export default function HealthcareProvidersMap({ userAddress, providers: initial
   const [minRating, setMinRating] = useState<number>(0);
   const [sortOption, setSortOption] = useState<"distance" | "rating">("distance");
 
-  // monta mapa e markers
+  // Carrega o mapa do Google Maps com a API key
   useEffect(() => {
     const loadGoogle = () => {
-      if ((window as any).google) {
-        initMap();
-      } else {
-        const script = document.createElement("script");
-        const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-        if (!apiKey) {
-          console.error('Google Maps API key not configured');
-          return;
-        }
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geometry`;
-        script.async = true;
-        script.onload = initMap;
-        document.head.appendChild(script);
+      // Remove scripts antigos do Google Maps se existirem
+      const existingScripts = document.querySelectorAll('script[src*="maps.googleapis.com"]');
+      existingScripts.forEach(script => script.remove());
+      
+      // Remove o objeto google.maps se existir
+      if ((window as any).google?.maps) {
+        delete (window as any).google.maps;
       }
+
+      const script = document.createElement("script");
+      const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+      if (!apiKey || apiKey === 'YOUR_GOOGLE_MAPS_API_KEY_HERE') {
+        console.error('Google Maps API key not configured properly');
+        return;
+      }
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geometry`;
+      script.async = true;
+      script.onload = initMap;
+      document.head.appendChild(script);
     };
 
     function initMap() {
