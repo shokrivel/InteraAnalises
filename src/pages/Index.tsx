@@ -183,9 +183,14 @@ const Index = () => {
             <div className="flex gap-4 justify-center">
               <Button 
                 size="lg" 
-                onClick={() => user ? navigate('/consultation') : setAuthDialogOpen(true)}
+                onClick={() => {
+                  console.log('🔘 Botão clicado - User:', user ? 'Logado' : 'Não logado', 'Loading:', loading);
+                  if (loading) return;
+                  user ? navigate('/consultation') : setAuthDialogOpen(true);
+                }}
+                disabled={loading}
               >
-                Começar Agora
+                {loading ? 'Carregando...' : (user ? 'Iniciar Consulta' : 'Começar Agora')}
               </Button>
               <Button variant="outline" size="lg" onClick={() => navigate('/saiba-mais')}>
                 Saiba Mais
@@ -295,9 +300,14 @@ const Index = () => {
             </p>
             <Button 
               size="lg" 
-              onClick={() => user ? navigate('/consultation') : setAuthDialogOpen(true)}
+              onClick={() => {
+                console.log('🔘 Botão CTA clicado - User:', user ? 'Logado' : 'Não logado', 'Loading:', loading);
+                if (loading) return;
+                user ? navigate('/consultation') : setAuthDialogOpen(true);
+              }}
+              disabled={loading}
             >
-              {user ? 'Iniciar Consulta' : 'Criar Conta Gratuita'}
+              {loading ? 'Carregando...' : (user ? 'Iniciar Consulta' : 'Criar Conta Gratuita')}
             </Button>
           </div>
         </div>
