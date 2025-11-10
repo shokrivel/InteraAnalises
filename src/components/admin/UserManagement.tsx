@@ -1,14 +1,22 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, User, Crown, Shield, UserCheck, Lock } from "lucide-react";
+import { Search, User, Crown, Shield, UserCheck, Lock, FileText, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useRole } from "@/hooks/useRole";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface UserProfile {
   id: string;
@@ -19,6 +27,13 @@ interface UserProfile {
   created_at: string;
   user_email?: string;
   user_role?: 'admin' | 'moderator' | 'user';
+  last_consultation?: {
+    id: string;
+    created_at: string;
+    symptoms: string[];
+    ai_response: string;
+    status: string;
+  };
 }
 
 const UserManagement = () => {
@@ -27,8 +42,11 @@ const UserManagement = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [profileTypeFilter, setProfileTypeFilter] = useState<string>("all");
+  const [selectedConsultation, setSelectedConsultation] = useState<any>(null);
+  const [consultationDialogOpen, setConsultationDialogOpen] = useState(false);
   const { toast } = useToast();
   const { isAdmin, isModerator } = useRole();
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchUsers();
@@ -101,11 +119,30 @@ const UserManagement = () => {
         }
       }
 
+      // Fetch last consultation for each user
+      const { data: consultations, error: consultationsError } = await supabase
+        .from('consultation_history')
+        .select('id, user_id, created_at, symptoms, ai_response, status')
+        .order('created_at', { ascending: false });
+
+      if (consultationsError) {
+        console.error('❌ Consultations fetch error:', consultationsError);
+      }
+
+      // Create a map of last consultations per user
+      const consultationMap = new Map();
+      (consultations || []).forEach((consultation: any) => {
+        if (!consultationMap.has(consultation.user_id)) {
+          consultationMap.set(consultation.user_id, consultation);
+        }
+      });
+
       // Combine all data
       const usersWithRoles = ((profiles as any[]) || []).map((profile: any) => ({
         ...profile,
         user_role: roleMap.get(profile.user_id) || 'user',
         user_email: emailMap.get(profile.user_id) || 'Email não disponível',
+        last_consultation: consultationMap.get(profile.user_id),
       }));
 
       console.log('✨ Final users with roles:', usersWithRoles);
@@ -211,6 +248,21 @@ const UserManagement = () => {
     }
   };
 
+  const viewConsultation = (consultation: any) => {
+    setSelectedConsultation(consultation);
+    setConsultationDialogOpen(true);
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -283,6 +335,7 @@ const UserManagement = () => {
                   <TableHead>Tipo de Perfil</TableHead>
                   <TableHead>Cidade</TableHead>
                   <TableHead>Papel</TableHead>
+                  <TableHead>Última Consulta</TableHead>
                   <TableHead>Cadastro</TableHead>
                   <TableHead>Ações</TableHead>
                 </TableRow>
@@ -290,7 +343,7 @@ const UserManagement = () => {
               <TableBody>
                 {filteredUsers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                       {searchTerm || roleFilter !== "all" || profileTypeFilter !== "all" 
                         ? "Nenhum usuário encontrado com os filtros aplicados"
                         : "Nenhum usuário encontrado"
@@ -313,6 +366,26 @@ const UserManagement = () => {
                           {getRoleIcon(user.user_role || 'user')}
                           {user.user_role || 'user'}
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {user.last_consultation ? (
+                          <div className="flex flex-col gap-1">
+                            <span className="text-xs text-muted-foreground">
+                              {formatDate(user.last_consultation.created_at)}
+                            </span>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => viewConsultation(user.last_consultation)}
+                              className="gap-1"
+                            >
+                              <Eye className="w-3 h-3" />
+                              Ver Consulta
+                            </Button>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">Nenhuma consulta</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         {new Date(user.created_at).toLocaleDateString('pt-BR')}
@@ -357,6 +430,69 @@ const UserManagement = () => {
           </Button>
         </div>
       </CardContent>
+
+      {/* Consultation Dialog */}
+      <Dialog open={consultationDialogOpen} onOpenChange={setConsultationDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              Detalhes da Consulta
+            </DialogTitle>
+            <DialogDescription>
+              Consulta realizada em {selectedConsultation && formatDate(selectedConsultation.created_at)}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedConsultation && (
+            <div className="space-y-4">
+              {/* Symptoms */}
+              {selectedConsultation.symptoms && selectedConsultation.symptoms.length > 0 && (
+                <div>
+                  <h4 className="font-semibold mb-2">Sintomas Relatados:</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedConsultation.symptoms.map((symptom: string, index: number) => (
+                      <Badge key={index} variant="secondary">
+                        {symptom}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Status */}
+              <div>
+                <h4 className="font-semibold mb-2">Status:</h4>
+                <Badge variant={selectedConsultation.status === 'finalizada' ? 'default' : 'secondary'}>
+                  {selectedConsultation.status}
+                </Badge>
+              </div>
+
+              {/* AI Response */}
+              {selectedConsultation.ai_response && (
+                <div>
+                  <h4 className="font-semibold mb-2">Resposta da IA:</h4>
+                  <div className="bg-muted p-4 rounded-lg">
+                    <p className="text-sm whitespace-pre-wrap">
+                      {selectedConsultation.ai_response}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex justify-end gap-2 pt-4 border-t">
+                <Button
+                  variant="outline"
+                  onClick={() => setConsultationDialogOpen(false)}
+                >
+                  Fechar
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };
