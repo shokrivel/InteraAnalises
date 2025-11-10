@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import interasaudeLogo from "@/assets/interasaude-logo.png";
 import { Button } from "@/components/ui/button";
@@ -43,10 +43,18 @@ const ConsultationChat = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
+  
+  // Flag para garantir que a consulta execute apenas uma vez
+  const hasProcessedRef = useRef(false);
 
   const consultationData = location.state?.consultationData;
 
   useEffect(() => {
+    // Evita re-execução ao trocar de aba ou perder/recuperar foco
+    if (hasProcessedRef.current) {
+      return;
+    }
+
     if (!user || !consultationData) {
       navigate("/dashboard");
       return;
@@ -54,6 +62,8 @@ const ConsultationChat = () => {
 
     const processConsultation = async () => {
       try {
+        // Marca como processado imediatamente para evitar múltiplas execuções
+        hasProcessedRef.current = true;
         setLoading(true);
 
         console.log("📤 Enviando dados para Gemini:", consultationData);
@@ -87,6 +97,8 @@ const ConsultationChat = () => {
         });
       } catch (error: any) {
         console.error("Erro ao processar consulta:", error);
+        // Em caso de erro, permite tentar novamente
+        hasProcessedRef.current = false;
         toast({
           title: "Erro ao processar consulta",
           description: error.message || "Tente novamente mais tarde.",
@@ -99,7 +111,7 @@ const ConsultationChat = () => {
     };
 
     processConsultation();
-  }, [user, consultationData, navigate, toast, profile]);
+  }, [user, consultationData, navigate, toast]);
 
   const copyToClipboard = () => {
     if (aiResponse?.response) {
