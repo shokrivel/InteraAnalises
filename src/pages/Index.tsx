@@ -181,7 +181,10 @@ const Index = () => {
               com linguagem adaptada ao seu perfil profissional.
             </p>
             <div className="flex gap-4 justify-center">
-              <Button size="lg" onClick={() => setAuthDialogOpen(true)}>
+              <Button 
+                size="lg" 
+                onClick={() => user ? navigate('/consultation') : setAuthDialogOpen(true)}
+              >
                 Começar Agora
               </Button>
               <Button variant="outline" size="lg" onClick={() => navigate('/saiba-mais')}>
@@ -290,8 +293,11 @@ const Index = () => {
             <p className="text-lg text-muted-foreground mb-8">
               Crie sua conta e tenha acesso a consultas personalizadas com base em evidências científicas.
             </p>
-            <Button size="lg" onClick={() => setAuthDialogOpen(true)}>
-              Criar Conta Gratuita
+            <Button 
+              size="lg" 
+              onClick={() => user ? navigate('/consultation') : setAuthDialogOpen(true)}
+            >
+              {user ? 'Iniciar Consulta' : 'Criar Conta Gratuita'}
             </Button>
           </div>
         </div>
