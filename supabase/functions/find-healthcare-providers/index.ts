@@ -10,13 +10,27 @@ function determineProviderType(keyword?: string): string {
   if (!keyword) return "doctor";
   const lower = keyword.toLowerCase();
 
+  // Hospital/Emergency care
+  if (lower.includes("hospital") || lower.includes("emergency") || lower.includes("pronto")) return "hospital";
+  
+  // Specialists
   if (lower.includes("cardio")) return "cardiologist";
   if (lower.includes("derma") || lower.includes("pele")) return "dermatologist";
+  if (lower.includes("neuro")) return "neurologist";
+  if (lower.includes("gastro")) return "gastroenterologist";
   if (lower.includes("psiqu")) return "psychiatrist";
   if (lower.includes("psico")) return "psychologist";
   if (lower.includes("gineco")) return "gynecologist";
   if (lower.includes("orto")) return "orthopedist";
   if (lower.includes("pedi")) return "pediatrician";
+  if (lower.includes("oftalmo")) return "ophthalmologist";
+  if (lower.includes("otorr")) return "otolaryngologist";
+  if (lower.includes("urolog")) return "urologist";
+  if (lower.includes("pneumo")) return "pulmonologist";
+  if (lower.includes("reuma")) return "rheumatologist";
+  if (lower.includes("nefro")) return "nephrologist";
+  if (lower.includes("endocr")) return "endocrinologist";
+  if (lower.includes("infect")) return "infectious disease specialist";
 
   return "doctor"; // fallback genérico
 }
@@ -62,10 +76,14 @@ serve(async (req) => {
 
     // Define tipo de profissional baseado no diagnóstico/especialidade
     const providerType = determineProviderType(keyword);
+    
+    // Define o tipo de busca (hospital vs doctor)
+    const searchType = (keyword === 'hospital' || providerType === 'hospital') ? 'hospital' : 'doctor';
+    const searchKeyword = (keyword === 'hospital' || providerType === 'hospital') ? 'emergency hospital' : providerType;
 
     // Monta URL do Google Places
-    const placesUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${searchLat},${searchLng}&radius=${radius}&type=doctor&keyword=${encodeURIComponent(
-      providerType,
+    const placesUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${searchLat},${searchLng}&radius=${radius}&type=${searchType}&keyword=${encodeURIComponent(
+      searchKeyword,
     )}&key=${googleMapsApiKey}`;
 
     console.log("Searching URL:", placesUrl);
