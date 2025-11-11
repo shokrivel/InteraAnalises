@@ -28,9 +28,25 @@ const Consultation = () => {
     }
   }, [user, profileLoading, navigate]);
 
-  // Request geolocation on component mount
+  // Request geolocation on component mount - only once per session
   useEffect(() => {
     const requestLocation = () => {
+      // Check if location was already requested in this session
+      const locationRequested = sessionStorage.getItem('locationRequested');
+      
+      if (locationRequested === 'true') {
+        // Location already requested, don't show popup again
+        const savedLocation = sessionStorage.getItem('userLocation');
+        if (savedLocation) {
+          const loc = JSON.parse(savedLocation);
+          setUserLocation(loc);
+          setLocationPermission('granted');
+        } else {
+          setLocationPermission('denied');
+        }
+        return;
+      }
+      
       if ('geolocation' in navigator) {
         toast({
           title: "Solicitação de Localização",
@@ -39,11 +55,17 @@ const Consultation = () => {
 
         navigator.geolocation.getCurrentPosition(
           (position) => {
-            setUserLocation({
+            const location = {
               lat: position.coords.latitude,
               lng: position.coords.longitude
-            });
+            };
+            setUserLocation(location);
             setLocationPermission('granted');
+            
+            // Save to sessionStorage
+            sessionStorage.setItem('locationRequested', 'true');
+            sessionStorage.setItem('userLocation', JSON.stringify(location));
+            
             toast({
               title: "Localização obtida",
               description: "Vamos buscar os profissionais mais próximos de você.",
@@ -52,6 +74,8 @@ const Consultation = () => {
           (error) => {
             console.log('Geolocation error:', error);
             setLocationPermission('denied');
+            sessionStorage.setItem('locationRequested', 'true');
+            
             toast({
               title: "Localização negada",
               description: "Usaremos o endereço do seu cadastro para buscar profissionais próximos.",
@@ -61,6 +85,7 @@ const Consultation = () => {
         );
       } else {
         setLocationPermission('denied');
+        sessionStorage.setItem('locationRequested', 'true');
       }
     };
 

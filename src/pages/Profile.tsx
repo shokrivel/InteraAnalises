@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Heart, Save, User, Edit } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -26,7 +27,8 @@ const Profile = () => {
     address: "",
     city: "",
     zip_code: "",
-    profile_type: "patient" as "patient" | "academic" | "health_professional"
+    profile_type: "patient" as "patient" | "academic" | "health_professional",
+    enable_family_history: false
   });
   const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -46,7 +48,8 @@ const Profile = () => {
         address: profile.address || "",
         city: profile.city || "",
         zip_code: profile.zip_code || "",
-        profile_type: profile.profile_type || "patient"
+        profile_type: profile.profile_type || "patient",
+        enable_family_history: (profile as any).enable_family_history || false
       });
     }
   }, [profile]);
@@ -163,7 +166,8 @@ const Profile = () => {
             address: formData.address,
             city: formData.city,
             zip_code: formData.zip_code,
-            profile_type: formData.profile_type
+            profile_type: formData.profile_type,
+            enable_family_history: formData.enable_family_history
           })
           .select()
           .single();
@@ -184,6 +188,7 @@ const Profile = () => {
             city: formData.city,
             zip_code: formData.zip_code,
             profile_type: formData.profile_type,
+            enable_family_history: formData.enable_family_history,
             updated_at: new Date().toISOString()
           })
           .eq('user_id', user.id)
@@ -231,7 +236,8 @@ const Profile = () => {
         address: profile.address || "",
         city: profile.city || "",
         zip_code: profile.zip_code || "",
-        profile_type: profile.profile_type || "patient"
+        profile_type: profile.profile_type || "patient",
+        enable_family_history: (profile as any).enable_family_history || false
       });
     }
     setIsEditing(false);
@@ -351,6 +357,22 @@ const Profile = () => {
                     </Select>
                   </div>
 
+                  <div className="flex items-center justify-between space-x-2 border rounded-lg p-4 bg-muted/30">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="enable_family_history" className="text-base">
+                        Ativar Histórico Familiar
+                      </Label>
+                      <p className="text-sm text-muted-foreground">
+                        Habilita o campo de histórico familiar durante consultas
+                      </p>
+                    </div>
+                    <Switch
+                      id="enable_family_history"
+                      checked={formData.enable_family_history}
+                      onCheckedChange={(checked) => handleInputChange("enable_family_history", checked.toString())}
+                    />
+                  </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="zip_code">CEP</Label>
                     <Input
@@ -426,6 +448,12 @@ const Profile = () => {
                         {formData.profile_type === 'patient' && "Paciente"}
                         {formData.profile_type === 'academic' && "Acadêmico"}
                         {formData.profile_type === 'health_professional' && "Profissional de Saúde"}
+                      </p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-muted-foreground">Histórico Familiar</Label>
+                      <p className="mt-1 text-sm">
+                        {formData.enable_family_history ? "Ativado" : "Desativado"}
                       </p>
                     </div>
                     <div>
