@@ -48,6 +48,8 @@ const ConsultationChat = () => {
   const hasProcessedRef = useRef(false);
 
   const consultationData = location.state?.consultationData;
+  const userLocation = location.state?.userLocation;
+  const locationPermission = location.state?.locationPermission;
 
   useEffect(() => {
     // Evita re-execução ao trocar de aba ou perder/recuperar foco
@@ -68,10 +70,16 @@ const ConsultationChat = () => {
 
         console.log("📤 Enviando dados para Gemini:", consultationData);
 
+        // Prepare attachments from consultation data
+        const attachments = consultationData.anexos_e_documentos || [];
+
         const { data, error } = await supabase.functions.invoke("gemini-consultation", {
           body: {
             consultationData: consultationData,
             userId: user.id,
+            attachments: attachments,
+            userLocation: userLocation,
+            locationPermission: locationPermission
           },
         });
 

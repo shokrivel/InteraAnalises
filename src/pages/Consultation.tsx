@@ -14,6 +14,8 @@ import DynamicField from "@/components/consultation/DynamicField";
 const Consultation = () => {
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(false);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [locationPermission, setLocationPermission] = useState<'pending' | 'granted' | 'denied'>('pending');
   const { user } = useAuth();
   const { profile, loading: profileLoading } = useProfile();
   const { fields, loading: fieldsLoading, isFieldRequired } = useConsultationFields();
@@ -25,6 +27,47 @@ const Consultation = () => {
       navigate("/");
     }
   }, [user, profileLoading, navigate]);
+
+  // Request geolocation on component mount
+  useEffect(() => {
+    const requestLocation = () => {
+      if ('geolocation' in navigator) {
+        toast({
+          title: "Solicitação de Localização",
+          description: "Permita o acesso à sua localização para encontrar médicos mais próximos de você. Você também pode usar seu CEP cadastrado.",
+        });
+
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            setUserLocation({
+              lat: position.coords.latitude,
+              lng: position.coords.longitude
+            });
+            setLocationPermission('granted');
+            toast({
+              title: "Localização obtida",
+              description: "Vamos buscar os profissionais mais próximos de você.",
+            });
+          },
+          (error) => {
+            console.log('Geolocation error:', error);
+            setLocationPermission('denied');
+            toast({
+              title: "Localização negada",
+              description: "Usaremos o endereço do seu cadastro para buscar profissionais próximos.",
+              variant: "default",
+            });
+          }
+        );
+      } else {
+        setLocationPermission('denied');
+      }
+    };
+
+    if (user && !profileLoading) {
+      requestLocation();
+    }
+  }, [user, profileLoading, toast]);
 
   const handleAnswerChange = (fieldName: string, value: any) => {
     setAnswers(prev => ({ ...prev, [fieldName]: value }));
@@ -59,10 +102,12 @@ const Consultation = () => {
     try {
       console.log('Submitting consultation data:', answers);
       
-      // Navigate to consultation chat with the answers
+      // Navigate to consultation chat with the answers and location
       navigate("/consultation-chat", { 
         state: { 
-          consultationData: answers 
+          consultationData: answers,
+          userLocation: userLocation,
+          locationPermission: locationPermission
         } 
       });
     } catch (error) {

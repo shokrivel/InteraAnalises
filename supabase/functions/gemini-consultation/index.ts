@@ -528,12 +528,14 @@ serve(async (req) => {
 
     const supabaseClient = createClient(supabaseUrl, supabaseServiceRoleKey);
 
-    const { consultationData, userId, attachments, reopenData } = await req.json();
+    const { consultationData, userId, attachments, reopenData, userLocation, locationPermission } = await req.json();
     console.log('Request body received:', { 
       consultationData, 
       userId, 
       hasAttachments: !!attachments,
-      hasReopenData: !!reopenData 
+      hasReopenData: !!reopenData,
+      hasUserLocation: !!userLocation,
+      locationPermission
     });
 
     // Get user profile with proper error handling
@@ -586,7 +588,9 @@ REGRAS OBRIGATÓRIAS:
 3. Não invente conclusões ou use conhecimento não fornecido nos artigos
 4. Se a evidência for fraca ou ausente, declare incerteza e recomende consulta médica presencial
 5. Cite as fontes no formato: (Autor et al., Ano, DOI se disponível)
-6. Retorne OBRIGATORIAMENTE ao final: **ESPECIALIDADE_SUGERIDA:** {"specialty":"nome","confidence":0.##}
+6. Se houver IMAGENS ou DOCUMENTOS anexados, analise-os cuidadosamente e integre as informações na sua análise
+7. Retorne OBRIGATORIAMENTE ao final: **ESPECIALIDADE_SUGERIDA:** {"specialty":"nome","confidence":0.##}
+8. Se não for possível determinar um diagnóstico específico (confidence < 0.5), sugira "Pronto-Atendimento" ou "Hospital"
 
 FORMATO DE RESPOSTA ESPECÍFICO para perfil "${profile?.profile_type || 'patient'}":
 
@@ -676,7 +680,7 @@ ${consultationData.epidemiological_info ? `Informações epidemiológicas: ${JSO
 
     console.log(`Calling Lovable AI Gateway...`);
 
-    // Call Lovable AI Gateway (OpenAI-compatible)
+    // Call Lovable AI Gateway with multimodal content if images are present
     const aiResponse = await fetch(
       'https://ai.gateway.lovable.dev/v1/chat/completions',
       {
@@ -689,7 +693,18 @@ ${consultationData.epidemiological_info ? `Informações epidemiológicas: ${JSO
           model: 'google/gemini-2.5-flash',
           messages: [
             { role: 'system', content: systemPrompt },
-            { role: 'user', content: `${articlesContext}\n\n${consultationContext}${imageParts.length > 0 ? '\n\n[Imagens anexadas: analisar se relevante.]' : ''}` }
+            { 
+              role: 'user', 
+              content: imageParts.length > 0 
+                ? [
+                    { type: 'text', text: `${articlesContext}\n\n${consultationContext}\n\nANEXOS: O usuário anexou ${imageParts.length} arquivo(s). Por favor, analise-os cuidadosamente e integre as informações na sua análise médica.` },
+                    ...imageParts.map(img => ({
+                      type: 'image_url',
+                      image_url: { url: `data:${img.inlineData.mimeType};base64,${img.inlineData.data}` }
+                    }))
+                  ]
+                : `${articlesContext}\n\n${consultationContext}`
+            }
           ]
         })
       }
@@ -725,6 +740,12 @@ ${consultationData.epidemiological_info ? `Informações epidemiológicas: ${JSO
         const specialtyData = JSON.parse(specialtyMatch[1]);
         suggestedSpecialty = specialtyData.specialty || 'Clínico Geral';
         confidence = specialtyData.confidence || 0.5;
+        
+        // If confidence is low, suggest emergency/hospital instead
+        if (confidence < 0.5) {
+          console.log(`Low confidence (${confidence}), suggesting emergency care`);
+          suggestedSpecialty = 'Pronto-Atendimento';
+        }
       } catch (error) {
         console.error('Error parsing specialty suggestion:', error);
       }
@@ -791,8 +812,8 @@ ${consultationData.epidemiological_info ? `Informações epidemiológicas: ${JSO
       // Infectious diseases
       if (lower.includes('infect') || lower.includes('infecção')) return 'infectious disease specialist';
       
-      // Emergency medicine
-      if (lower.includes('emergência') || lower.includes('urgência')) return 'emergency medicine';
+      // Emergency medicine / Hospital
+      if (lower.includes('emergência') || lower.includes('urgência') || lower.includes('pronto-atendimento') || lower.includes('hospital')) return 'hospital';
       
       return 'doctor';
     };
@@ -805,8 +826,36 @@ ${consultationData.epidemiological_info ? `Informações epidemiológicas: ${JSO
     let specialists = [];
     let searchPerformed = false;
     
-    // Try with user address first
-    if (profile?.address && profile?.city) {
+    // Priority 1: Use geolocation if available
+    if (userLocation && locationPermission === 'granted') {
+      console.log(`Searching for specialists using geolocation: ${userLocation.lat}, ${userLocation.lng}`);
+      
+      try {
+        const specialistResponse = await supabaseClient.functions.invoke('find-healthcare-providers', {
+          body: {
+            lat: userLocation.lat,
+            lng: userLocation.lng,
+            keyword: specialtyKeyword,
+            radius: 15000
+          }
+        });
+
+        console.log('Specialist response (geolocation):', specialistResponse);
+        searchPerformed = true;
+
+        if (specialistResponse.data?.providers) {
+          specialists = specialistResponse.data.providers.slice(0, 5);
+          console.log(`Found ${specialists.length} specialists using geolocation`);
+        } else {
+          console.log('No providers found with geolocation:', specialistResponse.data);
+        }
+      } catch (error) {
+        console.error('Error finding specialists with geolocation:', error);
+      }
+    }
+    
+    // Priority 2: Try with user address if geolocation failed or wasn't granted
+    if (!searchPerformed && profile?.address && profile?.city) {
       const userAddress = `${profile.address}, ${profile.city}`;
       console.log(`Searching for specialists near: ${userAddress}`);
       
