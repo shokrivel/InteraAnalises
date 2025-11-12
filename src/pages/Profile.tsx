@@ -80,7 +80,7 @@ const Profile = () => {
     );
   }
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -369,7 +369,7 @@ const Profile = () => {
                     <Switch
                       id="enable_family_history"
                       checked={formData.enable_family_history}
-                      onCheckedChange={(checked) => handleInputChange("enable_family_history", checked.toString())}
+                      onCheckedChange={(checked) => handleInputChange("enable_family_history", checked)}
                     />
                   </div>
 

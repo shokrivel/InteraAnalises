@@ -278,7 +278,7 @@ export type Database = {
           created_at: string
           department: string | null
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           user_agent: string | null
         }
         Insert: {
@@ -289,7 +289,7 @@ export type Database = {
           created_at?: string
           department?: string | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           user_agent?: string | null
         }
         Update: {
@@ -300,7 +300,7 @@ export type Database = {
           created_at?: string
           department?: string | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           user_agent?: string | null
         }
         Relationships: []
@@ -311,6 +311,7 @@ export type Database = {
           birth_date: string
           city: string
           created_at: string | null
+          enable_family_history: boolean | null
           id: string
           name: string
           profile_type: Database["public"]["Enums"]["user_profile_type"]
@@ -323,6 +324,7 @@ export type Database = {
           birth_date: string
           city: string
           created_at?: string | null
+          enable_family_history?: boolean | null
           id?: string
           name: string
           profile_type?: Database["public"]["Enums"]["user_profile_type"]
@@ -335,6 +337,7 @@ export type Database = {
           birth_date?: string
           city?: string
           created_at?: string | null
+          enable_family_history?: boolean | null
           id?: string
           name?: string
           profile_type?: Database["public"]["Enums"]["user_profile_type"]
@@ -407,14 +410,8 @@ export type Database = {
         Args: { _user_id: string }
         Returns: boolean
       }
-      can_manage_roles: {
-        Args: { _user_id: string }
-        Returns: boolean
-      }
-      email_exists: {
-        Args: { email_to_check: string }
-        Returns: boolean
-      }
+      can_manage_roles: { Args: { _user_id: string }; Returns: boolean }
+      email_exists: { Args: { email_to_check: string }; Returns: boolean }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
@@ -437,10 +434,7 @@ export type Database = {
         Args: { _access_type: string; _profile_id: string; _reason?: string }
         Returns: boolean
       }
-      log_profile_select: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      log_profile_select: { Args: never; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
