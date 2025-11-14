@@ -64,8 +64,10 @@ const SignupForm = ({ onSuccess }: SignupFormProps) => {
       return;
     }
 
-    if (formData.password.length < 6) {
-      setError("A senha deve ter pelo menos 6 caracteres");
+    // Validação de senha forte
+    const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
+    if (!passwordRegex.test(formData.password)) {
+      setError("A senha deve conter pelo menos 8 caracteres, 1 letra maiúscula, 1 número e 1 caractere especial");
       setLoading(false);
       return;
     }
@@ -177,6 +179,9 @@ const SignupForm = ({ onSuccess }: SignupFormProps) => {
             placeholder="••••••••"
             required
           />
+          <p className="text-xs text-muted-foreground">
+            Mínimo de 8 caracteres, 1 letra maiúscula, 1 número e 1 caractere especial
+          </p>
         </div>
         <div className="space-y-2">
           <Label htmlFor="confirm-password">Confirmar Senha *</Label>
