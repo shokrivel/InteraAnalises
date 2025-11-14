@@ -20,7 +20,8 @@ interface DynamicFieldProps {
 }
 
 const DynamicField = ({ field, value, onChange, required }: DynamicFieldProps) => {
-  const [showConditionalList, setShowConditionalList] = useState(false);
+  // Initialize showConditionalList based on current value - only show if "yes" is selected
+  const [showConditionalList, setShowConditionalList] = useState(value === 'yes');
 
   const handleChange = (newValue: any) => {
     onChange(field.field_name, newValue);
@@ -31,14 +32,13 @@ const DynamicField = ({ field, value, onChange, required }: DynamicFieldProps) =
     handleChange(selectedValue);
     if (selectedValue === 'yes') {
       setShowConditionalList(true);
-    } else if (selectedValue === 'no') {
+    } else {
+      // Hide block for "no" or empty selection
       setShowConditionalList(false);
-      // Clear any previously selected items when user selects "No"
+      // Clear any previously selected items when user selects "No" or clears selection
       if (field.field_options?.subfield) {
         onChange(field.field_options.subfield, []);
       }
-    } else {
-      setShowConditionalList(false);
     }
   };
 
@@ -68,26 +68,30 @@ const DynamicField = ({ field, value, onChange, required }: DynamicFieldProps) =
       case 'number':
         // Check if this is a pain scale field (0-10)
         const isPainScale = field.field_name.toLowerCase().includes('dor') || 
-                           field.field_name.toLowerCase().includes('pain');
+                           field.field_name.toLowerCase().includes('pain') ||
+                           field.field_name.toLowerCase().includes('escala');
         
         if (isPainScale) {
           return (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">0 (sem dor)</span>
-                <span className="text-2xl font-bold text-primary">{value || 0}</span>
-                <span className="text-sm text-muted-foreground">10 (dor máxima)</span>
-              </div>
-              <Slider
-                value={[value || 0]}
-                onValueChange={(values) => handleChange(values[0])}
+            <div className="space-y-2">
+              <Input
+                type="number"
+                value={value || ''}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value);
+                  if (!isNaN(val) && val >= 0 && val <= 10) {
+                    handleChange(val);
+                  } else if (e.target.value === '') {
+                    handleChange('');
+                  }
+                }}
+                placeholder="0"
                 min={0}
                 max={10}
-                step={1}
-                className="w-full"
+                required={required}
               />
-              <p className="text-xs text-center text-muted-foreground">
-                De 0 (sem dor) até 10 (dor máxima suportável)
+              <p className="text-xs text-muted-foreground">
+                Digite um valor entre 0 (sem dor) e 10 (dor máxima)
               </p>
             </div>
           );
