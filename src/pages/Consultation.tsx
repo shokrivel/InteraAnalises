@@ -237,15 +237,22 @@ const Consultation = () => {
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-6">
-                  {fields.map((field) => (
-                    <DynamicField
-                      key={field.id}
-                      field={field}
-                      value={answers[field.field_name]}
-                      onChange={handleAnswerChange}
-                      required={isFieldRequired(field)}
-                    />
-                  ))}
+                  {fields.map((field) => {
+                    // Hide file_upload field unless lab tests is set to "yes"
+                    if (field.field_type === 'file_upload' && answers['exames_laboratoriais'] !== 'yes') {
+                      return null;
+                    }
+                    
+                    return (
+                      <DynamicField
+                        key={field.id}
+                        field={field}
+                        value={answers[field.field_name]}
+                        onChange={handleAnswerChange}
+                        required={isFieldRequired(field)}
+                      />
+                    );
+                  })}
                   
                   <div className="flex gap-4 pt-6">
                     <Button
