@@ -16,7 +16,7 @@ export const useRole = () => {
   const { user } = useAuth();
 
   useEffect(() => {
-    if (!user) {
+    if (!user?.id) {
       setUserRole(null);
       setLoading(false);
       return;
@@ -31,13 +31,11 @@ export const useRole = () => {
           .maybeSingle();
 
         if (error) {
-          console.error('Error fetching user role:', error);
           setError(error.message);
         } else {
           setUserRole(data as any);
         }
       } catch (err) {
-        console.error('Unexpected error fetching user role:', err);
         setError('Erro ao buscar role do usuário');
       } finally {
         setLoading(false);
@@ -45,18 +43,11 @@ export const useRole = () => {
     };
 
     fetchUserRole();
-  }, [user]);
+  }, [user?.id]); // Usar user.id estável, não o objeto user inteiro
 
   const isAdmin = userRole?.role === 'admin';
   const isModerator = userRole?.role === 'moderator';
   const hasAdminAccess = isAdmin || isModerator;
 
-  return { 
-    userRole, 
-    loading, 
-    error, 
-    isAdmin, 
-    isModerator, 
-    hasAdminAccess 
-  };
+  return { userRole, loading, error, isAdmin, isModerator, hasAdminAccess };
 };

@@ -11,6 +11,7 @@ interface Profile {
   address: string;
   city: string;
   zip_code?: string;
+  enable_family_history?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -21,43 +22,37 @@ export const useProfile = () => {
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
 
-  const fetchProfile = async () => {
-    if (!user) {
-      setProfile(null);
-      setLoading(false);
-      return;
-    }
-
+  const fetchProfile = async (userId: string) => {
     try {
       setLoading(true);
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('user_id', user.id as any)
+        .eq('user_id', userId)
         .maybeSingle();
 
       if (error) {
-        console.error('Error fetching profile:', error);
         setError(error.message);
       } else {
         setProfile(data as unknown as Profile);
         setError(null);
       }
     } catch (err) {
-      console.error('Unexpected error fetching profile:', err);
       setError('Erro ao buscar perfil');
     } finally {
       setLoading(false);
     }
   };
 
+  // Usar user.id como dependência (string estável) em vez do objeto user inteiro
   useEffect(() => {
-    fetchProfile();
-  }, [user]);
+    if (!user?.id) {
+      setProfile(null);
+      setLoading(false);
+      return;
+    }
+    fetchProfile(user.id);
+  }, [user?.id]);
 
-  const refetch = () => {
-    fetchProfile();
-  };
-
-  return { profile, loading, error, refetch };
+  return { profile, loading, error, refetch: () => user?.id && fetchProfile(user.id) };
 };
