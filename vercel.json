@@ -1,1 +1,9 @@
-{\n  \"buildCommand\": \"npm run build\",\n  \"outputDirectory\": \"dist\",\n  \"installCommand\": \"npm install\",\n  \"framework\": \"vite\",\n  \"rewrites\": [\n    { \"source\": \"/(.*)\", \"destination\": \"/index.html\" }\n  ]\n}\n
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "installCommand": "npm install",
+  "framework": "vite",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
