@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import interasaudeLogo from "@/assets/interasaude-logo.png";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ const Consultation = () => {
   const { fields, loading: fieldsLoading, isFieldRequired } = useConsultationFields();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const locationRequestedRef = useRef(false);
 
   useEffect(() => {
     if (!profileLoading && !user) {
@@ -28,71 +29,59 @@ const Consultation = () => {
     }
   }, [user, profileLoading, navigate]);
 
-  // Request geolocation on component mount - only once per session
+  // Request geolocation only once per page load using a ref
   useEffect(() => {
-    const requestLocation = () => {
-      // Check if location was already requested in this session
-      const locationRequested = sessionStorage.getItem('locationRequested');
-      
-      if (locationRequested === 'true') {
-        // Location already requested, don't show popup again
-        const savedLocation = sessionStorage.getItem('userLocation');
-        if (savedLocation) {
-          const loc = JSON.parse(savedLocation);
-          setUserLocation(loc);
-          setLocationPermission('granted');
-        } else {
-          setLocationPermission('denied');
-        }
-        return;
-      }
-      
-      if ('geolocation' in navigator) {
-        toast({
-          title: "Solicitação de Localização",
-          description: "Permita o acesso à sua localização para encontrar médicos mais próximos de você. Você também pode usar seu CEP cadastrado.",
-        });
+    if (!user || profileLoading || locationRequestedRef.current) return;
+    locationRequestedRef.current = true;
 
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            const location = {
-              lat: position.coords.latitude,
-              lng: position.coords.longitude
-            };
-            setUserLocation(location);
-            setLocationPermission('granted');
-            
-            // Save to sessionStorage
-            sessionStorage.setItem('locationRequested', 'true');
-            sessionStorage.setItem('userLocation', JSON.stringify(location));
-            
-            toast({
-              title: "Localização obtida",
-              description: "Vamos buscar os profissionais mais próximos de você.",
-            });
-          },
-          (error) => {
-            console.log('Geolocation error:', error);
-            setLocationPermission('denied');
-            sessionStorage.setItem('locationRequested', 'true');
-            
-            toast({
-              title: "Localização negada",
-              description: "Usaremos o endereço do seu cadastro para buscar profissionais próximos.",
-              variant: "default",
-            });
-          }
-        );
-      } else {
-        setLocationPermission('denied');
-        sessionStorage.setItem('locationRequested', 'true');
-      }
-    };
+    // Check localStorage first (persists across tab switches)
+    const savedLocation = localStorage.getItem('userLocation');
+    const locationDenied = localStorage.getItem('locationDenied');
 
-    if (user && !profileLoading) {
-      requestLocation();
+    if (savedLocation) {
+      setUserLocation(JSON.parse(savedLocation));
+      setLocationPermission('granted');
+      return;
     }
-  }, [user, profileLoading, toast]);
+
+    if (locationDenied === 'true') {
+      setLocationPermission('denied');
+      return;
+    }
+
+    if ('geolocation' in navigator) {
+      toast({
+        title: "Solicitação de Localização",
+        description: "Permita o acesso à sua localização para encontrar médicos mais próximos de você.",
+      });
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const location = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          };
+          setUserLocation(location);
+          setLocationPermission('granted');
+          localStorage.setItem('userLocation', JSON.stringify(location));
+          toast({
+            title: "Localização obtida",
+            description: "Vamos buscar os profissionais mais próximos de você.",
+          });
+        },
+        () => {
+          setLocationPermission('denied');
+          localStorage.setItem('locationDenied', 'true');
+          toast({
+            title: "Localização negada",
+            description: "Usaremos o endereço do seu cadastro para buscar profissionais próximos.",
+          });
+        }
+      );
+    } else {
+      setLocationPermission('denied');
+    }
+  }, [user, profileLoading]);
 
   const handleAnswerChange = (fieldName: string, value: any) => {
     setAnswers(prev => ({ ...prev, [fieldName]: value }));
@@ -104,7 +93,6 @@ const Consultation = () => {
       const value = answers[field.field_name];
       return !value || (typeof value === 'string' && value.trim() === '');
     });
-
     if (missingFields.length > 0) {
       toast({
         title: "Campos obrigatórios",
@@ -119,21 +107,15 @@ const Consultation = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile || !user) return;
-
     if (!validateForm()) return;
-
     setLoading(true);
-
     try {
-      console.log('Submitting consultation data:', answers);
-      
-      // Navigate to consultation chat with the answers and location
-      navigate("/consultation-chat", { 
-        state: { 
+      navigate("/consultation-chat", {
+        state: {
           consultationData: answers,
-          userLocation: userLocation,
-          locationPermission: locationPermission
-        } 
+          userLocation,
+          locationPermission
+        }
       });
     } catch (error) {
       toast({
@@ -163,14 +145,10 @@ const Consultation = () => {
         <Card className="max-w-md">
           <CardHeader>
             <CardTitle>Perfil não encontrado</CardTitle>
-            <CardDescription>
-              Você precisa completar seu perfil primeiro.
-            </CardDescription>
+            <CardDescription>Você precisa completar seu perfil primeiro.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button onClick={() => navigate("/profile")}>
-              Completar Perfil
-            </Button>
+            <Button onClick={() => navigate("/profile")}>Completar Perfil</Button>
           </CardContent>
         </Card>
       </div>
@@ -185,32 +163,23 @@ const Consultation = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="border-b border-border bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/80">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate("/dashboard")}
-              className="mr-2"
-            >
+            <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")} className="mr-2">
               <ArrowLeft className="w-4 h-4" />
             </Button>
-            <img 
-              src={interasaudeLogo} 
-              alt="InteraSaúde Logo" 
+            <img
+              src={interasaudeLogo}
+              alt="InteraSaúde Logo"
               className="h-10 cursor-pointer hover:opacity-80 transition-opacity"
               onClick={() => navigate("/")}
             />
           </div>
-          <Badge variant="secondary">
-            {profileLabels[profile.profile_type]}
-          </Badge>
+          <Badge variant="secondary">{profileLabels[profile.profile_type]}</Badge>
         </div>
       </header>
 
-      {/* Consultation Form */}
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-3xl mx-auto">
           <Card>
@@ -224,25 +193,15 @@ const Consultation = () => {
             <CardContent>
               {fields.length === 0 ? (
                 <div className="text-center py-8">
-                  <p className="text-muted-foreground">
-                    Nenhum campo de consulta configurado para o seu perfil.
-                  </p>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => navigate("/dashboard")}
-                    className="mt-4"
-                  >
+                  <p className="text-muted-foreground">Nenhum campo de consulta configurado para o seu perfil.</p>
+                  <Button variant="outline" onClick={() => navigate("/dashboard")} className="mt-4">
                     Voltar ao Dashboard
                   </Button>
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-6">
                   {fields.map((field) => {
-                    // Hide file_upload field unless lab tests is set to "yes"
-                    if (field.field_type === 'file_upload' && answers['exames_laboratoriais'] !== 'yes') {
-                      return null;
-                    }
-                    
+                    if (field.field_type === 'file_upload' && answers['exames_laboratoriais'] !== 'yes') return null;
                     return (
                       <DynamicField
                         key={field.id}
@@ -253,29 +212,12 @@ const Consultation = () => {
                       />
                     );
                   })}
-                  
                   <div className="flex gap-4 pt-6">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => navigate("/dashboard")}
-                      className="flex-1"
-                    >
+                    <Button type="button" variant="outline" onClick={() => navigate("/dashboard")} className="flex-1">
                       Cancelar
                     </Button>
-                    <Button
-                      type="submit"
-                      disabled={loading}
-                      className="flex-1"
-                    >
-                      {loading ? (
-                        "Processando..."
-                      ) : (
-                        <>
-                          <Send className="w-4 h-4 mr-2" />
-                          Iniciar Consulta
-                        </>
-                      )}
+                    <Button type="submit" disabled={loading} className="flex-1">
+                      {loading ? "Processando..." : (<><Send className="w-4 h-4 mr-2" />Iniciar Consulta</>)}
                     </Button>
                   </div>
                 </form>
