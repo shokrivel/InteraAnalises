@@ -1,50 +1,48 @@
-import { Toaster } from '@/components/ui/toaster';
-import { Toaster as Sonner } from '@/components/ui/sonner';
-import { TooltipProvider } from '@/components/ui/tooltip';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { ProtectedRoute } from './components/layout/ProtectedRoute';
-import { AdminRoute } from './components/layout/AdminRoute';
-import Index from './pages/Index';
-import Login from './pages/auth/Login';
-import Dashboard from './pages/app/Dashboard';
-import Results from './pages/app/Results';
-import History from './pages/app/History';
-import Profile from './pages/app/Profile';
-import AdminResults from './pages/admin/Results';
-import AdminUsers from './pages/admin/Users';
-import NotFound from './pages/NotFound';
+import React from "react";
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "@/contexts/AuthContext";
+import Index from "./pages/Index";
+import Dashboard from "./pages/Dashboard";
+import Consultation from "./pages/Consultation";
+import ConsultationChat from "./pages/ConsultationChat";
+import ConsultationHistory from "./pages/ConsultationHistory";
+import AdminPanel from "./pages/AdminPanel";
+import ResetPassword from "./pages/ResetPassword";
+import Profile from "./pages/Profile";
+import SaibaMais from "./pages/SaibaMais";
+import DynamicPage from "./pages/DynamicPage";
+import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-export default function App() {
-  return (
-    <QueryClientProvider client={queryClient}>
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <AuthProvider>
       <TooltipProvider>
         <Toaster />
         <Sonner />
         <BrowserRouter>
           <Routes>
-            {/* Pública */}
             <Route path="/" element={<Index />} />
-            <Route path="/login" element={<Login />} />
-
-            {/* Área do paciente */}
-            <Route path="/app" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/app/results" element={<ProtectedRoute><Results /></ProtectedRoute>} />
-            <Route path="/app/history" element={<ProtectedRoute><History /></ProtectedRoute>} />
-            <Route path="/app/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-
-            {/* Painel admin */}
-            <Route path="/admin" element={<AdminRoute><AdminResults /></AdminRoute>} />
-            <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
-
-            {/* Fallbacks */}
-            <Route path="/404" element={<NotFound />} />
-            <Route path="*" element={<Navigate to="/404" replace />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/consultation" element={<Consultation />} />
+            <Route path="/consultation-chat" element={<ConsultationChat />} />
+            <Route path="/consultation-history" element={<ConsultationHistory />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/saiba-mais" element={<SaibaMais />} />
+            <Route path="/admin" element={<AdminPanel />} />
+            <Route path="/page/:slug" element={<DynamicPage />} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
       </TooltipProvider>
-    </QueryClientProvider>
-  );
-}
+    </AuthProvider>
+  </QueryClientProvider>
+);
+
+export default App;
