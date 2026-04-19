@@ -1,18 +1,32 @@
-import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Send, CheckCircle2, Heart } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
-import { useProfile } from "@/hooks/useProfile";
-import { useConsultationFields } from "@/hooks/useConsultationFields";
-import { useToast } from "@/hooks/use-toast";
-import DynamicField from "@/components/consultation/DynamicField";
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, Send, CheckCircle2 } from 'lucide-react';
+import { InteraAnalisesLogo } from '@/components/InteraAnalisesLogo';
+import { useAuth } from '@/contexts/AuthContext';
+import { useProfile } from '@/hooks/useProfile';
+import { useConsultationFields } from '@/hooks/useConsultationFields';
+import { useToast } from '@/hooks/use-toast';
+import DynamicField from '@/components/consultation/DynamicField';
+import { useRef } from 'react';
 
-const STEP_LABELS = ["Sintomas", "Histórico", "Exames", "Anexos"];
+const STEP_LABELS = ['Sintomas', 'Histórico', 'Exames', 'Anexos'];
 
 const profileLabels: Record<string, string> = {
-  patient: "Paciente",
-  academic: "Acadêmico",
-  health_professional: "Profissional de Saúde",
+  patient: 'Paciente',
+  academic: 'Acadêmico',
+  health_professional: 'Profissional de Saúde',
+};
+
+const profileColors: Record<string, string> = {
+  patient: '#e6f5f0',
+  academic: '#e8f3fa',
+  health_professional: '#fef3c7',
+};
+
+const profileTextColors: Record<string, string> = {
+  patient: '#065f46',
+  academic: '#1e3a5f',
+  health_professional: '#92400e',
 };
 
 const Consultation = () => {
@@ -20,262 +34,167 @@ const Consultation = () => {
   const [loading, setLoading] = useState(false);
   const [visibleCount, setVisibleCount] = useState(1);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [locationPermission, setLocationPermission] = useState<"pending" | "granted" | "denied">("pending");
+  const [locationPermission, setLocationPermission] = useState<'pending' | 'granted' | 'denied'>('pending');
   const { user } = useAuth();
   const { profile, loading: profileLoading } = useProfile();
   const { fields, loading: fieldsLoading, isFieldRequired } = useConsultationFields();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const locationRequestedRef = useRef(false);
+  const locationRef = useRef(false);
   const fieldRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  useEffect(() => {
-    if (!profileLoading && !user) navigate("/");
-  }, [user, profileLoading, navigate]);
+  useEffect(() => { if (!profileLoading && !user) navigate('/'); }, [user, profileLoading, navigate]);
 
   useEffect(() => {
-    if (!user || profileLoading || locationRequestedRef.current) return;
-    locationRequestedRef.current = true;
-    const saved = localStorage.getItem("userLocation");
-    const denied = localStorage.getItem("locationDenied");
-    if (saved) { setUserLocation(JSON.parse(saved)); setLocationPermission("granted"); return; }
-    if (denied === "true") { setLocationPermission("denied"); return; }
-    if ("geolocation" in navigator) {
+    if (!user || profileLoading || locationRef.current) return;
+    locationRef.current = true;
+    const saved = localStorage.getItem('userLocation');
+    const denied = localStorage.getItem('locationDenied');
+    if (saved) { setUserLocation(JSON.parse(saved)); setLocationPermission('granted'); return; }
+    if (denied === 'true') { setLocationPermission('denied'); return; }
+    if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
-        pos => {
-          const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-          setUserLocation(loc); setLocationPermission("granted");
-          localStorage.setItem("userLocation", JSON.stringify(loc));
-        },
-        () => { setLocationPermission("denied"); localStorage.setItem("locationDenied", "true"); }
+        pos => { const l = { lat: pos.coords.latitude, lng: pos.coords.longitude }; setUserLocation(l); setLocationPermission('granted'); localStorage.setItem('userLocation', JSON.stringify(l)); },
+        () => { setLocationPermission('denied'); localStorage.setItem('locationDenied', 'true'); }
       );
-    } else setLocationPermission("denied");
+    } else setLocationPermission('denied');
   }, [user, profileLoading]);
 
-  const handleAnswerChange = (fieldName: string, value: any) => {
-    setAnswers(prev => ({ ...prev, [fieldName]: value }));
-    const hasValue = value !== undefined && value !== "" && value !== false && value !== null && !(Array.isArray(value) && value.length === 0);
-    if (hasValue) {
-      const currentIdx = fields.findIndex(f => f.field_name === fieldName);
-      if (currentIdx >= 0 && currentIdx + 1 < fields.length) {
-        const nextIdx = currentIdx + 1;
-        if (nextIdx >= visibleCount) {
-          setVisibleCount(nextIdx + 1);
-          setTimeout(() => {
-            fieldRefs.current[fields[nextIdx].field_name]?.scrollIntoView({ behavior: "smooth", block: "center" });
-          }, 120);
-        }
+  const hasVal = (v: any) => v !== undefined && v !== '' && v !== false && v !== null && !(Array.isArray(v) && v.length === 0);
+
+  const handleChange = (name: string, value: any) => {
+    setAnswers(p => ({ ...p, [name]: value }));
+    if (hasVal(value)) {
+      const idx = fields.findIndex(f => f.field_name === name);
+      if (idx >= 0 && idx + 1 < fields.length && idx + 1 >= visibleCount) {
+        setVisibleCount(idx + 2);
+        setTimeout(() => fieldRefs.current[fields[idx + 1].field_name]?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 120);
       }
     }
   };
 
-  const validateForm = () => {
-    const missing = fields.filter(f => isFieldRequired(f)).filter(f => {
-      const v = answers[f.field_name];
-      return !v || (typeof v === "string" && !v.trim()) || (Array.isArray(v) && v.length === 0);
-    });
-    if (missing.length > 0) {
-      toast({ title: "Campos obrigatórios", description: `Preencha: ${missing.map(f => f.field_label).join(", ")}`, variant: "destructive" });
-      return false;
-    }
-    return true;
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profile || !user || !validateForm()) return;
+    if (!profile || !user) return;
+    const missing = fields.filter(f => isFieldRequired(f) && !hasVal(answers[f.field_name]));
+    if (missing.length > 0) { toast({ title: 'Campos obrigatórios', description: `Preencha: ${missing.map(f => f.field_label).join(', ')}`, variant: 'destructive' }); return; }
     setLoading(true);
-    try {
-      navigate("/consultation-chat", { state: { consultationData: answers, userLocation, locationPermission } });
-    } catch {
-      toast({ title: "Erro ao processar consulta", description: "Tente novamente", variant: "destructive" });
-    } finally { setLoading(false); }
+    try { navigate('/consultation-chat', { state: { consultationData: answers, userLocation, locationPermission } }); }
+    catch { toast({ title: 'Erro', description: 'Tente novamente', variant: 'destructive' }); }
+    finally { setLoading(false); }
   };
 
-  // ── Loading states ─────────────────────────────────────────────
-  if (profileLoading || fieldsLoading) {
-    return (
-      <div style={{ minHeight: '100vh', background: '#f5f0e8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ width: 40, height: 40, border: '3px solid #1a7a4a', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' }} />
-          <p style={{ color: '#3d3d3d', fontFamily: "'DM Sans', sans-serif" }}>Carregando formulário...</p>
-        </div>
-        <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
-      </div>
-    );
-  }
+  if (profileLoading || fieldsLoading) return <LoadingScreen text="Carregando..." />;
+  if (!profile) return (
+    <div style={centerStyle}>
+      <p style={{ color: '#6b7280', marginBottom: 20 }}>Complete seu perfil primeiro.</p>
+      <button onClick={() => navigate('/profile')} style={btnPrimary}>Completar perfil</button>
+    </div>
+  );
 
-  if (!profile) {
-    return (
-      <div style={{ minHeight: '100vh', background: '#f5f0e8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ textAlign: 'center', padding: 40 }}>
-          <p style={{ color: '#3d3d3d', marginBottom: 20 }}>Você precisa completar seu perfil primeiro.</p>
-          <button onClick={() => navigate("/profile")} style={btnPrimary}>Completar Perfil</button>
-        </div>
-      </div>
-    );
-  }
-
-  const visibleFields = fields.slice(0, visibleCount);
   const progress = fields.length > 0 ? Math.min((visibleCount / fields.length) * 100, 95) : 0;
-  const requiredDone = fields.filter(f => isFieldRequired(f)).every(f => {
-    const v = answers[f.field_name];
-    return v && (typeof v !== "string" || v.trim()) && (!Array.isArray(v) || v.length > 0);
-  });
+  const requiredDone = fields.filter(f => isFieldRequired(f)).every(f => hasVal(answers[f.field_name]));
   const stepIdx = Math.floor((visibleCount / fields.length) * (STEP_LABELS.length - 1));
+  const profColor = profileColors[profile.profile_type] || '#e6f5f0';
+  const profText = profileTextColors[profile.profile_type] || '#065f46';
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f5f0e8', fontFamily: "'DM Sans', sans-serif" }}>
+    <div style={{ minHeight: '100vh', background: '#f9fafb', fontFamily: "'Inter', sans-serif" }}>
 
-      {/* ── HEADER ── */}
-      <header style={{
-        position: 'sticky', top: 0, zIndex: 100,
-        background: 'rgba(245,240,232,.95)', backdropFilter: 'blur(12px)',
-        borderBottom: '1px solid rgba(200,168,75,.3)',
-        padding: '0 40px', height: 64,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <button onClick={() => navigate("/dashboard")} style={navBackBtn}>
-            <ArrowLeft size={16} /> Voltar
-          </button>
-          <div style={{ fontFamily: "'Playfair Display', serif", fontWeight: 900, fontSize: '1.2rem', color: '#0f4a2e', cursor: 'pointer', letterSpacing: '-0.5px' }} onClick={() => navigate('/')}>
-            Intera<span style={{ color: '#c8a84b' }}>Análises</span>
-          </div>
+      {/* NAV */}
+      <nav style={{ background: '#ffffff', borderBottom: '1px solid #e5e7eb', padding: '0 24px', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 50 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <button onClick={() => navigate('/dashboard')} style={backBtn}><ArrowLeft size={15} /> Voltar</button>
+          <InteraAnalisesLogo size="sm" onClick={() => navigate('/')} />
         </div>
-        <div style={{ background: '#e8f5ee', color: '#1a7a4a', fontSize: '0.75rem', fontWeight: 700, padding: '4px 12px', borderRadius: 2, letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+        <span style={{ background: profColor, color: profText, fontSize: 12, fontWeight: 600, padding: '4px 12px', borderRadius: 20 }}>
           {profileLabels[profile.profile_type]}
+        </span>
+      </nav>
+
+      <div style={{ maxWidth: 680, margin: '0 auto', padding: '32px 20px 80px' }}>
+
+        {/* Header */}
+        <div style={{ marginBottom: 28 }}>
+          <h1 style={{ fontWeight: 700, fontSize: 22, color: '#111827', marginBottom: 6, letterSpacing: '-0.3px' }}>Nova consulta</h1>
+          <p style={{ fontSize: 13.5, color: '#6b7280' }}>Responda as perguntas abaixo. Novos campos aparecem conforme você avança.</p>
         </div>
-      </header>
 
-      {/* ── HERO STRIP ── */}
-      <div style={{ background: '#0f4a2e', padding: '40px 60px 36px' }}>
-        <div style={{ maxWidth: 720, margin: '0 auto' }}>
-          <div style={{ fontFamily: "'Space Mono', monospace", fontSize: '0.68rem', letterSpacing: 3, textTransform: 'uppercase', color: '#c8a84b', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ width: 24, height: 1, background: '#c8a84b', display: 'inline-block' }} />
-            Nova Consulta
-          </div>
-          <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 'clamp(1.6rem,3vw,2.4rem)', fontWeight: 900, color: '#fafaf8', lineHeight: 1.1, marginBottom: 8 }}>
-            Responda as perguntas <em style={{ fontStyle: 'italic', color: '#e8c96a' }}>abaixo</em>
-          </h1>
-          <p style={{ color: 'rgba(255,255,255,.6)', fontSize: '0.9rem' }}>Novos campos aparecem conforme você avança.</p>
-        </div>
-      </div>
-
-      <div style={{ maxWidth: 720, margin: '0 auto', padding: '40px 24px 80px' }}>
-
-        {/* Steps + Progress */}
-        <div style={{ marginBottom: 36 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+        {/* Steps */}
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
             {STEP_LABELS.map((label, i) => (
-              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <div style={{
-                    width: 26, height: 26, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '0.72rem', fontWeight: 700,
-                    background: i <= stepIdx ? '#0f4a2e' : '#e8f5ee',
-                    color: i <= stepIdx ? '#fafaf8' : '#3d3d3d',
-                    border: i === stepIdx ? '2px solid #c8a84b' : '2px solid transparent',
-                    transition: 'all .3s',
-                  }}>
+              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <div style={{ width: 24, height: 24, borderRadius: '50%', background: i <= stepIdx ? '#0d7a5f' : '#e5e7eb', color: i <= stepIdx ? '#fff' : '#9ca3af', fontWeight: 600, fontSize: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', border: i === stepIdx ? '2px solid #065f46' : '2px solid transparent', transition: 'all .3s' }}>
                     {i < stepIdx ? '✓' : i + 1}
                   </div>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: i <= stepIdx ? '#0f4a2e' : '#9ca3af', display: window.innerWidth < 500 ? 'none' : 'block' }}>{label}</span>
+                  <span style={{ fontSize: 12, color: i <= stepIdx ? '#0d7a5f' : '#9ca3af', fontWeight: i === stepIdx ? 600 : 400 }}>{label}</span>
                 </div>
-                {i < STEP_LABELS.length - 1 && (
-                  <div style={{ width: 28, height: 1, background: i < stepIdx ? '#1a7a4a' : '#d1d5db', transition: 'background .3s' }} />
-                )}
+                {i < STEP_LABELS.length - 1 && <div style={{ width: 20, height: 1.5, background: i < stepIdx ? '#0d7a5f' : '#e5e7eb', transition: 'background .3s' }} />}
               </div>
             ))}
           </div>
-          <div style={{ height: 3, background: '#e8e8e8', borderRadius: 8, overflow: 'hidden' }}>
-            <div style={{ height: '100%', background: 'linear-gradient(90deg,#1a7a4a,#c8a84b)', borderRadius: 8, width: `${progress}%`, transition: 'width .5s ease' }} />
+          {/* Progress bar */}
+          <div style={{ height: 4, background: '#e5e7eb', borderRadius: 99, overflow: 'hidden' }}>
+            <div style={{ height: '100%', background: '#0d7a5f', borderRadius: 99, width: `${progress}%`, transition: 'width .5s ease' }} />
           </div>
         </div>
 
         {/* Fields */}
         {fields.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-            <p style={{ color: '#3d3d3d', marginBottom: 20 }}>Nenhum campo configurado para seu perfil.</p>
-            <button onClick={() => navigate("/dashboard")} style={btnOutline}>Voltar ao Dashboard</button>
+            <p style={{ color: '#6b7280', marginBottom: 16 }}>Nenhum campo configurado para seu perfil.</p>
+            <button onClick={() => navigate('/dashboard')} style={btnOutline}>Voltar</button>
           </div>
         ) : (
           <form onSubmit={handleSubmit}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {visibleFields.map((field, idx) => {
-                const hasValue = (() => { const v = answers[field.field_name]; return v !== undefined && v !== "" && v !== false && v !== null && !(Array.isArray(v) && v.length === 0); })();
-                const isLast = idx === visibleFields.length - 1;
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {fields.slice(0, visibleCount).map((field, idx) => {
+                const v = answers[field.field_name];
+                const answered = hasVal(v);
+                const isLast = idx === visibleCount - 1;
                 return (
-                  <div
-                    key={field.id}
+                  <div key={field.id}
                     ref={el => { fieldRefs.current[field.field_name] = el; }}
-                    style={{
-                      background: '#fafaf8',
-                      borderRadius: 4,
-                      border: isLast ? '1px solid rgba(200,168,75,.5)' : hasValue ? '1px solid rgba(26,122,74,.2)' : '1px solid rgba(200,168,75,.15)',
-                      borderLeft: `3px solid ${isLast ? '#c8a84b' : hasValue ? '#1a7a4a' : '#e8e8e8'}`,
-                      padding: '20px 24px',
-                      position: 'relative',
-                      animation: 'slideUp .3s ease both',
-                      opacity: !isLast && hasValue ? 0.82 : 1,
-                      transition: 'all .3s',
-                    }}
+                    style={{ background: '#ffffff', borderRadius: 12, border: `1.5px solid ${isLast ? '#0d7a5f' : answered ? '#d1fae5' : '#e5e7eb'}`, padding: '18px 20px', position: 'relative', animation: 'fadeUp .3s ease both', opacity: answered && !isLast ? 0.85 : 1 }}
                   >
-                    {hasValue && !isLast && (
-                      <div style={{ position: 'absolute', top: 16, right: 16 }}>
-                        <CheckCircle2 size={16} color="#1a7a4a" opacity={0.6} />
+                    {answered && !isLast && (
+                      <div style={{ position: 'absolute', top: 14, right: 14 }}>
+                        <CheckCircle2 size={15} color="#059669" />
                       </div>
                     )}
-                    <DynamicField field={field} value={answers[field.field_name]} onChange={handleAnswerChange} required={isFieldRequired(field)} />
+                    <DynamicField field={field} value={v} onChange={handleChange} required={isFieldRequired(field)} />
                   </div>
                 );
               })}
             </div>
 
-            {/* Actions */}
-            <div style={{ display: 'flex', gap: 12, marginTop: 28 }}>
-              <button type="button" onClick={() => navigate("/dashboard")} style={{ ...btnOutline, flex: 1 }}>Cancelar</button>
-              <button
-                type="submit"
-                disabled={loading || !requiredDone}
-                style={{ ...btnPrimary, flex: 1, opacity: loading || !requiredDone ? 0.5 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
-              >
-                {loading ? 'Processando…' : <><Send size={15} /> Iniciar Consulta</>}
+            <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
+              <button type="button" onClick={() => navigate('/dashboard')} style={{ ...btnOutline, flex: 1 }}>Cancelar</button>
+              <button type="submit" disabled={loading || !requiredDone} style={{ ...btnPrimary, flex: 2, opacity: loading || !requiredDone ? 0.5 : 1, cursor: loading || !requiredDone ? 'not-allowed' : 'pointer' }}>
+                {loading ? 'Processando…' : <><Send size={15} /> Enviar para análise</>}
               </button>
             </div>
           </form>
         )}
       </div>
-
-      <style>{`
-        @keyframes slideUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
-        @keyframes spin    { to { transform:rotate(360deg); } }
-      `}</style>
+      <style>{`@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}`}</style>
     </div>
   );
 };
 
-// ── Shared styles ────────────────────────────────────────────────
-const navBackBtn: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', gap: 6,
-  background: 'transparent', border: '1px solid rgba(200,168,75,.4)',
-  color: '#0f4a2e', fontWeight: 700, fontSize: '0.75rem',
-  letterSpacing: 1, textTransform: 'uppercase',
-  padding: '7px 14px', borderRadius: 2, cursor: 'pointer',
-};
-const btnPrimary: React.CSSProperties = {
-  background: '#0f4a2e', color: '#fafaf8',
-  fontWeight: 700, fontSize: '0.82rem', letterSpacing: 1,
-  textTransform: 'uppercase', padding: '14px 24px',
-  borderRadius: 2, border: 'none', cursor: 'pointer',
-  transition: 'background .2s',
-};
-const btnOutline: React.CSSProperties = {
-  background: 'transparent', color: '#0f4a2e',
-  border: '2px solid #0f4a2e', fontWeight: 700,
-  fontSize: '0.82rem', letterSpacing: 1, textTransform: 'uppercase',
-  padding: '12px 24px', borderRadius: 2, cursor: 'pointer',
-  transition: 'all .2s',
-};
+const LoadingScreen = ({ text }: { text: string }) => (
+  <div style={centerStyle}>
+    <div style={{ width: 36, height: 36, border: '3px solid #0d7a5f', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin .7s linear infinite' }} />
+    <p style={{ color: '#6b7280', marginTop: 14, fontSize: 14 }}>{text}</p>
+    <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+  </div>
+);
+
+const centerStyle: React.CSSProperties = { minHeight: '100vh', background: '#f9fafb', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' };
+const backBtn: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 5, background: 'transparent', color: '#6b7280', fontSize: 13, fontWeight: 500, padding: '6px 12px', borderRadius: 8, border: '1px solid #e5e7eb', cursor: 'pointer' };
+const btnPrimary: React.CSSProperties = { background: '#0d7a5f', color: '#fff', fontWeight: 600, fontSize: 14, padding: '11px 20px', borderRadius: 8, border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 7, justifyContent: 'center' };
+const btnOutline: React.CSSProperties = { background: 'transparent', color: '#374151', fontSize: 14, fontWeight: 500, padding: '11px 20px', borderRadius: 8, border: '1px solid #e5e7eb', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 7, justifyContent: 'center' };
 
 export default Consultation;

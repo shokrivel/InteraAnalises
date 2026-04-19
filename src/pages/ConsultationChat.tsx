@@ -1,415 +1,287 @@
-import { useState, useEffect, useRef } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import interasaudeLogo from "@/assets/interasaude-logo.png";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import {
-  ArrowLeft, Bot, Copy, CheckCheck, MapPin, Star,
-  Navigation, Map, AlertTriangle, Lightbulb, FlaskConical, FileText,
-} from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
-import { useProfile } from "@/hooks/useProfile";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import HealthcareProvidersMap from "@/components/maps/HealthcareProvidersMap";
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { ArrowLeft, Bot, Copy, CheckCheck, MapPin, Star, Navigation, Map, AlertTriangle, Lightbulb, FlaskConical, FileText } from 'lucide-react';
+import { InteraAnalisesLogo } from '@/components/InteraAnalisesLogo';
+import { useAuth } from '@/contexts/AuthContext';
+import { useProfile } from '@/hooks/useProfile';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import HealthcareProvidersMap from '@/components/maps/HealthcareProvidersMap';
 
-interface Specialist {
-  name: string;
-  address: string;
-  rating: number;
-  userRatingsTotal: number;
-  location: { lat: number; lng: number };
-  placeId: string;
-  specialty: string;
-}
+interface Specialist { name: string; address: string; rating: number; userRatingsTotal: number; location: { lat: number; lng: number }; placeId: string; specialty: string; }
+interface ConsultationResponse { response: string; consultationId?: string; profileType?: string; suggestedSpecialty?: string; specialists?: Specialist[]; }
+type TabId = 'resumo' | 'achados' | 'orientacoes' | 'alertas';
 
-interface ConsultationResponse {
-  response: string;
-  consultationId?: string;
-  profileType?: string;
-  suggestedSpecialty?: string;
-  specialists?: Specialist[];
-}
-
-type TabId = "resumo" | "achados" | "orientacoes" | "alertas";
-
-const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
-  { id: "resumo",      label: "Resumo",            icon: <FileText className="w-3.5 h-3.5" /> },
-  { id: "achados",     label: "Achados clínicos",   icon: <FlaskConical className="w-3.5 h-3.5" /> },
-  { id: "orientacoes", label: "Orientações",        icon: <Lightbulb className="w-3.5 h-3.5" /> },
-  { id: "alertas",     label: "Alertas",            icon: <AlertTriangle className="w-3.5 h-3.5" /> },
+const TABS: { id: TabId; label: string; Icon: any }[] = [
+  { id: 'resumo',      label: 'Resumo',           Icon: FileText },
+  { id: 'achados',     label: 'Achados',           Icon: FlaskConical },
+  { id: 'orientacoes', label: 'Orientações',      Icon: Lightbulb },
+  { id: 'alertas',     label: 'Alertas',           Icon: AlertTriangle },
 ];
 
-/** Split raw AI text into 4 logical sections */
 function parseSections(text: string): Record<TabId, string[]> {
-  const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
-
-  // Heuristic keywords per section
-  const alertKeywords = /emergência|urgência|procure|atenção|important|alerta|pior dor|convuls|desmaio|sangramento|hospital|pronto.socorro/i;
-  const orientKeywords = /recomend|orient|hidrat|repouso|evit|monitor|acompanhe|próxim|retorn|consul|medir|verificar|tomar/i;
-  const achadosKeywords = /hemogram|exame|result|valor|normal|alterado|elevad|reduzid|achado|laborat|dosagem|parâmet/i;
-
-  const sections: Record<TabId, string[]> = { resumo: [], achados: [], orientacoes: [], alertas: [] };
-
-  lines.forEach((line) => {
-    const clean = line.replace(/\*\*/g, "").replace(/^\*/, "").replace(/^-\s*/, "").trim();
-    if (!clean) return;
-    if (alertKeywords.test(clean))       sections.alertas.push(clean);
-    else if (achadosKeywords.test(clean)) sections.achados.push(clean);
-    else if (orientKeywords.test(clean))  sections.orientacoes.push(clean);
-    else                                  sections.resumo.push(clean);
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  const alertKW = /emergência|urgência|procure|atenção|alerta|convuls|desmaio|sangramento|hospital|pronto.socorro/i;
+  const orientKW = /recomend|orient|hidrat|repouso|evit|monitor|acompanhe|retorn|consul|medir|verificar|tomar/i;
+  const achadosKW = /hemogram|exame|result|valor|normal|alterado|elevad|reduzid|achado|laborat|dosagem/i;
+  const s: Record<TabId, string[]> = { resumo: [], achados: [], orientacoes: [], alertas: [] };
+  lines.forEach(line => {
+    const c = line.replace(/\*\*/g, '').replace(/^[\*\-]\s*/, '').trim();
+    if (!c) return;
+    if (alertKW.test(c)) s.alertas.push(c);
+    else if (achadosKW.test(c)) s.achados.push(c);
+    else if (orientKW.test(c)) s.orientacoes.push(c);
+    else s.resumo.push(c);
   });
-
-  // If a section is empty, move overflow from resumo
-  if (sections.achados.length === 0 && sections.resumo.length > 3) {
-    sections.achados = sections.resumo.splice(Math.ceil(sections.resumo.length / 2));
-  }
-  if (sections.orientacoes.length === 0 && sections.resumo.length > 2) {
-    sections.orientacoes = sections.resumo.splice(-2);
-  }
-
-  return sections;
+  if (s.achados.length === 0 && s.resumo.length > 3) s.achados = s.resumo.splice(Math.ceil(s.resumo.length / 2));
+  if (s.orientacoes.length === 0 && s.resumo.length > 2) s.orientacoes = s.resumo.splice(-2);
+  return s;
 }
 
 const ConsultationChat = () => {
-  const [aiResponse, setAiResponse] = useState<ConsultationResponse | null>(null);
+  const [res, setRes] = useState<ConsultationResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [showMap, setShowMap] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [activeTab, setActiveTab] = useState<TabId>("resumo");
+  const [tab, setTab] = useState<TabId>('resumo');
   const [specialists, setSpecialists] = useState<Specialist[]>([]);
   const [ratingFilter, setRatingFilter] = useState(0);
-  const { user, session } = useAuth();
+  const { user } = useAuth();
   const { profile } = useProfile();
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
-  const hasProcessedRef = useRef(false);
+  const processedRef = useRef(false);
 
   const consultationData = location.state?.consultationData;
-  const userLocation     = location.state?.userLocation;
+  const userLocation = location.state?.userLocation;
   const locationPermission = location.state?.locationPermission;
 
   useEffect(() => {
-    if (hasProcessedRef.current) return;
-    if (!user || !consultationData) { navigate("/dashboard"); return; }
-
+    if (processedRef.current) return;
+    if (!user || !consultationData) { navigate('/dashboard'); return; }
     const run = async () => {
       try {
-        hasProcessedRef.current = true;
-        setLoading(true);
+        processedRef.current = true; setLoading(true);
         const { data: { session: s } } = await supabase.auth.getSession();
-        const token = s?.access_token;
-        if (!token) throw new Error("Sessão expirada. Faça login novamente.");
-
-        const { data, error } = await supabase.functions.invoke("gemini-consultation", {
+        if (!s?.access_token) throw new Error('Sessão expirada.');
+        const { data, error } = await supabase.functions.invoke('gemini-consultation', {
           body: { consultationData, userId: user.id, attachments: consultationData.anexos_e_documentos || [], userLocation, locationPermission },
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${s.access_token}` },
         });
-
         if (error) throw new Error(error.message);
         if (data?.error) throw new Error(data.error);
-        if (!data?.response) throw new Error("Não foi possível obter resposta da IA.");
-
-        setAiResponse(data);
+        if (!data?.response) throw new Error('Não foi possível obter resposta da IA.');
+        setRes(data);
         if (data.specialists?.length > 0) setSpecialists(data.specialists);
-        toast({ title: "Consulta processada com sucesso!" });
+        toast({ title: 'Consulta processada com sucesso!' });
       } catch (err: any) {
-        hasProcessedRef.current = false;
-        toast({ title: "Erro ao processar consulta", description: err.message, variant: "destructive" });
-        navigate("/dashboard");
-      } finally {
-        setLoading(false);
-      }
+        processedRef.current = false;
+        toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+        navigate('/dashboard');
+      } finally { setLoading(false); }
     };
     run();
   }, [user, consultationData, navigate, toast]);
 
-  const copyToClipboard = () => {
-    if (!aiResponse?.response) return;
-    navigator.clipboard.writeText(aiResponse.response);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const copy = () => {
+    if (!res?.response) return;
+    navigator.clipboard.writeText(res.response);
+    setCopied(true); setTimeout(() => setCopied(false), 2000);
   };
 
-  const profileLabels: Record<string, string> = {
-    patient: "Paciente",
-    academic: "Acadêmico",
-    health_professional: "Profissional de Saúde",
-  };
+  const profileLabels: Record<string, string> = { patient: 'Paciente', academic: 'Acadêmico', health_professional: 'Profissional de Saúde' };
+  const filtered = specialists.filter(s => s.rating >= ratingFilter);
 
-  const filteredSpecialists = specialists.filter((s) => s.rating >= ratingFilter);
+  if (loading) return (
+    <div style={{ minHeight: '100vh', background: '#f9fafb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Inter',sans-serif" }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ width: 56, height: 56, background: '#e6f5f0', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', animation: 'pulse 1.5s ease-in-out infinite' }}>
+          <Bot size={26} color="#0d7a5f" />
+        </div>
+        <h2 style={{ fontWeight: 700, fontSize: 18, color: '#111827', marginBottom: 8 }}>Analisando suas informações...</h2>
+        <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 20 }}>A IA está processando sua consulta.</p>
+        <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
+          {[0, 0.15, 0.3].map((d, i) => <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: '#0d7a5f', animation: `bounce .9s ${d}s ease-in-out infinite` }} />)}
+        </div>
+      </div>
+      <style>{`
+        @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+        @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+      `}</style>
+    </div>
+  );
 
-  /* ── Loading ── */
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto animate-pulse">
-            <Bot className="w-8 h-8 text-primary" />
+  if (!res) return (
+    <div style={{ minHeight: '100vh', background: '#f9fafb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ textAlign: 'center', padding: 40 }}>
+        <p style={{ color: '#6b7280', marginBottom: 16 }}>Não foi possível processar a consulta.</p>
+        <button onClick={() => navigate('/dashboard')} style={btnPrimary}>Voltar ao painel</button>
+      </div>
+    </div>
+  );
+
+  const sections = parseSections(res.response);
+
+  return (
+    <div style={{ minHeight: '100vh', background: '#f9fafb', fontFamily: "'Inter',sans-serif" }}>
+
+      {/* NAV */}
+      <nav style={{ background: '#fff', borderBottom: '1px solid #e5e7eb', padding: '0 24px', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 50 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <button onClick={() => navigate('/dashboard')} style={backBtn}><ArrowLeft size={15} /> Voltar</button>
+          <InteraAnalisesLogo size="sm" onClick={() => navigate('/')} />
+        </div>
+        {profile && <span style={{ background: '#e6f5f0', color: '#065f46', fontSize: 12, fontWeight: 600, padding: '4px 12px', borderRadius: 20 }}>{profileLabels[profile.profile_type]}</span>}
+      </nav>
+
+      <div style={{ maxWidth: 720, margin: '0 auto', padding: '24px 20px 60px' }}>
+
+        {/* Summary pill */}
+        <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', padding: '14px 18px', marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: '#e6f5f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Bot size={18} color="#0d7a5f" />
+            </div>
+            <div>
+              <p style={{ fontSize: 11, color: '#9ca3af', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 2 }}>Consulta processada</p>
+              <p style={{ fontSize: 13, fontWeight: 600, color: '#111827' }}>
+                {Array.isArray(consultationData?.symptoms) ? consultationData.symptoms.slice(0, 3).join(' · ') : 'Sintomas informados'}
+              </p>
+            </div>
           </div>
-          <h2 className="text-xl font-semibold">Processando sua consulta...</h2>
-          <p className="text-sm text-muted-foreground">A IA está analisando suas informações.</p>
-          <div className="flex items-center justify-center gap-1 pt-1">
-            {[0, 0.15, 0.3].map((d, i) => (
-              <div key={i} className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: `${d}s` }} />
+          {res.suggestedSpecialty && (
+            <span style={{ background: '#e6f5f0', color: '#065f46', fontSize: 12, fontWeight: 600, padding: '5px 14px', borderRadius: 20 }}>{res.suggestedSpecialty}</span>
+          )}
+        </div>
+
+        {/* AI Response card */}
+        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e5e7eb', overflow: 'hidden', marginBottom: 16 }}>
+          {/* Card header */}
+          <div style={{ padding: '14px 18px', borderBottom: '1px solid #f3f4f6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ width: 28, height: 28, borderRadius: 8, background: '#e6f5f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Bot size={14} color="#0d7a5f" /></div>
+              <span style={{ fontWeight: 600, fontSize: 13.5, color: '#111827' }}>InteraAnalises AI</span>
+              <span style={{ background: '#f3f4f6', color: '#6b7280', fontSize: 11, fontWeight: 500, padding: '2px 8px', borderRadius: 20 }}>Gemini 2.5</span>
+            </div>
+            <button onClick={copy} style={chipBtn}>{copied ? <><CheckCheck size={13} color="#0d7a5f" /> Copiado</> : <><Copy size={13} /> Copiar</>}</button>
+          </div>
+
+          {/* Tabs */}
+          <div style={{ display: 'flex', borderBottom: '1px solid #f3f4f6', overflowX: 'auto' }}>
+            {TABS.map(({ id, label, Icon }) => (
+              <button key={id} onClick={() => setTab(id)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '11px 16px', background: 'none', border: 'none', borderBottom: `2px solid ${tab === id ? '#0d7a5f' : 'transparent'}`, cursor: 'pointer', fontSize: 13, fontWeight: tab === id ? 600 : 400, color: tab === id ? '#0d7a5f' : '#9ca3af', whiteSpace: 'nowrap', transition: 'color .15s' }}>
+                <Icon size={13} />{label}
+                {sections[id].length > 0 && (
+                  <span style={{ background: tab === id ? '#e6f5f0' : '#f3f4f6', color: tab === id ? '#065f46' : '#9ca3af', fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 20, marginLeft: 2 }}>{sections[id].length > 9 ? '9+' : sections[id].length}</span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          {/* Content */}
+          <div style={{ padding: '18px 20px', minHeight: 180 }} key={tab}>
+            {sections[tab].length === 0 ? (
+              <p style={{ fontSize: 13, color: '#9ca3af', fontStyle: 'italic' }}>Nenhuma informação nesta seção.</p>
+            ) : sections[tab].map((line, i) => (
+              <div key={i} style={{
+                fontSize: 13.5, lineHeight: 1.7, padding: '10px 14px', borderRadius: 8, marginBottom: 8,
+                background: tab === 'alertas' ? '#fff8ec' : tab === 'orientacoes' ? '#f0faf7' : '#f9fafb',
+                border: tab === 'alertas' ? '1px solid #fcd34d' : tab === 'orientacoes' ? '1px solid #d1fae5' : '1px solid #f3f4f6',
+                color: tab === 'alertas' ? '#92400e' : '#374151',
+                animation: `fadeUp .2s ${i * 0.04}s ease both`,
+              }}>
+                {tab === 'alertas' && <AlertTriangle size={13} color="#d97706" style={{ display: 'inline', marginRight: 6, verticalAlign: 'middle' }} />}
+                {line}
+              </div>
             ))}
           </div>
         </div>
-      </div>
-    );
-  }
 
-  if (!aiResponse) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center space-y-4 max-w-sm px-4">
-          <p className="text-muted-foreground">Não foi possível processar sua consulta.</p>
-          <Button onClick={() => navigate("/dashboard")}>Voltar ao Dashboard</Button>
-        </div>
-      </div>
-    );
-  }
-
-  const sections = parseSections(aiResponse.response);
-
-  /* ── Main render ── */
-  return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-10 border-b border-border bg-card/80 backdrop-blur">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
-              <ArrowLeft className="w-4 h-4 mr-1" />Voltar
-            </Button>
-            <img src={interasaudeLogo} alt="InteraSaúde" className="h-8 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => navigate("/")} />
-          </div>
-          <Badge variant="secondary">{profile && profileLabels[profile.profile_type]}</Badge>
-        </div>
-      </header>
-
-      <div className="container mx-auto px-4 py-6">
-        <div className="max-w-3xl mx-auto space-y-4">
-
-          {/* Summary bar */}
-          <div className="bg-card border border-border rounded-xl p-4 flex flex-wrap items-center gap-4">
-            <div className="flex items-center gap-3 flex-1 min-w-0">
-              <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <Bot className="w-4 h-4 text-primary" />
+        {/* Specialists */}
+        {filtered.length > 0 && (
+          <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e5e7eb', overflow: 'hidden', marginBottom: 16 }}>
+            <div style={{ padding: '14px 18px', borderBottom: '1px solid #f3f4f6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <MapPin size={15} color="#0d7a5f" />
+                <span style={{ fontWeight: 600, fontSize: 13.5, color: '#111827' }}>Especialistas próximos</span>
+                {res.suggestedSpecialty && <span style={{ fontSize: 12, color: '#9ca3af' }}>— {res.suggestedSpecialty}</span>}
               </div>
-              <div className="min-w-0">
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">Consulta processada</p>
-                <p className="text-sm font-medium truncate">
-                  {Array.isArray(consultationData?.symptoms)
-                    ? consultationData.symptoms.slice(0, 3).join(" · ") + (consultationData.symptoms.length > 3 ? ` +${consultationData.symptoms.length - 3}` : "")
-                    : "Sintomas informados"}
-                </p>
-              </div>
+              <select value={ratingFilter} onChange={e => setRatingFilter(Number(e.target.value))} style={{ fontSize: 12, border: '1px solid #e5e7eb', borderRadius: 8, padding: '4px 8px', color: '#374151', background: '#fff', cursor: 'pointer' }}>
+                <option value={0}>Todas avaliações</option>
+                <option value={3}>3+ estrelas</option>
+                <option value={4}>4+ estrelas</option>
+                <option value={4.5}>4.5+ estrelas</option>
+              </select>
             </div>
-            {aiResponse.suggestedSpecialty && (
-              <div className="flex-shrink-0">
-                <p className="text-xs text-muted-foreground mb-1">Especialidade indicada</p>
-                <span className="inline-block bg-primary text-primary-foreground text-xs font-semibold px-3 py-1 rounded-full">
-                  {aiResponse.suggestedSpecialty}
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* AI response card */}
-          <div className="bg-card border border-border rounded-xl overflow-hidden">
-            {/* Card header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-              <div className="flex items-center gap-2">
-                <Avatar className="w-7 h-7">
-                  <AvatarFallback className="bg-primary text-primary-foreground text-xs">IA</AvatarFallback>
-                </Avatar>
-                <span className="text-sm font-medium">InteraSaúde AI</span>
-                <Badge variant="outline" className="text-[10px] px-2 py-0">Gemini 2.5 Flash</Badge>
-              </div>
-              <Button variant="ghost" size="sm" onClick={copyToClipboard} className="gap-1.5 text-xs">
-                {copied ? <><CheckCheck className="w-3.5 h-3.5 text-primary" /> Copiado</> : <><Copy className="w-3.5 h-3.5" /> Copiar</>}
-              </Button>
-            </div>
-
-            {/* Tabs */}
-            <div className="flex border-b border-border overflow-x-auto">
-              {TABS.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-medium whitespace-nowrap transition-colors border-b-2 ${
-                    activeTab === tab.id
-                      ? "border-primary text-primary"
-                      : "border-transparent text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {tab.icon}{tab.label}
-                  {sections[tab.id].length > 0 && (
-                    <span className={`ml-0.5 w-4 h-4 rounded-full text-[10px] flex items-center justify-center ${
-                      activeTab === tab.id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-                    }`}>
-                      {sections[tab.id].length > 9 ? "9+" : sections[tab.id].length}
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
-
-            {/* Tab content */}
-            <div className="p-5 space-y-3 min-h-[200px]" key={activeTab}>
-              {sections[activeTab].length === 0 ? (
-                <p className="text-sm text-muted-foreground italic">Nenhuma informação nesta seção.</p>
-              ) : (
-                sections[activeTab].map((line, i) => {
-                  const isAlert = activeTab === "alertas";
-                  const isOrient = activeTab === "orientacoes";
-                  return (
-                    <div
-                      key={i}
-                      className={`text-sm leading-relaxed p-3 rounded-lg ${
-                        isAlert
-                          ? "bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200"
-                          : isOrient
-                          ? "bg-primary/5 border border-primary/10 text-foreground"
-                          : "text-foreground"
-                      }`}
-                      style={{ animation: `fadeIn .25s ${i * 0.05}s ease both` }}
-                    >
-                      {isAlert && <AlertTriangle className="w-3.5 h-3.5 inline mr-1.5 text-amber-500" />}
-                      {line}
+            {filtered.map((s, i) => (
+              <div key={s.placeId} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 18px', borderBottom: '1px solid #f9fafb', background: i === 0 ? '#f0faf7' : '#fff', transition: 'background .15s' }}
+                onMouseEnter={e => { if (i > 0) e.currentTarget.style.background = '#f9fafb'; }}
+                onMouseLeave={e => { if (i > 0) e.currentTarget.style.background = '#fff'; }}
+              >
+                <div style={{ width: 28, height: 28, borderRadius: 8, background: i === 0 ? '#0d7a5f' : '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 12, fontWeight: 700, color: i === 0 ? '#fff' : '#6b7280' }}>{i + 1}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <p style={{ fontWeight: 600, fontSize: 13.5, color: '#111827' }}>{s.name}</p>
+                    {i === 0 && <span style={{ background: '#e6f5f0', color: '#065f46', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20 }}>Mais próximo</span>}
+                  </div>
+                  <p style={{ fontSize: 12, color: '#9ca3af', marginTop: 2, display: 'flex', alignItems: 'center', gap: 3 }}><MapPin size={11} /> {s.address}</p>
+                  {s.rating > 0 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 4 }}>
+                      {[1,2,3,4,5].map(star => <Star key={star} size={11} color="#f59e0b" fill={star <= s.rating ? '#f59e0b' : 'transparent'} />)}
+                      <span style={{ fontSize: 11, color: '#9ca3af', marginLeft: 3 }}>{s.rating} ({s.userRatingsTotal})</span>
                     </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-
-          {/* Specialists */}
-          {filteredSpecialists.length > 0 && (
-            <div className="bg-card border border-border rounded-xl overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-primary" />
-                  <span className="text-sm font-medium">Especialistas próximos</span>
-                  {aiResponse.suggestedSpecialty && (
-                    <span className="text-xs text-muted-foreground">— {aiResponse.suggestedSpecialty}</span>
                   )}
                 </div>
-                <select
-                  value={ratingFilter}
-                  onChange={(e) => setRatingFilter(Number(e.target.value))}
-                  className="text-xs border border-input rounded-md px-2 py-1 bg-background"
-                >
-                  <option value={0}>Todas avaliações</option>
-                  <option value={3}>3+ estrelas</option>
-                  <option value={4}>4+ estrelas</option>
-                  <option value={4.5}>4.5+ estrelas</option>
-                </select>
+                <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                  <button onClick={() => window.open(`https://www.google.com/maps/place/?q=place_id:${s.placeId}`, '_blank')} style={iconBtn}><MapPin size={13} /></button>
+                  <button onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${s.location.lat},${s.location.lng}&destination_place_id=${s.placeId}`, '_blank')} style={{ ...iconBtn, background: '#0d7a5f', color: '#fff', border: 'none' }}><Navigation size={13} /></button>
+                </div>
               </div>
-
-              <div className="divide-y divide-border">
-                {filteredSpecialists.map((s, i) => (
-                  <div key={s.placeId} className={`flex items-start gap-3 px-4 py-3 transition-colors hover:bg-muted/40 ${i === 0 ? "bg-primary/5" : ""}`}>
-                    <div className={`w-6 h-6 rounded-md flex items-center justify-center text-xs font-semibold flex-shrink-0 mt-0.5 ${
-                      i === 0 ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-                    }`}>
-                      {i + 1}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-sm font-medium">{s.name}</p>
-                        {i === 0 && <Badge className="text-[10px] px-1.5 py-0 h-4">Mais próximo</Badge>}
-                      </div>
-                      <div className="flex items-center gap-1 mt-0.5">
-                        <MapPin className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-                        <p className="text-xs text-muted-foreground truncate">{s.address}</p>
-                      </div>
-                      {s.rating > 0 && (
-                        <div className="flex items-center gap-1 mt-1">
-                          {[1,2,3,4,5].map((star) => (
-                            <Star key={star} className={`w-3 h-3 ${star <= s.rating ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground"}`} />
-                          ))}
-                          <span className="text-xs text-muted-foreground ml-0.5">{s.rating} ({s.userRatingsTotal})</span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex gap-1.5 flex-shrink-0">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-7 px-2 text-xs"
-                        onClick={() => window.open(`https://www.google.com/maps/place/?q=place_id:${s.placeId}`, "_blank")}
-                      >
-                        <MapPin className="w-3 h-3" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        className="h-7 px-2 text-xs"
-                        onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${s.location.lat},${s.location.lng}&destination_place_id=${s.placeId}`, "_blank")}
-                      >
-                        <Navigation className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Map */}
-          {showMap && specialists.length > 0 && (
-            <div className="bg-card border border-border rounded-xl overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-                <span className="text-sm font-medium">Mapa interativo</span>
-                <Button variant="ghost" size="sm" onClick={() => setShowMap(false)} className="text-xs h-7">Fechar</Button>
-              </div>
-              <div className="p-4">
-                <HealthcareProvidersMap
-                  userAddress={profile?.address && profile?.city ? `${profile.address}, ${profile.city}` : undefined}
-                  providers={specialists}
-                  onClose={() => setShowMap(false)}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Actions */}
-          <div className="flex flex-wrap gap-2">
-            {specialists.length > 0 && (
-              <Button variant="outline" size="sm" onClick={() => setShowMap(!showMap)} className="gap-1.5">
-                <Map className="w-3.5 h-3.5" />{showMap ? "Ocultar mapa" : "Ver mapa"}
-              </Button>
-            )}
-            <Button size="sm" onClick={() => navigate("/consultation")} className="gap-1.5">
-              Nova consulta
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => navigate("/dashboard")}>
-              Dashboard
-            </Button>
+            ))}
           </div>
+        )}
 
-          {/* Disclaimer */}
-          <p className="text-xs text-muted-foreground bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900 rounded-lg px-4 py-3">
-            <AlertTriangle className="w-3.5 h-3.5 inline mr-1.5 text-amber-500" />
-            <strong>Importante:</strong> Esta resposta é gerada por IA para fins informativos. Não substitui diagnóstico médico profissional.
-            {aiResponse.consultationId && (
-              <span className="ml-2 opacity-50">ID: {aiResponse.consultationId.slice(0, 8)}…</span>
-            )}
+        {/* Map */}
+        {showMap && specialists.length > 0 && (
+          <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e5e7eb', overflow: 'hidden', marginBottom: 16 }}>
+            <div style={{ padding: '14px 18px', borderBottom: '1px solid #f3f4f6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontWeight: 600, fontSize: 13.5 }}>Mapa interativo</span>
+              <button onClick={() => setShowMap(false)} style={chipBtn}>Fechar</button>
+            </div>
+            <div style={{ padding: 16 }}>
+              <HealthcareProvidersMap userAddress={profile?.address && profile?.city ? `${profile.address}, ${profile.city}` : undefined} providers={specialists} onClose={() => setShowMap(false)} />
+            </div>
+          </div>
+        )}
+
+        {/* Actions */}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+          {specialists.length > 0 && (
+            <button onClick={() => setShowMap(!showMap)} style={chipBtn}><Map size={13} /> {showMap ? 'Ocultar mapa' : 'Ver mapa'}</button>
+          )}
+          <button onClick={() => navigate('/consultation')} style={btnPrimary}>Nova consulta</button>
+          <button onClick={() => navigate('/dashboard')} style={chipBtn}>Painel</button>
+        </div>
+
+        {/* Disclaimer */}
+        <div style={{ background: '#fff8ec', border: '1px solid #fcd34d', borderRadius: 10, padding: '12px 16px' }}>
+          <p style={{ fontSize: 12.5, color: '#92400e', lineHeight: 1.7 }}>
+            <AlertTriangle size={12} style={{ display: 'inline', marginRight: 5, verticalAlign: 'middle' }} />
+            <strong>Importante:</strong> Esta resposta é gerada por IA para fins informativos e não substitui diagnóstico médico profissional.
+            {res.consultationId && <span style={{ marginLeft: 6, opacity: 0.5 }}>ID: {res.consultationId.slice(0, 8)}…</span>}
           </p>
         </div>
       </div>
 
-      <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(6px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
+      <style>{`@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}`}</style>
     </div>
   );
 };
+
+const backBtn: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 5, background: 'transparent', color: '#6b7280', fontSize: 13, fontWeight: 500, padding: '6px 12px', borderRadius: 8, border: '1px solid #e5e7eb', cursor: 'pointer' };
+const chipBtn: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 5, background: 'transparent', color: '#6b7280', fontSize: 12, fontWeight: 500, padding: '6px 12px', borderRadius: 20, border: '1px solid #e5e7eb', cursor: 'pointer' };
+const btnPrimary: React.CSSProperties = { background: '#0d7a5f', color: '#fff', fontWeight: 600, fontSize: 13.5, padding: '9px 20px', borderRadius: 8, border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 };
+const iconBtn: React.CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', color: '#6b7280', cursor: 'pointer' };
 
 export default ConsultationChat;

@@ -1,234 +1,187 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { Microscope, Droplet, Users, Shield, BookOpen, Heart, Menu, ChevronRight } from "lucide-react";
-import AuthDialog from "@/components/auth/AuthDialog";
-import { InteraAnalisesLogo } from "@/components/InteraAnalisesLogo";
-import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
-
-interface Page {
-  id: string;
-  title: string;
-  slug: string;
-  parent_id?: string;
-  children?: Page[];
-}
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { InteraAnalisesLogo } from '@/components/InteraAnalisesLogo';
+import AuthDialog from '@/components/auth/AuthDialog';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { Microscope, Users, Clock, Shield, ChevronRight, Menu, X } from 'lucide-react';
 
 const Index = () => {
-  const [authDialogOpen, setAuthDialogOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [menuPages, setMenuPages] = useState<Page[]>([]);
+  const [authOpen, setAuthOpen] = useState(false);
+  const [mobileMenu, setMobileMenu] = useState(false);
   const { user, loading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchMenuPages();
     const obs = new IntersectionObserver(
-      entries => entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); } }),
+      es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); } }),
       { threshold: 0.1 }
     );
-    document.querySelectorAll('.fade-in').forEach(el => obs.observe(el));
+    document.querySelectorAll('.fade-up').forEach(el => obs.observe(el));
     return () => obs.disconnect();
   }, []);
 
-  const fetchMenuPages = async () => {
-    try {
-      const { data } = await supabase.from('pages').select('id, title, slug, parent_id').eq('is_active', true).order('order_index');
-      const map = new Map<string, Page>();
-      const roots: Page[] = [];
-      (data || []).forEach(p => map.set(p.id, { ...p, children: [] }));
-      (data || []).forEach(p => { const node = map.get(p.id)!; p.parent_id ? map.get(p.parent_id)?.children?.push(node) : roots.push(node); });
-      setMenuPages(roots);
-    } catch {}
-  };
-
-  const features = [
-    { icon: Microscope, title: "Análise Especializada",    desc: "Parasitologia, Bioquímica e Hematologia com IA Gemini 2.5 Pro" },
-    { icon: Users,      title: "Perfis Personalizados",    desc: "Linguagem adaptada para Pacientes, Acadêmicos e Profissionais" },
-    { icon: Droplet,    title: "Histórico Completo",       desc: "Acompanhe sintomas, exames e evolução clínica ao longo do tempo" },
-    { icon: Shield,     title: "Evidências Científicas",   desc: "Respostas baseadas em literatura confiável com referências" },
-    { icon: BookOpen,   title: "Encaminhamentos",          desc: "Localização de profissionais de saúde próximos via Google Maps" },
-    { icon: Heart,      title: "Interface Intuitiva",      desc: "Coleta de informações através de balões interativos simples" },
-  ];
+  const goOrAuth = () => { if (!loading) user ? navigate('/consultation') : setAuthOpen(true); };
 
   return (
-    <div className="min-h-screen" style={{ background: '#f5f0e8', fontFamily: "'DM Sans', sans-serif" }}>
+    <div style={{ fontFamily: "'Inter', sans-serif", background: '#ffffff', color: '#111827', minHeight: '100vh' }}>
 
-      {/* NAV */}
-      <nav style={{ position:'fixed', top:0, left:0, right:0, zIndex:100, background:'rgba(245,240,232,0.94)', backdropFilter:'blur(12px)', borderBottom:'1px solid rgba(200,168,75,0.3)', padding:'0 40px', display:'flex', alignItems:'center', justifyContent:'space-between', height:64 }}>
-        <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
-          <InteraAnalisesLogo onClick={() => navigate('/')} />
-          {menuPages.length > 0 && (
-            <div style={{ position:'relative' }}>
-              <button onClick={() => setMenuOpen(p => !p)} style={{ display:'flex', alignItems:'center', gap:6, background:'none', border:'none', cursor:'pointer', fontSize:'0.72rem', fontWeight:600, letterSpacing:'1.5px', textTransform:'uppercase', color:'#3d3d3d', padding:'2px 0' }}>
-                <Menu size={14} /> Menu
-              </button>
-              {menuOpen && (
-                <div style={{ position:'absolute', top:'100%', left:0, background:'#fafaf8', border:'1px solid rgba(200,168,75,0.25)', borderRadius:4, padding:'12px 0', minWidth:220, boxShadow:'0 8px 32px rgba(0,0,0,0.08)', zIndex:200 }}>
-                  {menuPages.map(p => (
-                    <a key={p.id} href={`/page/${p.slug}`} onClick={() => setMenuOpen(false)} style={{ display:'block', padding:'8px 20px', fontSize:'0.85rem', color:'#1c1c1c', textDecoration:'none' }}
-                      onMouseEnter={e=>(e.currentTarget.style.background='#e8f5ee')}
-                      onMouseLeave={e=>(e.currentTarget.style.background='transparent')}
-                    >{p.title}</a>
-                  ))}
-                </div>
-              )}
-            </div>
+      {/* ─── NAV ───────────────────────────────────── */}
+      <nav style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(8px)', borderBottom: '1px solid #e5e7eb', padding: '0 24px', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <InteraAnalisesLogo size="sm" onClick={() => navigate('/')} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {!loading && (
+            user ? (
+              <button onClick={() => navigate('/dashboard')} style={btnPrimary}>Ir para o painel</button>
+            ) : (
+              <>
+                <button onClick={() => setAuthOpen(true)} style={btnGhost}>Entrar</button>
+                <button onClick={() => setAuthOpen(true)} style={btnPrimary}>Criar conta grátis</button>
+              </>
+            )
           )}
         </div>
-        {!loading && (
-          user ? (
-            <div style={{ display:'flex', gap:10 }}>
-              <button onClick={() => navigate('/dashboard')} style={navBtnPrimary}>Dashboard</button>
-              <button onClick={async () => { await supabase.auth.signOut(); navigate('/'); }} style={navBtnOutline}>Sair</button>
-            </div>
-          ) : (
-            <button onClick={() => setAuthDialogOpen(true)} style={navBtnPrimary}>Entrar / Cadastrar</button>
-          )
-        )}
       </nav>
 
-      {/* HERO */}
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', minHeight:'100vh', paddingTop:0 }}>
-        {/* left */}
-        <div style={{ background:'#0f4a2e', display:'flex', flexDirection:'column', justifyContent:'center', padding:'120px 60px 80px', position:'relative', overflow:'hidden' }}>
-          <div style={{ position:'absolute', right:-60, top:0, bottom:0, width:120, background:'#0f4a2e', clipPath:'polygon(0 0, 0 100%, 100% 100%)', zIndex:2 }} />
-          <div style={{ fontFamily:"'Space Mono',monospace", fontSize:'0.7rem', letterSpacing:3, textTransform:'uppercase', color:'#c8a84b', marginBottom:24, display:'flex', alignItems:'center', gap:12 }}>
-            <span style={{ width:32, height:1, background:'#c8a84b', display:'inline-block' }} />
-            Saúde Educativa · 2026
-          </div>
-          <h1 style={{ fontFamily:"'Playfair Display',serif", fontSize:'clamp(2.8rem,5vw,4.8rem)', fontWeight:900, lineHeight:1.05, color:'#fafaf8', marginBottom:8 }}>
-            Intera<em style={{ fontStyle:'italic', color:'#e8c96a' }}>Análises</em>
-          </h1>
-          <p style={{ fontSize:'1.05rem', color:'rgba(255,255,255,0.65)', maxWidth:400, marginTop:20, marginBottom:48, lineHeight:1.75 }}>
-            Obtenha respostas personalizadas baseadas em evidências científicas para Parasitologia, Bioquímica e Hematologia — com linguagem adaptada ao seu perfil.
-          </p>
-          <div style={{ display:'flex', gap:14, flexWrap:'wrap' }}>
-            <button onClick={() => { if(!loading) user ? navigate('/consultation') : setAuthDialogOpen(true); }} style={heroBtnPrimary}
-              onMouseEnter={e=>(e.currentTarget.style.background='#e8c96a')}
-              onMouseLeave={e=>(e.currentTarget.style.background='#c8a84b')}
-            >
-              {loading ? 'Carregando…' : user ? 'Iniciar Consulta' : 'Começar Agora'} <ChevronRight size={16} />
-            </button>
-            <button onClick={() => navigate('/saiba-mais')} style={heroBtnGhost}
-              onMouseEnter={e=>{e.currentTarget.style.background='rgba(200,168,75,0.15)';}}
-              onMouseLeave={e=>{e.currentTarget.style.background='transparent';}}
-            >
-              Saiba Mais
-            </button>
-          </div>
+      {/* ─── HERO ───────────────────────────────────── */}
+      <section style={{ padding: '80px 24px 72px', maxWidth: 900, margin: '0 auto', textAlign: 'center' }}>
+        <div style={badge}>IA Gemini 2.5 · Gratuito para começar</div>
+        <h1 style={{ fontFamily: "'Inter', sans-serif", fontSize: 'clamp(2rem, 5vw, 3.2rem)', fontWeight: 700, lineHeight: 1.15, color: '#111827', margin: '20px 0 18px', letterSpacing: '-0.5px' }}>
+          Entenda seus exames<br />
+          <span style={{ color: '#0d7a5f' }}>de forma simples e segura</span>
+        </h1>
+        <p style={{ fontSize: 'clamp(1rem, 2vw, 1.15rem)', color: '#6b7280', maxWidth: 560, margin: '0 auto 36px', lineHeight: 1.7 }}>
+          Descreva seus sintomas ou envie seus resultados. Nossa IA explica tudo em uma linguagem que qualquer pessoa entende.
+        </p>
+        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+          <button onClick={goOrAuth} style={{ ...btnPrimary, padding: '14px 32px', fontSize: 16, borderRadius: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+            {user ? 'Iniciar consulta' : 'Começar agora — é grátis'} <ChevronRight size={18} />
+          </button>
+          <button onClick={() => navigate('/saiba-mais')} style={{ ...btnGhost, padding: '14px 28px', fontSize: 15, borderRadius: 10 }}>Saiba mais</button>
         </div>
-        {/* right */}
-        <div style={{ background:'#fafaf8', display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'center', padding:'120px 60px 80px 100px', position:'relative' }}>
-          <div style={{ position:'relative', width:'100%', maxWidth:360 }}>
-            <div style={{ width:300, height:300, borderRadius:'50%', background:'linear-gradient(135deg,#e8f5ee 0%,rgba(200,168,75,0.12) 100%)', border:'2px solid rgba(200,168,75,0.3)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto', position:'relative', animation:'pulse 4s ease-in-out infinite' }}>
-              <span style={{ fontSize:'5rem' }}>🔬</span>
-            </div>
-            {[
-              { n:'IA', l:'Gemini 2.5', top:20, right:-20 },
-              { n:'24/7', l:'Disponível', bottom:30, left:-30 },
-              { n:'3', l:'Especialidades', top:'50%', right:-40 },
-            ].map(({ n, l, ...pos }) => (
-              <div key={l} style={{ position:'absolute', background:'white', borderLeft:'3px solid #c8a84b', padding:'12px 18px', borderRadius:4, boxShadow:'0 8px 32px rgba(0,0,0,0.08)', minWidth:130, transform: pos.top==='50%'?'translateY(-50%)':undefined, ...pos as any }}>
-                <div style={{ fontFamily:"'Playfair Display',serif", fontSize:'1.55rem', fontWeight:900, color:'#1a7a4a' }}>{n}</div>
-                <div style={{ fontSize:'0.7rem', fontWeight:500, letterSpacing:'0.5px', color:'#3d3d3d', textTransform:'uppercase' }}>{l}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="gold-divider" />
-
-      {/* FEATURES */}
-      <section style={{ padding:'100px 60px', maxWidth:1200, margin:'0 auto' }} className="fade-in">
-        <div className="section-tag">Funcionalidades</div>
-        <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:'clamp(2rem,4vw,3rem)', fontWeight:900, lineHeight:1.1, color:'#1c1c1c', marginBottom:16 }}>
-          Tudo que você precisa<br /><em style={{ fontStyle:'italic', color:'#1a7a4a' }}>para uma consulta informada</em>
-        </h2>
-        <p style={{ fontSize:'1rem', color:'#3d3d3d', maxWidth:560, marginBottom:60 }}>Plataforma completa de análise laboratorial com IA, adaptada ao seu nível de conhecimento.</p>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:28 }}>
-          {features.map(({ icon:Icon, title, desc }) => (
-            <div key={title} style={featureCard}
-              onMouseEnter={e=>Object.assign(e.currentTarget.style,featureCardHover)}
-              onMouseLeave={e=>Object.assign(e.currentTarget.style,featureCard)}
-            >
-              <div style={{ width:52, height:52, background:'#e8f5ee', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:20 }}>
-                <Icon size={22} color="#1a7a4a" />
-              </div>
-              <h3 style={{ fontFamily:"'Playfair Display',serif", fontSize:'1.05rem', fontWeight:700, marginBottom:10, color:'#1c1c1c' }}>{title}</h3>
-              <p style={{ fontSize:'0.85rem', color:'#3d3d3d', lineHeight:1.65 }}>{desc}</p>
+        {/* Trust strip */}
+        <div style={{ marginTop: 48, display: 'flex', justifyContent: 'center', gap: 32, flexWrap: 'wrap' }}>
+          {[
+            { n: '3', l: 'áreas médicas' },
+            { n: '24/7', l: 'disponível' },
+            { n: '100%', l: 'baseado em ciência' },
+          ].map(({ n, l }) => (
+            <div key={l} style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: 24, fontWeight: 700, color: '#0d7a5f' }}>{n}</div>
+              <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>{l}</div>
             </div>
           ))}
         </div>
       </section>
 
-      <div className="gold-divider" />
-
-      {/* PÚBLICO */}
-      <section style={{ background:'#fafaf8', padding:'100px 60px' }}>
-        <div style={{ maxWidth:1200, margin:'0 auto' }} className="fade-in">
-          <div className="section-tag">Público-Alvo</div>
-          <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:'clamp(2rem,4vw,3rem)', fontWeight:900, lineHeight:1.1, color:'#1c1c1c', marginBottom:16 }}>
-            Para quem foi<br /><em style={{ fontStyle:'italic', color:'#1a7a4a' }}>criada a plataforma?</em>
-          </h2>
-          <p style={{ fontSize:'1rem', color:'#3d3d3d', maxWidth:560, marginBottom:60 }}>Linguagem e profundidade adaptadas para cada tipo de usuário.</p>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:24 }}>
+      {/* ─── HOW IT WORKS ───────────────────────────── */}
+      <section style={{ background: '#f9fafb', borderTop: '1px solid #e5e7eb', borderBottom: '1px solid #e5e7eb', padding: '64px 24px' }}>
+        <div style={{ maxWidth: 800, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 48 }} className="fade-up">
+            <p style={{ fontSize: 12, fontWeight: 600, color: '#0d7a5f', letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: 10 }}>Como funciona</p>
+            <h2 style={{ fontSize: 'clamp(1.5rem,3vw,2.2rem)', fontWeight: 700, color: '#111827', letterSpacing: '-0.3px' }}>Três passos simples</h2>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 24 }}>
             {[
-              { icon:'👤', title:'Paciente', desc:'Compreenda seus exames de forma simples, segura e sem jargão técnico.', tag:'Linguagem acessível' },
-              { icon:'🎓', title:'Estudante & Acadêmico', desc:'Suporte científico para estudos, estágios e pesquisas clínicas em saúde.', tag:'Linguagem técnica moderada' },
-              { icon:'🩺', title:'Profissional de Saúde', desc:'Acesso rápido a protocolos, informações clínicas e suporte à decisão.', tag:'Linguagem técnica completa' },
-            ].map(({ icon, title, desc, tag }) => (
-              <div key={title} style={audienceCard}
-                onMouseEnter={e=>Object.assign(e.currentTarget.style,{...audienceCard,borderColor:'#c8a84b',background:'rgba(200,168,75,0.05)'})}
-                onMouseLeave={e=>Object.assign(e.currentTarget.style,audienceCard)}
-              >
-                <div style={{ fontSize:'2.4rem', marginBottom:20 }}>{icon}</div>
-                <h3 style={{ fontFamily:"'Playfair Display',serif", fontSize:'1.05rem', fontWeight:700, marginBottom:10, color:'#1c1c1c' }}>{title}</h3>
-                <p style={{ fontSize:'0.85rem', color:'#3d3d3d', lineHeight:1.65, marginBottom:16 }}>{desc}</p>
-                <span style={{ display:'inline-block', background:'#e8f5ee', color:'#1a7a4a', fontSize:'0.72rem', fontWeight:700, padding:'4px 10px', borderRadius:2 }}>{tag}</span>
+              { step: '1', title: 'Descreva', desc: 'Informe seus sintomas, hábitos e resultados de exames no formulário guiado.' },
+              { step: '2', title: 'IA analisa', desc: 'O Gemini 2.5 interpreta suas informações com base em literatura médica atual.' },
+              { step: '3', title: 'Entenda', desc: 'Receba uma explicação clara, alertas e indicação de especialista quando necessário.' },
+            ].map(({ step, title, desc }, i) => (
+              <div key={step} className="fade-up" style={{ background: '#ffffff', borderRadius: 12, border: '1px solid #e5e7eb', padding: 28, position: 'relative', overflow: 'hidden' }}>
+                <div style={{ position: 'absolute', top: -8, right: -4, fontFamily: "'Inter',sans-serif", fontSize: 80, fontWeight: 800, color: '#0d7a5f', opacity: 0.06, lineHeight: 1, userSelect: 'none' }}>{step}</div>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: '#e6f5f0', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+                  <span style={{ fontWeight: 700, fontSize: 15, color: '#0d7a5f' }}>{step}</span>
+                </div>
+                <h3 style={{ fontWeight: 600, fontSize: 16, color: '#111827', marginBottom: 8 }}>{title}</h3>
+                <p style={{ fontSize: 14, color: '#6b7280', lineHeight: 1.6 }}>{desc}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      <div className="gold-divider" />
+      {/* ─── AREAS ─────────────────────────────────── */}
+      <section style={{ padding: '64px 24px', maxWidth: 900, margin: '0 auto' }}>
+        <div className="fade-up" style={{ textAlign: 'center', marginBottom: 40 }}>
+          <p style={{ fontSize: 12, fontWeight: 600, color: '#0d7a5f', letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: 10 }}>Especialidades</p>
+          <h2 style={{ fontSize: 'clamp(1.5rem,3vw,2.2rem)', fontWeight: 700, color: '#111827', letterSpacing: '-0.3px' }}>O que podemos analisar</h2>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 20 }}>
+          {[
+            { emoji: '🤬', title: 'Parasitologia', desc: 'Exames de fezes, infecções parasitárias, doenças tropicais e mais.', color: '#e6f5f0', textC: '#065f46' },
+            { emoji: '🧪', title: 'Bioquímica', desc: 'Glicemia, colesterol, função renal, hepática e marcadores gerais.', color: '#e8f3fa', textC: '#1e3a5f' },
+            { emoji: '🩸', title: 'Hematologia', desc: 'Hemograma completo, anemias, plaquetas e doenças do sangue.', color: '#fef2f2', textC: '#7f1d1d' },
+          ].map(({ emoji, title, desc, color, textC }) => (
+            <div key={title} className="fade-up" style={{ background: color, borderRadius: 14, padding: '28px 24px', border: '1px solid transparent' }}>
+              <div style={{ fontSize: 32, marginBottom: 14 }}>{emoji}</div>
+              <h3 style={{ fontWeight: 700, fontSize: 17, color: textC, marginBottom: 8 }}>{title}</h3>
+              <p style={{ fontSize: 13.5, color: textC, opacity: 0.75, lineHeight: 1.6 }}>{desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
 
-      {/* CTA */}
-      <section style={{ background:'#0f4a2e', padding:'100px 60px' }}>
-        <div style={{ maxWidth:700, margin:'0 auto', textAlign:'center' }} className="fade-in">
-          <div style={{ fontFamily:"'Space Mono',monospace", fontSize:'0.68rem', letterSpacing:3, textTransform:'uppercase', color:'#c8a84b', marginBottom:24 }}>Pronto para começar?</div>
-          <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:'clamp(2rem,4vw,3rem)', fontWeight:900, lineHeight:1.1, color:'#fafaf8', marginBottom:20 }}>
-            Crie sua conta e acesse consultas baseadas em <em style={{ fontStyle:'italic', color:'#e8c96a' }}>evidências científicas</em>
-          </h2>
-          <p style={{ fontSize:'1rem', color:'rgba(255,255,255,0.65)', marginBottom:40 }}>Gratuito para começar. Linguagem adaptada ao seu perfil profissional.</p>
-          <button onClick={() => { if(!loading) user ? navigate('/consultation') : setAuthDialogOpen(true); }} style={heroBtnPrimary}
-            onMouseEnter={e=>(e.currentTarget.style.background='#e8c96a')}
-            onMouseLeave={e=>(e.currentTarget.style.background='#c8a84b')}
-          >
-            {loading ? 'Carregando…' : user ? 'Iniciar Consulta' : 'Criar Conta Gratuita'} <ChevronRight size={18} />
+      {/* ─── PARA QUEM ─────────────────────────────── */}
+      <section style={{ background: '#f9fafb', borderTop: '1px solid #e5e7eb', borderBottom: '1px solid #e5e7eb', padding: '64px 24px' }}>
+        <div style={{ maxWidth: 900, margin: '0 auto' }}>
+          <div className="fade-up" style={{ textAlign: 'center', marginBottom: 40 }}>
+            <p style={{ fontSize: 12, fontWeight: 600, color: '#0d7a5f', letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: 10 }}>Para quem é</p>
+            <h2 style={{ fontSize: 'clamp(1.5rem,3vw,2.2rem)', fontWeight: 700, color: '#111827', letterSpacing: '-0.3px' }}>Serve para qualquer pessoa</h2>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
+            {[
+              { icon: '👤', title: 'Paciente comum', desc: 'Receba explicações simples, sem termos técnicos difíceis de entender.', tag: 'Linguagem simples' },
+              { icon: '🎓', title: 'Estudante de saúde', desc: 'Aprofunde seu estudo com respostas baseadas em literatura atualizada.', tag: 'Nível técnico' },
+              { icon: '🩺', title: 'Profissional de saúde', desc: 'Consulte rápido, compare valores de referência e acesse sugestões clínicas.', tag: 'Nível avançado' },
+            ].map(({ icon, title, desc, tag }) => (
+              <div key={title} className="fade-up" style={{ background: '#ffffff', borderRadius: 12, border: '1px solid #e5e7eb', padding: 24 }}>
+                <div style={{ fontSize: 28, marginBottom: 14 }}>{icon}</div>
+                <h3 style={{ fontWeight: 600, fontSize: 15, color: '#111827', marginBottom: 6 }}>{title}</h3>
+                <p style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.65, marginBottom: 14 }}>{desc}</p>
+                <span style={{ display: 'inline-block', background: '#e6f5f0', color: '#065f46', fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 20 }}>{tag}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ─── DISCLAIMER ─────────────────────────────── */}
+      <section style={{ padding: '48px 24px', maxWidth: 700, margin: '0 auto', textAlign: 'center' }} className="fade-up">
+        <div style={{ background: '#fff8ec', border: '1px solid #fcd34d', borderRadius: 12, padding: '20px 24px' }}>
+          <p style={{ fontSize: 13, color: '#92400e', lineHeight: 1.7 }}>
+            <strong>Importante:</strong> O InteraAnalises fornece informações educativas baseadas em IA. As respostas não substituem consulta médica. Em caso de dúvida, procure sempre um profissional de saúde.
+          </p>
+        </div>
+      </section>
+
+      {/* ─── CTA FINAL ─────────────────────────────── */}
+      <section style={{ background: '#0d7a5f', padding: '72px 24px', textAlign: 'center' }}>
+        <div style={{ maxWidth: 560, margin: '0 auto' }} className="fade-up">
+          <h2 style={{ fontSize: 'clamp(1.5rem,3vw,2.2rem)', fontWeight: 700, color: '#ffffff', marginBottom: 16, letterSpacing: '-0.3px' }}>Pronto para entender seus exames?</h2>
+          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 15, marginBottom: 32 }}>Sem custo. Sem burocracia. Resultado em segundos.</p>
+          <button onClick={goOrAuth} style={{ background: '#ffffff', color: '#0d7a5f', fontWeight: 700, fontSize: 15, padding: '14px 36px', borderRadius: 10, border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            Começar agora <ChevronRight size={18} />
           </button>
         </div>
       </section>
 
-      {/* FOOTER */}
-      <footer style={{ background:'#1c1c1c', padding:'32px 60px', textAlign:'center', fontSize:'0.78rem', color:'rgba(255,255,255,0.4)', letterSpacing:'0.5px' }}>
-        <span style={{ color:'#c8a84b', fontWeight:700 }}>InteraAnalises</span> · Plataforma Educativa em Saúde · <a href="https://interasaude.vercel.app" target="_blank" rel="noreferrer" style={{ color:'#c8a84b', textDecoration:'none' }}>InteraSaúde</a> · 2026
+      {/* ─── FOOTER ─────────────────────────────────── */}
+      <footer style={{ background: '#111827', padding: '32px 24px', textAlign: 'center' }}>
+        <div style={{ marginBottom: 16 }}>
+          <InteraAnalisesLogo size="sm" inverted />
+        </div>
+        <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>
+          © 2026 InteraAnalises · <a href="https://interasaude.vercel.app" target="_blank" rel="noreferrer" style={{ color: 'rgba(255,255,255,0.5)', textDecoration: 'none' }}>InteraSaúde</a> · Plataforma educativa em saúde
+        </p>
       </footer>
 
-      <style>{`@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.03)}}`}</style>
-      <AuthDialog open={authDialogOpen} onOpenChange={setAuthDialogOpen} />
+      <AuthDialog open={authOpen} onOpenChange={setAuthOpen} />
     </div>
   );
 };
 
-const navBtnPrimary: React.CSSProperties = { background:'#0f4a2e', color:'#fafaf8', fontWeight:700, fontSize:'0.78rem', letterSpacing:1, textTransform:'uppercase', padding:'10px 22px', borderRadius:2, border:'none', cursor:'pointer' };
-const navBtnOutline: React.CSSProperties = { background:'transparent', color:'#c8a84b', border:'1px solid #c8a84b', fontWeight:700, fontSize:'0.78rem', letterSpacing:1, textTransform:'uppercase', padding:'9px 20px', borderRadius:2, cursor:'pointer' };
-const heroBtnPrimary: React.CSSProperties = { display:'inline-flex', alignItems:'center', gap:10, background:'#c8a84b', color:'#0f4a2e', fontWeight:700, fontSize:'0.85rem', letterSpacing:1, textTransform:'uppercase', padding:'16px 32px', borderRadius:2, border:'none', cursor:'pointer', transition:'background .2s' };
-const heroBtnGhost: React.CSSProperties = { display:'inline-flex', alignItems:'center', gap:10, background:'transparent', color:'#c8a84b', border:'2px solid #c8a84b', fontWeight:700, fontSize:'0.85rem', letterSpacing:1, textTransform:'uppercase', padding:'14px 28px', borderRadius:2, cursor:'pointer', transition:'all .2s' };
-const featureCard: React.CSSProperties = { background:'#fafaf8', border:'1px solid rgba(26,122,74,0.15)', padding:'36px 28px', borderRadius:4, transition:'all .3s' };
-const featureCardHover: React.CSSProperties = { ...featureCard, borderColor:'#1a7a4a', boxShadow:'0 8px 32px rgba(26,122,74,0.1)', transform:'translateY(-4px)' };
-const audienceCard: React.CSSProperties = { padding:'36px 28px', border:'1px solid rgba(200,168,75,0.2)', borderRadius:4, transition:'all .3s' };
+const btnPrimary: React.CSSProperties = { background: '#0d7a5f', color: '#ffffff', fontWeight: 600, fontSize: 14, padding: '9px 20px', borderRadius: 8, border: 'none', cursor: 'pointer', transition: 'opacity .15s' };
+const btnGhost: React.CSSProperties = { background: 'transparent', color: '#374151', fontWeight: 500, fontSize: 14, padding: '9px 18px', borderRadius: 8, border: '1px solid #e5e7eb', cursor: 'pointer' };
+const badge: React.CSSProperties = { display: 'inline-block', background: '#e6f5f0', color: '#065f46', fontSize: 12, fontWeight: 600, padding: '4px 14px', borderRadius: 20, letterSpacing: '0.3px' };
 
 export default Index;
