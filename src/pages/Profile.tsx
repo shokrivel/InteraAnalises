@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Edit2, LogOut, User, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Save, Edit2, LogOut } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { InteraAnalisesLogo } from '@/components/InteraAnalisesLogo';
@@ -15,6 +15,7 @@ const Profile = () => {
   const { profile, loading: profileLoading, refetch } = useProfile();
   const { toast } = useToast();
   const navigate = useNavigate();
+
   const [form, setForm] = useState({ name: '', birth_date: '', address: '', city: '', zip_code: '', profile_type: 'patient' as 'patient' | 'academic' | 'health_professional', enable_family_history: false });
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -23,17 +24,17 @@ const Profile = () => {
     if (profile) setForm({ name: profile.name || '', birth_date: profile.birth_date || '', address: profile.address || '', city: profile.city || '', zip_code: profile.zip_code || '', profile_type: profile.profile_type || 'patient', enable_family_history: (profile as any).enable_family_history || false });
   }, [profile]);
 
-  if (authLoading || profileLoading) return <Spinner />;
-  if (!user) return <Blocked onBack={() => navigate('/')} />;
+  if (authLoading || profileLoading) return <Spin />;
+  if (!user) return <Gated onBack={() => navigate('/')} />;
 
-  const set = (k: string, v: any) => setForm(p => ({ ...p, [k]: v }));
+  const set = (k: string, v: string | boolean) => setForm(p => ({ ...p, [k]: v }));
 
   const handleZip = async (v: string) => {
     const fmt = v.replace(/\D/g, '').replace(/(\d{5})(\d)/, '$1-$2').slice(0, 9);
     set('zip_code', fmt);
     if (fmt.replace(/\D/g, '').length === 8) {
       try {
-        const r = await (await window.fetch(`https://viacep.com.br/ws/${fmt.replace(/\D/g, '')}/json/`)).json();
+        const r = await (await fetch(`https://viacep.com.br/ws/${fmt.replace(/\D/g, '')}/json/`)).json();
         if (!r.erro) { set('address', r.logradouro || form.address); set('city', r.localidade || form.city); toast({ title: 'CEP encontrado', description: `${r.logradouro}, ${r.localidade}` }); }
         else toast({ title: 'CEP não encontrado', variant: 'destructive' });
       } catch { toast({ title: 'Erro ao buscar CEP', variant: 'destructive' }); }
@@ -42,13 +43,13 @@ const Profile = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
     setSaving(true);
     try {
       if (!profile) { const { error } = await supabase.from('profiles').insert({ user_id: user.id, ...form }); if (error) throw error; }
       else { const { error } = await supabase.from('profiles').update({ ...form, updated_at: new Date().toISOString() }).eq('user_id', user.id); if (error) throw error; }
-      toast({ title: 'Perfil atualizado!' }); setEditing(false); refetch();
-    } catch (err: any) { toast({ title: 'Erro', description: err.message, variant: 'destructive' }); }
+      toast({ title: 'Perfil atualizado com sucesso!' });
+      setEditing(false); refetch();
+    } catch (err: any) { toast({ title: 'Erro ao salvar', description: err.message, variant: 'destructive' }); }
     finally { setSaving(false); }
   };
 
@@ -59,127 +60,117 @@ const Profile = () => {
 
   const ptLabel = { patient: 'Paciente', academic: 'Acadêmico', health_professional: 'Profissional de Saúde' };
 
-  const viewRows: { label: string; value: string }[] = [
-    { label: 'Nome', value: form.name || '—' },
-    { label: 'Nascimento', value: form.birth_date ? new Date(form.birth_date).toLocaleDateString('pt-BR') : '—' },
+  const rows = [
+    { label: 'Nome completo', value: form.name },
+    { label: 'Data de nascimento', value: form.birth_date ? new Date(form.birth_date + 'T12:00:00').toLocaleDateString('pt-BR') : undefined },
     { label: 'Tipo de perfil', value: ptLabel[form.profile_type] },
     { label: 'Histórico familiar', value: form.enable_family_history ? 'Ativado' : 'Desativado' },
-    { label: 'CEP', value: form.zip_code || '—' },
-    { label: 'Endereço', value: form.address || '—' },
-    { label: 'Cidade', value: form.city || '—' },
-    { label: 'E-mail', value: user?.email || '—' },
+    { label: 'CEP', value: form.zip_code },
+    { label: 'Endereço', value: form.address },
+    { label: 'Cidade', value: form.city },
+    { label: 'E-mail', value: user.email },
   ];
 
   return (
     <div style={{ minHeight: '100vh', background: '#f9fafb', fontFamily: "'Inter', sans-serif" }}>
 
       {/* NAV */}
-      <nav style={{ background: '#fff', borderBottom: '1px solid #e5e7eb', padding: '0 24px', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 50 }}>
+      <nav style={{ background: '#fff', borderBottom: '1px solid #e5e7eb', padding: '0 32px', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 50 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <button onClick={() => navigate('/dashboard')} style={backBtn}><ArrowLeft size={15} /> Voltar</button>
           <InteraAnalisesLogo size="sm" onClick={() => navigate('/')} />
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <span style={{ fontSize: 12, color: '#9ca3af', background: '#f3f4f6', padding: '4px 12px', borderRadius: 20 }}>{user?.email}</span>
-          <button onClick={() => { localStorage.clear(); sessionStorage.clear(); window.location.href = '/'; }} style={chipBtn}><LogOut size={12} /> Sair</button>
-        </div>
+        <button onClick={() => { localStorage.clear(); sessionStorage.clear(); window.location.href = '/'; }} style={navOutBtn}>
+          <LogOut size={13} /> Sair
+        </button>
       </nav>
 
-      <div style={{ maxWidth: 680, margin: '0 auto', padding: '32px 20px 80px' }}>
-
-        {/* Title */}
-        <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ maxWidth: 700, margin: '0 auto', padding: '36px 24px 80px' }}>
+        <div style={{ marginBottom: 28, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <h1 style={{ fontWeight: 700, fontSize: 20, color: '#111827', marginBottom: 4 }}>Meu perfil</h1>
-            <p style={{ fontSize: 13, color: '#6b7280' }}>Mantenha seus dados atualizados para respostas mais precisas.</p>
+            <h1 style={{ fontWeight: 700, fontSize: 24, color: '#111827', marginBottom: 4, letterSpacing: '-0.3px' }}>Meu Perfil</h1>
+            <p style={{ fontSize: 14, color: '#6b7280' }}>{editing ? 'Edite suas informações abaixo.' : 'Visualize suas informações pessoais.'}</p>
           </div>
-          {!editing && <button onClick={() => setEditing(true)} style={chipBtn}><Edit2 size={13} /> Editar</button>}
+          {!editing && <button onClick={() => setEditing(true)} style={editBtn}><Edit2 size={14} /> Editar</button>}
         </div>
 
-        {/* Profile avatar + type */}
-        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e5e7eb', padding: '20px 22px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 16 }}>
-          <div style={{ width: 52, height: 52, borderRadius: '50%', background: '#e6f5f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <User size={22} color="#0d7a5f" />
-          </div>
-          <div>
-            <p style={{ fontWeight: 600, fontSize: 15, color: '#111827', marginBottom: 4 }}>{form.name || user?.email}</p>
-            <span style={{ background: '#e6f5f0', color: '#065f46', fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 20 }}>{ptLabel[form.profile_type]}</span>
-          </div>
-        </div>
-
-        {/* Form / View */}
-        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e5e7eb', overflow: 'hidden' }}>
-          <div style={{ padding: '16px 22px', borderBottom: '1px solid #f3f4f6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <p style={{ fontWeight: 600, fontSize: 14, color: '#111827' }}>Informações pessoais</p>
-            {editing && <button onClick={cancel} style={{ ...chipBtn, color: '#9ca3af' }}>Cancelar</button>}
+        {/* Card */}
+        <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #e5e7eb', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+          <div style={{ padding: '20px 24px', background: 'linear-gradient(135deg, #0d7a5f 0%, #0a9974 100%)', display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 700, color: '#fff' }}>
+              {(form.name || user.email || '?')[0].toUpperCase()}
+            </div>
+            <div>
+              <p style={{ fontWeight: 700, fontSize: 17, color: '#fff' }}>{form.name || 'Sem nome'}</p>
+              <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)' }}>{user.email}</p>
+            </div>
           </div>
 
           {editing ? (
-            <form onSubmit={handleSubmit} style={{ padding: '20px 22px' }}>
+            <form onSubmit={handleSubmit} style={{ padding: 24 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 20px' }}>
-                <F label="Nome completo *">
-                  <input value={form.name} onChange={e => set('name', e.target.value)} required style={inputSt} placeholder="Seu nome" />
-                </F>
-                <F label="Data de nascimento *">
-                  <input type="date" value={form.birth_date} onChange={e => set('birth_date', e.target.value)} required style={inputSt} />
-                </F>
-                <F label="Tipo de perfil">
+                <Field label="Nome completo *">
+                  <input value={form.name} onChange={e => set('name', e.target.value)} required style={inp} placeholder="Seu nome" />
+                </Field>
+                <Field label="Data de nascimento *">
+                  <input type="date" value={form.birth_date} onChange={e => set('birth_date', e.target.value)} required style={inp} />
+                </Field>
+                <Field label="Tipo de perfil">
                   <Select value={form.profile_type} onValueChange={v => set('profile_type', v)}>
-                    <SelectTrigger style={{ borderRadius: 8, fontSize: 13, borderColor: '#e5e7eb', height: 40 }}><SelectValue /></SelectTrigger>
+                    <SelectTrigger style={{ ...inp, height: 42 }}><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="patient">Paciente</SelectItem>
                       <SelectItem value="academic">Acadêmico</SelectItem>
                       <SelectItem value="health_professional">Profissional de Saúde</SelectItem>
                     </SelectContent>
                   </Select>
-                </F>
-                <F label="CEP">
-                  <input value={form.zip_code} onChange={e => handleZip(e.target.value)} placeholder="00000-000" maxLength={9} style={inputSt} />
+                </Field>
+                <Field label="CEP">
+                  <input value={form.zip_code} onChange={e => handleZip(e.target.value)} placeholder="00000-000" maxLength={9} style={inp} />
                   <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>Endereço preenchido automaticamente</p>
-                </F>
-                <F label="Endereço">
-                  <input value={form.address} onChange={e => set('address', e.target.value)} style={inputSt} placeholder="Rua, número..." />
-                </F>
-                <F label="Cidade">
-                  <input value={form.city} onChange={e => set('city', e.target.value)} style={inputSt} placeholder="Sua cidade" />
-                </F>
+                </Field>
+                <Field label="Endereço">
+                  <input value={form.address} onChange={e => set('address', e.target.value)} style={inp} placeholder="Rua, número…" />
+                </Field>
+                <Field label="Cidade">
+                  <input value={form.city} onChange={e => set('city', e.target.value)} style={inp} placeholder="Sua cidade" />
+                </Field>
               </div>
-
-              {/* Toggle histórico familiar */}
-              <div style={{ marginTop: 8, marginBottom: 24, background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 10, padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              {/* Toggle */}
+              <div style={{ marginBottom: 24, background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  <p style={{ fontWeight: 600, fontSize: 13, color: '#111827', marginBottom: 2 }}>Histórico familiar</p>
+                  <p style={{ fontWeight: 600, fontSize: 14, color: '#111827', marginBottom: 2 }}>Histórico Familiar</p>
                   <p style={{ fontSize: 12, color: '#6b7280' }}>Habilita campo de histórico familiar nas consultas</p>
                 </div>
                 <Switch checked={form.enable_family_history} onCheckedChange={v => set('enable_family_history', v)} />
               </div>
-
               <div style={{ display: 'flex', gap: 10 }}>
-                <button type="button" onClick={cancel} style={{ ...btnOutline, flex: 1 }}>Cancelar</button>
-                <button type="submit" disabled={saving} style={{ ...btnPrimary, flex: 2, opacity: saving ? 0.6 : 1 }}>
+                <button type="button" onClick={cancel} style={btnCancel}>Cancelar</button>
+                <button type="submit" disabled={saving} style={{ ...btnSave, opacity: saving ? 0.6 : 1, display: 'flex', alignItems: 'center', gap: 6 }}>
                   {saving ? 'Salvando…' : <><Save size={14} /> Salvar alterações</>}
                 </button>
               </div>
             </form>
           ) : (
-            <div style={{ padding: '4px 0' }}>
-              {viewRows.map(({ label, value }) => (
-                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 22px', borderBottom: '1px solid #f9fafb' }}>
-                  <span style={{ fontSize: 13, color: '#9ca3af', fontWeight: 500 }}>{label}</span>
-                  <span style={{ fontSize: 13.5, color: '#111827', fontWeight: 500, textAlign: 'right', maxWidth: '55%' }}>{value}</span>
-                </div>
-              ))}
+            <div style={{ padding: 24 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px 32px' }}>
+                {rows.map(({ label, value }) => (
+                  <div key={label}>
+                    <p style={{ fontSize: 11, fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 4 }}>{label}</p>
+                    <p style={{ fontSize: 14, color: value ? '#111827' : '#d1d5db', fontWeight: value ? 500 : 400 }}>{value || 'Não informado'}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
 
-        {/* Senha */}
         {editing && (
-          <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e5e7eb', marginTop: 16, overflow: 'hidden' }}>
-            <div style={{ padding: '16px 22px', borderBottom: '1px solid #f3f4f6' }}>
-              <p style={{ fontWeight: 600, fontSize: 14, color: '#111827' }}>Alterar senha</p>
+          <div style={{ marginTop: 20, background: '#fff', borderRadius: 16, border: '1px solid #e5e7eb', overflow: 'hidden' }}>
+            <div style={{ padding: '16px 24px', borderBottom: '1px solid #f3f4f6' }}>
+              <h2 style={{ fontWeight: 600, fontSize: 16, color: '#111827' }}>Alterar senha</h2>
             </div>
-            <div style={{ padding: '20px 22px' }}>
+            <div style={{ padding: '20px 24px' }}>
               <ChangePasswordSection />
             </div>
           </div>
@@ -189,28 +180,20 @@ const Profile = () => {
   );
 };
 
-const F = ({ label, children }: { label: string; children: React.ReactNode }) => (
+const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
   <div style={{ marginBottom: 18 }}>
-    <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 6, letterSpacing: '0.3px' }}>{label}</label>
+    <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 6 }}>{label}</label>
     {children}
   </div>
 );
-const Spinner = () => (
-  <div style={{ minHeight: '100vh', background: '#f9fafb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-    <div style={{ width: 32, height: 32, border: '3px solid #0d7a5f', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin .7s linear infinite' }} />
-    <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-  </div>
-);
-const Blocked = ({ onBack }: { onBack: () => void }) => (
-  <div style={{ minHeight: '100vh', background: '#f9fafb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-    <div style={{ textAlign: 'center', padding: 40 }}><p style={{ color: '#6b7280', marginBottom: 16 }}>Você precisa estar logado.</p><button onClick={onBack} style={btnPrimary}>Ir para login</button></div>
-  </div>
-);
+const Spin = () => (<div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><div style={{ width: 32, height: 32, border: '3px solid #0d7a5f', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin .7s linear infinite' }} /><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style></div>);
+const Gated = ({ onBack }: { onBack: () => void }) => (<div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><div style={{ textAlign: 'center', padding: 40 }}><p style={{ color: '#6b7280', marginBottom: 20 }}>Você precisa estar logado.</p><button onClick={onBack} style={{ background: '#0d7a5f', color: '#fff', fontWeight: 600, fontSize: 14, padding: '10px 24px', borderRadius: 8, border: 'none', cursor: 'pointer' }}>Ir para login</button></div></div>);
 
-const backBtn: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 5, background: 'transparent', color: '#6b7280', fontSize: 13, fontWeight: 500, padding: '6px 12px', borderRadius: 8, border: '1px solid #e5e7eb', cursor: 'pointer' };
-const chipBtn: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 5, background: 'transparent', color: '#6b7280', fontSize: 12, fontWeight: 500, padding: '6px 12px', borderRadius: 20, border: '1px solid #e5e7eb', cursor: 'pointer' };
-const btnPrimary: React.CSSProperties = { background: '#0d7a5f', color: '#fff', fontWeight: 600, fontSize: 13.5, padding: '10px 20px', borderRadius: 8, border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, justifyContent: 'center' };
-const btnOutline: React.CSSProperties = { background: 'transparent', color: '#374151', fontSize: 13.5, fontWeight: 500, padding: '10px 20px', borderRadius: 8, border: '1px solid #e5e7eb', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' };
-const inputSt: React.CSSProperties = { width: '100%', height: 40, padding: '0 12px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13, color: '#111827', background: '#fff', outline: 'none', boxSizing: 'border-box' };
+const backBtn: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 5, background: 'transparent', border: '1px solid #e5e7eb', color: '#374151', fontWeight: 500, fontSize: 13, padding: '6px 14px', borderRadius: 8, cursor: 'pointer' };
+const navOutBtn: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 5, background: 'transparent', border: '1px solid #e5e7eb', color: '#6b7280', fontWeight: 500, fontSize: 12, padding: '6px 14px', borderRadius: 8, cursor: 'pointer' };
+const editBtn: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 6, background: '#f3f4f6', color: '#374151', fontWeight: 600, fontSize: 13, padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer' };
+const inp: React.CSSProperties = { width: '100%', padding: '10px 12px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 14, color: '#111827', background: '#fff', outline: 'none', boxSizing: 'border-box' };
+const btnCancel: React.CSSProperties = { background: '#f3f4f6', color: '#374151', fontWeight: 600, fontSize: 14, padding: '10px 22px', borderRadius: 8, border: 'none', cursor: 'pointer', minWidth: 110 };
+const btnSave: React.CSSProperties = { background: '#0d7a5f', color: '#fff', fontWeight: 600, fontSize: 14, padding: '10px 22px', borderRadius: 8, border: 'none', cursor: 'pointer', flex: 1 };
 
 export default Profile;
