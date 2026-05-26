@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { MessageCircle, History, User, Shield, LogOut, ChevronRight, FlaskConical } from 'lucide-react';
+import { MessageCircle, User, Shield, LogOut, ChevronRight, FlaskConical } from 'lucide-react';
 import { InteraAnalisesLogo } from '@/components/InteraAnalisesLogo';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRole } from '@/hooks/useRole';
@@ -21,20 +21,11 @@ const Dashboard = () => {
     {
       icon: MessageCircle,
       title: 'Nova Consulta',
-      desc: 'Descreva seus sintomas ou envie seus exames para receber uma análise personalizada.',
+      desc: 'Descreva seus sintomas ou envie seus exames para receber uma indicação de especialista.',
       btn: 'Iniciar consulta',
       action: () => navigate('/consultation'),
       accent: '#0d7a5f',
       light: '#e6f5f0',
-    },
-    {
-      icon: History,
-      title: 'Histórico',
-      desc: 'Veja todas as suas consultas anteriores e acompanhe a evolução dos resultados.',
-      btn: 'Ver histórico',
-      action: () => navigate('/consultation-history'),
-      accent: '#2563eb',
-      light: '#eff6ff',
     },
     {
       icon: User,
@@ -77,11 +68,11 @@ const Dashboard = () => {
             </div>
             <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', fontWeight: 500 }}>Painel do usuário</span>
           </div>
-          <h1 style={{ fontFamily: "'Inter', sans-serif", fontSize: 'clamp(1.5rem,3vw,2rem)', fontWeight: 700, color: '#fff', marginBottom: 6, letterSpacing: '-0.3px' }}>
+          <h1 style={{ fontSize: 'clamp(1.5rem,3vw,2rem)', fontWeight: 700, color: '#fff', marginBottom: 6, letterSpacing: '-0.3px' }}>
             Olá, bem-vindo ao InteraAnalises!
           </h1>
           <p style={{ color: 'rgba(255,255,255,0.72)', fontSize: 15, maxWidth: 480 }}>
-            Escolha uma opção abaixo para começar.
+            Descreva seus sintomas para receber uma indicação do especialista ideal para você.
           </p>
         </div>
       </div>
@@ -89,51 +80,27 @@ const Dashboard = () => {
       {/* CARDS */}
       <div style={{ maxWidth: 900, margin: '-24px auto 0', padding: '0 24px 64px' }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
-          {cards.map(({ icon: Icon, title, desc, btn, action, accent, light }) => (
-            <div key={title}
-              style={{ background: '#fff', borderRadius: 16, border: '1px solid #e5e7eb', padding: '28px 24px', display: 'flex', flexDirection: 'column', boxShadow: '0 1px 4px rgba(0,0,0,0.04)', transition: 'box-shadow .2s, transform .2s', cursor: 'pointer' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = '0 8px 24px rgba(0,0,0,0.09)'; (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = '0 1px 4px rgba(0,0,0,0.04)'; (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)'; }}
-            >
-              <div style={{ width: 48, height: 48, borderRadius: 14, background: light, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 18 }}>
-                <Icon size={22} color={accent} />
+          {cards.map(card => (
+            <div key={card.title} style={{ background: '#fff', borderRadius: 16, border: '1px solid #e5e7eb', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div style={{ width: 44, height: 44, borderRadius: 12, background: card.light, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <card.icon size={20} color={card.accent} />
               </div>
-              <h3 style={{ fontWeight: 600, fontSize: 16, color: '#111827', marginBottom: 8 }}>{title}</h3>
-              <p style={{ fontSize: 14, color: '#6b7280', lineHeight: 1.6, flexGrow: 1, marginBottom: 20 }}>{desc}</p>
-              <button onClick={action} style={{ background: accent, color: '#fff', border: 'none', borderRadius: 10, padding: '10px 18px', fontWeight: 600, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, alignSelf: 'flex-start', transition: 'opacity .15s' }}
-                onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
-                onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
-              >
-                {btn} <ChevronRight size={15} />
+              <div>
+                <h3 style={{ fontWeight: 700, fontSize: 16, color: '#111827', marginBottom: 6 }}>{card.title}</h3>
+                <p style={{ fontSize: 13.5, color: '#6b7280', lineHeight: 1.6 }}>{card.desc}</p>
+              </div>
+              <button onClick={card.action} style={{ marginTop: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6, background: card.light, color: card.accent, border: 'none', borderRadius: 8, padding: '10px 16px', fontWeight: 600, fontSize: 13.5, cursor: 'pointer', width: 'fit-content' }}>
+                {card.btn} <ChevronRight size={15} />
               </button>
             </div>
           ))}
-
-          {isAdmin && (
-            <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #e5e7eb', padding: '28px 24px', display: 'flex', flexDirection: 'column', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
-              <div style={{ width: 48, height: 48, borderRadius: 14, background: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 18 }}>
-                <Shield size={22} color="#d97706" />
-              </div>
-              <h3 style={{ fontWeight: 600, fontSize: 16, color: '#111827', marginBottom: 8 }}>Painel Admin
-                <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 700, background: '#fef3c7', color: '#92400e', padding: '2px 8px', borderRadius: 20 }}>ADMIN</span>
-              </h3>
-              <p style={{ fontSize: 14, color: '#6b7280', lineHeight: 1.6, flexGrow: 1, marginBottom: 20 }}>Gerencie usuários, consultas e configurações do sistema.</p>
-              <button onClick={() => navigate('/admin')} style={{ background: '#d97706', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 18px', fontWeight: 600, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, alignSelf: 'flex-start' }}>
-                Acessar painel <ChevronRight size={15} />
-              </button>
-            </div>
-          )}
         </div>
       </div>
-
-      <footer style={{ textAlign: 'center', padding: '24px', fontSize: 12, color: '#9ca3af', borderTop: '1px solid #e5e7eb' }}>
-        InteraAnalises · Plataforma educativa em saúde · 2026
-      </footer>
     </div>
   );
 };
 
-const navBtn: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 6, background: '#0d7a5f', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer' };
-const navBtnOutline: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 6, background: 'transparent', color: '#374151', border: '1px solid #e5e7eb', borderRadius: 8, padding: '7px 14px', fontSize: 13, fontWeight: 500, cursor: 'pointer' };
+const navBtn: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 5, background: '#0d7a5f', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer' };
+const navBtnOutline: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 5, background: 'transparent', color: '#374151', border: '1px solid #e5e7eb', borderRadius: 8, padding: '7px 14px', fontSize: 13, fontWeight: 500, cursor: 'pointer' };
 
 export default Dashboard;
