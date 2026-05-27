@@ -1,187 +1,236 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { InteraAnalisesLogo } from '@/components/InteraAnalisesLogo';
-import AuthDialog from '@/components/auth/AuthDialog';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { Microscope, Users, Clock, Shield, ChevronRight, Menu, X } from 'lucide-react';
+/**
+ * Index.tsx — Homepage InteraAnalises
+ * Layout fiel ao Canva: split hero (foto lab esq) + menu vertical direito
+ * 5 seções: Entrar/Cadastre-se · Notícias · Assinatura · Quem somos · Contato
+ */
+import{useState,useEffect,useRef}from'react';
+import{useNavigate}from'react-router-dom';
+import{useAuth}from'@/contexts/AuthContext';
+import AuthDialog from'@/components/auth/AuthDialog';
+import{supabase}from'@/integrations/supabase/client';
 
-const Index = () => {
-  const [authOpen, setAuthOpen] = useState(false);
-  const [mobileMenu, setMobileMenu] = useState(false);
-  const { user, loading } = useAuth();
-  const navigate = useNavigate();
+type Section='auth'|'news'|'pricing'|'about'|'contact'|null;
 
-  useEffect(() => {
-    const obs = new IntersectionObserver(
-      es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); } }),
-      { threshold: 0.1 }
-    );
-    document.querySelectorAll('.fade-up').forEach(el => obs.observe(el));
-    return () => obs.disconnect();
-  }, []);
+const NEWS=[
+  {date:'Mai 2026',tag:'Atualiza\u00e7\u00e3o',title:'IA Gemini 2.5 agora dispon\u00edvel',body:'A nova vers\u00e3o analisa exames com ainda mais precis\u00e3o e retorna indica\u00e7\u00f5es de especialistas em segundos.'},
+  {date:'Abr 2026',tag:'Feature',title:'Busca de especialistas por localiza\u00e7\u00e3o',body:'Agora o sistema detecta automaticamente sua localiza\u00e7\u00e3o e sugere profissionais pr\u00f3ximos ap\u00f3s a an\u00e1lise.'},
+  {date:'Mar 2026',tag:'Parceria',title:'InteraAnalises + InteraSa\u00fade',body:'Integra\u00e7\u00e3o completa com o ecossistema InteraSa\u00fade para acompanhamento longitudinal do paciente.'},
+];
 
-  const goOrAuth = () => { if (!loading) user ? navigate('/consultation') : setAuthOpen(true); };
+const PLANS=[
+  {name:'Gratuito',price:'R$ 0',period:'/m\u00eas',features:['3 an\u00e1lises por m\u00eas','Indica\u00e7\u00e3o de especialista','Hist\u00f3rico b\u00e1sico'],cta:'Come\u00e7ar gr\u00e1tis',highlight:false},
+  {name:'Profissional',price:'R$ 29,90',period:'/m\u00eas',features:['An\u00e1lises ilimitadas','Todos os perfis cl\u00ednicos','Relat\u00f3rio em PDF','Suporte priorit\u00e1rio'],cta:'Assinar agora',highlight:true},
+  {name:'Cl\u00ednica',price:'R$ 99,90',period:'/m\u00eas',features:['M\u00faltiplos usu\u00e1rios','Dashboard administrativo','API de integra\u00e7\u00e3o','SLA 99,9%'],cta:'Falar com vendas',highlight:false},
+];
 
-  return (
-    <div style={{ fontFamily: "'Inter', sans-serif", background: '#ffffff', color: '#111827', minHeight: '100vh' }}>
+const TEAM=[
+  {name:'Dr. Igor Souza',role:'Fundador & Biom\u00e9dico',avatar:'\uD83D\uDD2C'},
+  {name:'Dra. Ana Ferreira',role:'Parasitologia Cl\u00ednica',avatar:'\uD83E\uDDEB'},
+  {name:'Prof. Carlos Lima',role:'Hematologia & IA M\u00e9dica',avatar:'\uD83E\uDE78'},
+];
 
-      {/* ─── NAV ───────────────────────────────────── */}
-      <nav style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(8px)', borderBottom: '1px solid #e5e7eb', padding: '0 24px', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <InteraAnalisesLogo size="sm" onClick={() => navigate('/')} />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {!loading && (
-            user ? (
-              <button onClick={() => navigate('/dashboard')} style={btnPrimary}>Ir para o painel</button>
-            ) : (
-              <>
-                <button onClick={() => setAuthOpen(true)} style={btnGhost}>Entrar</button>
-                <button onClick={() => setAuthOpen(true)} style={btnPrimary}>Criar conta grátis</button>
-              </>
-            )
-          )}
-        </div>
-      </nav>
+const MENU:Array<{id:Section;label:string;icon:string}>=[
+  {id:'auth',   label:'Entrar / Cadastre-se',icon:'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z'},
+  {id:'news',   label:'Not\u00edcias e updates',  icon:'M19 20H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h10l6 6v10a2 2 0 0 1-2 2zM9 14h6M9 10h4'},
+  {id:'pricing',label:'Assinatura',            icon:'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z'},
+  {id:'about',  label:'Quem somos?',           icon:'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75'},
+  {id:'contact',label:'Contato',               icon:'M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2zM22 6l-10 7L2 6'},
+];
 
-      {/* ─── HERO ───────────────────────────────────── */}
-      <section style={{ padding: '80px 24px 72px', maxWidth: 900, margin: '0 auto', textAlign: 'center' }}>
-        <div style={badge}>IA Gemini 2.5 · Gratuito para começar</div>
-        <h1 style={{ fontFamily: "'Inter', sans-serif", fontSize: 'clamp(2rem, 5vw, 3.2rem)', fontWeight: 700, lineHeight: 1.15, color: '#111827', margin: '20px 0 18px', letterSpacing: '-0.5px' }}>
-          Entenda seus exames<br />
-          <span style={{ color: '#0d7a5f' }}>de forma simples e segura</span>
-        </h1>
-        <p style={{ fontSize: 'clamp(1rem, 2vw, 1.15rem)', color: '#6b7280', maxWidth: 560, margin: '0 auto 36px', lineHeight: 1.7 }}>
-          Descreva seus sintomas ou envie seus resultados. Nossa IA explica tudo em uma linguagem que qualquer pessoa entende.
-        </p>
-        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-          <button onClick={goOrAuth} style={{ ...btnPrimary, padding: '14px 32px', fontSize: 16, borderRadius: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
-            {user ? 'Iniciar consulta' : 'Começar agora — é grátis'} <ChevronRight size={18} />
-          </button>
-          <button onClick={() => navigate('/saiba-mais')} style={{ ...btnGhost, padding: '14px 28px', fontSize: 15, borderRadius: 10 }}>Saiba mais</button>
-        </div>
-        {/* Trust strip */}
-        <div style={{ marginTop: 48, display: 'flex', justifyContent: 'center', gap: 32, flexWrap: 'wrap' }}>
-          {[
-            { n: '3', l: 'áreas médicas' },
-            { n: '24/7', l: 'disponível' },
-            { n: '100%', l: 'baseado em ciência' },
-          ].map(({ n, l }) => (
-            <div key={l} style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 24, fontWeight: 700, color: '#0d7a5f' }}>{n}</div>
-              <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>{l}</div>
-            </div>
-          ))}
-        </div>
-      </section>
+export default function Index(){
+  const{user,loading}=useAuth();
+  const navigate=useNavigate();
+  const[active,setActive]=useState<Section>(null);
+  const[authOpen,setAuthOpen]=useState(false);
+  const[sending,setSending]=useState(false);
+  const[sent,setSent]=useState(false);
+  const[contact,setContact]=useState({name:'',email:'',msg:''});
+  const panelRef=useRef<HTMLDivElement>(null);
 
-      {/* ─── HOW IT WORKS ───────────────────────────── */}
-      <section style={{ background: '#f9fafb', borderTop: '1px solid #e5e7eb', borderBottom: '1px solid #e5e7eb', padding: '64px 24px' }}>
-        <div style={{ maxWidth: 800, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 48 }} className="fade-up">
-            <p style={{ fontSize: 12, fontWeight: 600, color: '#0d7a5f', letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: 10 }}>Como funciona</p>
-            <h2 style={{ fontSize: 'clamp(1.5rem,3vw,2.2rem)', fontWeight: 700, color: '#111827', letterSpacing: '-0.3px' }}>Três passos simples</h2>
+  useEffect(()=>{if(!loading&&user)navigate('/dashboard');},[user,loading]);
+
+  useEffect(()=>{
+    const h=(e:MouseEvent)=>{if(panelRef.current&&!panelRef.current.contains(e.target as Node))setActive(null);};
+    document.addEventListener('mousedown',h);
+    return()=>document.removeEventListener('mousedown',h);
+  },[]);
+
+  const toggle=(s:Section)=>setActive(p=>p===s?null:s);
+
+  const sendContact=async(e:React.FormEvent)=>{
+    e.preventDefault();
+    if(!contact.name||!contact.email||!contact.msg)return;
+    setSending(true);
+    await supabase.from('contact_messages').insert({name:contact.name,email:contact.email,message:contact.msg});
+    setSending(false);setSent(true);
+    setContact({name:'',email:'',msg:''});
+    setTimeout(()=>setSent(false),4000);
+  };
+
+  const Ic=({d}:{d:string})=>(
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={d}/></svg>
+  );
+
+  const renderPanel=()=>{
+    switch(active){
+      case'auth': return(
+        <div>
+          <h2 style={ph2}>Acesse sua conta</h2>
+          <p style={psub}>Entre para analisar seus exames ou crie uma conta gratuita.</p>
+          <div style={{display:'flex',flexDirection:'column',gap:12,marginTop:24}}>
+            <button onClick={()=>{setAuthOpen(true);setActive(null);}} style={pbtnP}>Entrar na conta</button>
+            <button onClick={()=>{setAuthOpen(true);setActive(null);}} style={pbtnO}>Criar conta gr\u00e1tis</button>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 24 }}>
-            {[
-              { step: '1', title: 'Descreva', desc: 'Informe seus sintomas, hábitos e resultados de exames no formulário guiado.' },
-              { step: '2', title: 'IA analisa', desc: 'O Gemini 2.5 interpreta suas informações com base em literatura médica atual.' },
-              { step: '3', title: 'Entenda', desc: 'Receba uma explicação clara, alertas e indicação de especialista quando necessário.' },
-            ].map(({ step, title, desc }, i) => (
-              <div key={step} className="fade-up" style={{ background: '#ffffff', borderRadius: 12, border: '1px solid #e5e7eb', padding: 28, position: 'relative', overflow: 'hidden' }}>
-                <div style={{ position: 'absolute', top: -8, right: -4, fontFamily: "'Inter',sans-serif", fontSize: 80, fontWeight: 800, color: '#0d7a5f', opacity: 0.06, lineHeight: 1, userSelect: 'none' }}>{step}</div>
-                <div style={{ width: 36, height: 36, borderRadius: 10, background: '#e6f5f0', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
-                  <span style={{ fontWeight: 700, fontSize: 15, color: '#0d7a5f' }}>{step}</span>
+          <p style={{fontSize:12,color:'rgba(255,255,255,0.3)',marginTop:20,lineHeight:1.6}}>Ao criar uma conta voc\u00ea concorda com nossos Termos de Uso.</p>
+        </div>
+      );
+      case'news': return(
+        <div>
+          <h2 style={ph2}>Not\u00edcias & Updates</h2>
+          <p style={psub}>Novidades da plataforma e da medicina de diagn\u00f3stico.</p>
+          <div style={{marginTop:20,display:'flex',flexDirection:'column',gap:16}}>
+            {NEWS.map((n,i)=>(
+              <div key={i} style={{borderLeft:'2px solid rgba(13,122,95,0.8)',paddingLeft:14}}>
+                <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:4}}>
+                  <span style={{fontSize:10,fontWeight:700,background:'rgba(13,122,95,0.3)',color:'#6ee7b7',padding:'2px 8px',borderRadius:20,letterSpacing:.5}}>{n.tag}</span>
+                  <span style={{fontSize:10,color:'rgba(255,255,255,0.35)'}}>{n.date}</span>
                 </div>
-                <h3 style={{ fontWeight: 600, fontSize: 16, color: '#111827', marginBottom: 8 }}>{title}</h3>
-                <p style={{ fontSize: 14, color: '#6b7280', lineHeight: 1.6 }}>{desc}</p>
+                <div style={{fontSize:14,fontWeight:600,color:'#fff',marginBottom:4}}>{n.title}</div>
+                <div style={{fontSize:12,color:'rgba(255,255,255,0.55)',lineHeight:1.6}}>{n.body}</div>
               </div>
             ))}
           </div>
         </div>
-      </section>
-
-      {/* ─── AREAS ─────────────────────────────────── */}
-      <section style={{ padding: '64px 24px', maxWidth: 900, margin: '0 auto' }}>
-        <div className="fade-up" style={{ textAlign: 'center', marginBottom: 40 }}>
-          <p style={{ fontSize: 12, fontWeight: 600, color: '#0d7a5f', letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: 10 }}>Especialidades</p>
-          <h2 style={{ fontSize: 'clamp(1.5rem,3vw,2.2rem)', fontWeight: 700, color: '#111827', letterSpacing: '-0.3px' }}>O que podemos analisar</h2>
+      );
+      case'pricing': return(
+        <div>
+          <h2 style={ph2}>Planos & Assinatura</h2>
+          <p style={psub}>Escolha o plano ideal para o seu perfil.</p>
+          <div style={{marginTop:20,display:'flex',flexDirection:'column',gap:12}}>
+            {PLANS.map((pl,i)=>(
+              <div key={i} style={{border:pl.highlight?'1.5px solid #0d7a5f':'1px solid rgba(255,255,255,0.12)',borderRadius:14,padding:'14px 16px',background:pl.highlight?'rgba(13,122,95,0.15)':'rgba(255,255,255,0.04)',position:'relative'}}>
+                {pl.highlight&&<span style={{position:'absolute',top:-10,right:14,background:'#0d7a5f',color:'#fff',fontSize:10,fontWeight:700,padding:'2px 10px',borderRadius:20}}>POPULAR</span>}
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:10}}>
+                  <span style={{fontSize:14,fontWeight:700,color:'#fff'}}>{pl.name}</span>
+                  <span style={{fontSize:18,fontWeight:800,color:pl.highlight?'#6ee7b7':'#fff'}}>{pl.price}<span style={{fontSize:11,fontWeight:400,opacity:.6}}>{pl.period}</span></span>
+                </div>
+                <ul style={{paddingLeft:0,listStyle:'none',margin:'0 0 12px',display:'flex',flexDirection:'column',gap:4}}>
+                  {pl.features.map((f,j)=>(<li key={j} style={{fontSize:12,color:'rgba(255,255,255,0.65)',display:'flex',alignItems:'center',gap:6}}><span style={{color:'#6ee7b7',fontSize:13}}>\u2713</span> {f}</li>))}
+                </ul>
+                <button onClick={()=>{setAuthOpen(true);setActive(null);}} style={{...pbtnO,width:'100%',fontSize:12,padding:'8px 0',...(pl.highlight?{background:'#0d7a5f',borderColor:'#0d7a5f'}:{})}}>{pl.cta}</button>
+              </div>
+            ))}
+          </div>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 20 }}>
-          {[
-            { emoji: '🤬', title: 'Parasitologia', desc: 'Exames de fezes, infecções parasitárias, doenças tropicais e mais.', color: '#e6f5f0', textC: '#065f46' },
-            { emoji: '🧪', title: 'Bioquímica', desc: 'Glicemia, colesterol, função renal, hepática e marcadores gerais.', color: '#e8f3fa', textC: '#1e3a5f' },
-            { emoji: '🩸', title: 'Hematologia', desc: 'Hemograma completo, anemias, plaquetas e doenças do sangue.', color: '#fef2f2', textC: '#7f1d1d' },
-          ].map(({ emoji, title, desc, color, textC }) => (
-            <div key={title} className="fade-up" style={{ background: color, borderRadius: 14, padding: '28px 24px', border: '1px solid transparent' }}>
-              <div style={{ fontSize: 32, marginBottom: 14 }}>{emoji}</div>
-              <h3 style={{ fontWeight: 700, fontSize: 17, color: textC, marginBottom: 8 }}>{title}</h3>
-              <p style={{ fontSize: 13.5, color: textC, opacity: 0.75, lineHeight: 1.6 }}>{desc}</p>
+      );
+      case'about': return(
+        <div>
+          <h2 style={ph2}>Quem somos?</h2>
+          <p style={{...psub,marginBottom:20}}>O InteraAnalises nasceu da necessidade de tornar a medicina diagn\u00f3stica acess\u00edvel e centrada no paciente. Somos uma startup brasileira de healthtech especializada em IA para an\u00e1lises laboratoriais.</p>
+          <div style={{display:'flex',flexDirection:'column',gap:12}}>
+            {TEAM.map((t,i)=>(
+              <div key={i} style={{display:'flex',alignItems:'center',gap:12,background:'rgba(255,255,255,0.05)',borderRadius:12,padding:'12px 14px'}}>
+                <span style={{fontSize:24}}>{t.avatar}</span>
+                <div><div style={{fontSize:13,fontWeight:700,color:'#fff'}}>{t.name}</div><div style={{fontSize:11,color:'rgba(255,255,255,0.5)',marginTop:2}}>{t.role}</div></div>
+              </div>
+            ))}
+          </div>
+          <div style={{marginTop:20,background:'rgba(13,122,95,0.15)',borderRadius:12,padding:'14px 16px',border:'1px solid rgba(13,122,95,0.3)'}}>
+            <div style={{fontSize:12,color:'rgba(255,255,255,0.6)',lineHeight:1.8}}>
+              \uD83D\uDD2C Tecnologia baseada em literatura m\u00e9dica revisada por pares.{`\n`}\uD83C\uDFE5 Parceiro do ecossistema InteraSa\u00fade.{`\n`}\uD83C\uDDE7\uD83C\uDDF7 100% feito no Brasil.
             </div>
+          </div>
+        </div>
+      );
+      case'contact': return(
+        <div>
+          <h2 style={ph2}>Fale conosco</h2>
+          <p style={psub}>D\u00favidas, sugest\u00f5es ou parcerias \u2014 estamos aqui.</p>
+          {sent?(
+            <div style={{background:'rgba(13,122,95,0.2)',border:'1px solid #0d7a5f',borderRadius:12,padding:20,marginTop:20,textAlign:'center'}}>
+              <div style={{fontSize:32,marginBottom:10}}>\u2705</div>
+              <div style={{fontSize:14,fontWeight:600,color:'#6ee7b7'}}>Mensagem enviada!</div>
+              <div style={{fontSize:12,color:'rgba(255,255,255,0.55)',marginTop:6}}>Retornaremos em at\u00e9 24h.</div>
+            </div>
+          ):(
+            <form onSubmit={sendContact} style={{marginTop:20,display:'flex',flexDirection:'column',gap:10}}>
+              {([{label:'Nome',key:'name',type:'text',ph:'Seu nome'},{label:'E-mail',key:'email',type:'email',ph:'seu@email.com'}] as any[]).map(f=>(
+                <div key={f.key}>
+                  <label style={plbl}>{f.label}</label>
+                  <input type={f.type} placeholder={f.ph} required value={(contact as any)[f.key]} onChange={e=>setContact(p=>({...p,[f.key]:e.target.value}))} style={pinp}/>
+                </div>
+              ))}
+              <div>
+                <label style={plbl}>Mensagem</label>
+                <textarea placeholder="Escreva sua mensagem\u2026" required rows={4} value={contact.msg} onChange={e=>setContact(p=>({...p,msg:e.target.value}))} style={{...pinp,resize:'none',height:96}}/>
+              </div>
+              <button type="submit" disabled={sending} style={{...pbtnP,opacity:sending?.7:1}}>{sending?'Enviando\u2026':'Enviar mensagem'}</button>
+            </form>
+          )}
+          <div style={{marginTop:20,fontSize:12,color:'rgba(255,255,255,0.4)',lineHeight:1.8}}>\uD83D\uDCE7 contato@interaanalises.com.br{`\n`}\uD83C\uDF10 interaanalises.com.br</div>
+        </div>
+      );
+      default:return null;
+    }
+  };
+
+  return(
+    <div style={{fontFamily:"'Syne','DM Sans',sans-serif",width:'100vw',height:'100vh',display:'flex',overflow:'hidden',position:'relative'}}>
+      <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+
+      {/* ESQUERDA — hero */}
+      <div style={{flex:1,position:'relative',overflow:'hidden',background:'linear-gradient(135deg,#0a0e1a 0%,#0d1f2d 50%,#091a14 100%)'}}>
+        <div style={{position:'absolute',inset:0,background:'url(https://images.unsplash.com/photo-1576086213369-97a306d36557?w=1200&q=80) center/cover no-repeat',opacity:.3}}/>
+        <div style={{position:'absolute',inset:0,background:'linear-gradient(135deg,rgba(9,26,20,0.85) 0%,rgba(10,14,26,0.6) 60%,transparent 100%)'}}/>
+        <div style={{position:'absolute',bottom:0,left:0,right:0,height:'30%',background:'linear-gradient(to top,#0d7a5f 0%,transparent 100%)',opacity:.7}}/>
+        <div style={{position:'relative',zIndex:2,height:'100%',display:'flex',flexDirection:'column',justifyContent:'space-between',padding:'48px 52px'}}>
+          <div style={{fontSize:11,fontWeight:600,letterSpacing:4,color:'rgba(255,255,255,0.4)',textTransform:'uppercase'}}>healthtech \u00b7 diagn\u00f3stico</div>
+          <div>
+            <div style={{lineHeight:.92,marginBottom:28}}>
+              <div style={{fontSize:'clamp(64px,8vw,110px)',fontWeight:800,color:'#fff',fontFamily:"'Syne',sans-serif",letterSpacing:'-3px',textShadow:'0 0 80px rgba(13,122,95,0.4)'}}>Intera</div>
+              <div style={{fontSize:'clamp(64px,8vw,110px)',fontWeight:800,fontFamily:"'Syne',sans-serif",letterSpacing:'-3px',background:'linear-gradient(90deg,#0d7a5f,#6ee7b7)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>An\u00e1lises</div>
+            </div>
+            <div style={{fontSize:'clamp(14px,1.5vw,18px)',fontWeight:400,color:'rgba(255,255,255,0.6)',letterSpacing:1,lineHeight:1.5,maxWidth:380}}>Diagn\u00f3sticos direcionais por IA \u2014 entenda seus exames, encontre o especialista certo.</div>
+            {!loading&&!user&&(
+              <button onClick={()=>setAuthOpen(true)} style={{marginTop:32,display:'inline-flex',alignItems:'center',gap:10,background:'#0d7a5f',color:'#fff',border:'none',borderRadius:12,padding:'14px 28px',fontSize:14,fontWeight:600,cursor:'pointer',letterSpacing:.3,boxShadow:'0 0 40px rgba(13,122,95,0.5)',fontFamily:"'DM Sans',sans-serif"}}>
+                Come\u00e7ar agora \u2014 \u00e9 gr\u00e1tis
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m9 18 6-6-6-6"/></svg>
+              </button>
+            )}
+          </div>
+          <div style={{fontSize:11,color:'rgba(255,255,255,0.25)',letterSpacing:.5}}>\u00a9 2026 InteraAnalises \u00b7 Plataforma educativa em sa\u00fade</div>
+        </div>
+      </div>
+
+      {/* DIREITA — menu + painel */}
+      <div ref={panelRef} style={{width:active?480:280,transition:'width 0.35s cubic-bezier(0.4,0,0.2,1)',background:'linear-gradient(160deg,#0d1117 0%,#0a1628 100%)',borderLeft:'1px solid rgba(255,255,255,0.07)',display:'flex',flexDirection:'column',position:'relative',overflow:'hidden'}}>
+        {/* Menu items */}
+        <div style={{width:280,flexShrink:0,display:'flex',flexDirection:'column',justifyContent:'center',height:'100%',zIndex:2,position:'relative'}}>
+          {MENU.map((item,i)=>(
+            <button key={item.id} onClick={()=>toggle(item.id)} style={{display:'flex',alignItems:'center',gap:16,padding:'22px 32px',background:active===item.id?'rgba(13,122,95,0.15)':'transparent',border:'none',borderLeft:active===item.id?'3px solid #0d7a5f':'3px solid transparent',cursor:'pointer',width:'100%',textAlign:'left',transition:'all 0.2s',borderBottom:i<MENU.length-1?'1px solid rgba(255,255,255,0.05)':'none',fontFamily:"'Syne',sans-serif"}}>
+              <div style={{width:36,height:36,borderRadius:10,background:active===item.id?'rgba(13,122,95,0.4)':'rgba(255,255,255,0.07)',display:'flex',alignItems:'center',justifyContent:'center',color:active===item.id?'#6ee7b7':'rgba(255,255,255,0.4)',flexShrink:0,transition:'all 0.2s'}}>
+                <Ic d={item.icon}/>
+              </div>
+              <span style={{fontSize:13,fontWeight:active===item.id?700:500,color:active===item.id?'#fff':'rgba(255,255,255,0.55)',letterSpacing:.2,transition:'color 0.2s'}}>{item.label}</span>
+              <svg style={{marginLeft:'auto',opacity:active===item.id?1:.25,transform:active===item.id?'rotate(90deg)':'none',transition:'all .2s',flexShrink:0}} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="m9 18 6-6-6-6"/></svg>
+            </button>
           ))}
         </div>
-      </section>
-
-      {/* ─── PARA QUEM ─────────────────────────────── */}
-      <section style={{ background: '#f9fafb', borderTop: '1px solid #e5e7eb', borderBottom: '1px solid #e5e7eb', padding: '64px 24px' }}>
-        <div style={{ maxWidth: 900, margin: '0 auto' }}>
-          <div className="fade-up" style={{ textAlign: 'center', marginBottom: 40 }}>
-            <p style={{ fontSize: 12, fontWeight: 600, color: '#0d7a5f', letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: 10 }}>Para quem é</p>
-            <h2 style={{ fontSize: 'clamp(1.5rem,3vw,2.2rem)', fontWeight: 700, color: '#111827', letterSpacing: '-0.3px' }}>Serve para qualquer pessoa</h2>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
-            {[
-              { icon: '👤', title: 'Paciente comum', desc: 'Receba explicações simples, sem termos técnicos difíceis de entender.', tag: 'Linguagem simples' },
-              { icon: '🎓', title: 'Estudante de saúde', desc: 'Aprofunde seu estudo com respostas baseadas em literatura atualizada.', tag: 'Nível técnico' },
-              { icon: '🩺', title: 'Profissional de saúde', desc: 'Consulte rápido, compare valores de referência e acesse sugestões clínicas.', tag: 'Nível avançado' },
-            ].map(({ icon, title, desc, tag }) => (
-              <div key={title} className="fade-up" style={{ background: '#ffffff', borderRadius: 12, border: '1px solid #e5e7eb', padding: 24 }}>
-                <div style={{ fontSize: 28, marginBottom: 14 }}>{icon}</div>
-                <h3 style={{ fontWeight: 600, fontSize: 15, color: '#111827', marginBottom: 6 }}>{title}</h3>
-                <p style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.65, marginBottom: 14 }}>{desc}</p>
-                <span style={{ display: 'inline-block', background: '#e6f5f0', color: '#065f46', fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 20 }}>{tag}</span>
-              </div>
-            ))}
-          </div>
+        {/* Painel expansivo */}
+        <div style={{position:'absolute',left:280,top:0,right:0,bottom:0,overflowY:'auto',padding:active?'48px 32px':'48px 0',opacity:active?1:0,transition:'opacity 0.25s 0.1s',scrollbarWidth:'thin',scrollbarColor:'rgba(255,255,255,0.1) transparent'}}>
+          {renderPanel()}
         </div>
-      </section>
+        <div style={{position:'absolute',right:0,top:'10%',bottom:'10%',width:1,background:'linear-gradient(to bottom,transparent,rgba(13,122,95,0.5),transparent)'}}/>
+      </div>
 
-      {/* ─── DISCLAIMER ─────────────────────────────── */}
-      <section style={{ padding: '48px 24px', maxWidth: 700, margin: '0 auto', textAlign: 'center' }} className="fade-up">
-        <div style={{ background: '#fff8ec', border: '1px solid #fcd34d', borderRadius: 12, padding: '20px 24px' }}>
-          <p style={{ fontSize: 13, color: '#92400e', lineHeight: 1.7 }}>
-            <strong>Importante:</strong> O InteraAnalises fornece informações educativas baseadas em IA. As respostas não substituem consulta médica. Em caso de dúvida, procure sempre um profissional de saúde.
-          </p>
-        </div>
-      </section>
-
-      {/* ─── CTA FINAL ─────────────────────────────── */}
-      <section style={{ background: '#0d7a5f', padding: '72px 24px', textAlign: 'center' }}>
-        <div style={{ maxWidth: 560, margin: '0 auto' }} className="fade-up">
-          <h2 style={{ fontSize: 'clamp(1.5rem,3vw,2.2rem)', fontWeight: 700, color: '#ffffff', marginBottom: 16, letterSpacing: '-0.3px' }}>Pronto para entender seus exames?</h2>
-          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 15, marginBottom: 32 }}>Sem custo. Sem burocracia. Resultado em segundos.</p>
-          <button onClick={goOrAuth} style={{ background: '#ffffff', color: '#0d7a5f', fontWeight: 700, fontSize: 15, padding: '14px 36px', borderRadius: 10, border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-            Começar agora <ChevronRight size={18} />
-          </button>
-        </div>
-      </section>
-
-      {/* ─── FOOTER ─────────────────────────────────── */}
-      <footer style={{ background: '#111827', padding: '32px 24px', textAlign: 'center' }}>
-        <div style={{ marginBottom: 16 }}>
-          <InteraAnalisesLogo size="sm" inverted />
-        </div>
-        <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>
-          © 2026 InteraAnalises · <a href="https://interasaude.vercel.app" target="_blank" rel="noreferrer" style={{ color: 'rgba(255,255,255,0.5)', textDecoration: 'none' }}>InteraSaúde</a> · Plataforma educativa em saúde
-        </p>
-      </footer>
-
-      <AuthDialog open={authOpen} onOpenChange={setAuthOpen} />
+      <AuthDialog open={authOpen} onOpenChange={setAuthOpen}/>
     </div>
   );
-};
+}
 
-const btnPrimary: React.CSSProperties = { background: '#0d7a5f', color: '#ffffff', fontWeight: 600, fontSize: 14, padding: '9px 20px', borderRadius: 8, border: 'none', cursor: 'pointer', transition: 'opacity .15s' };
-const btnGhost: React.CSSProperties = { background: 'transparent', color: '#374151', fontWeight: 500, fontSize: 14, padding: '9px 18px', borderRadius: 8, border: '1px solid #e5e7eb', cursor: 'pointer' };
-const badge: React.CSSProperties = { display: 'inline-block', background: '#e6f5f0', color: '#065f46', fontSize: 12, fontWeight: 600, padding: '4px 14px', borderRadius: 20, letterSpacing: '0.3px' };
-
-export default Index;
+const ph2:React.CSSProperties={fontSize:20,fontWeight:800,color:'#fff',letterSpacing:'-0.3px',marginBottom:8,fontFamily:"'Syne',sans-serif"};
+const psub:React.CSSProperties={fontSize:13,color:'rgba(255,255,255,0.5)',lineHeight:1.65};
+const pbtnP:React.CSSProperties={background:'#0d7a5f',color:'#fff',border:'none',borderRadius:10,padding:'12px 20px',fontSize:14,fontWeight:600,cursor:'pointer',width:'100%',letterSpacing:.2};
+const pbtnO:React.CSSProperties={background:'transparent',color:'rgba(255,255,255,0.8)',border:'1px solid rgba(255,255,255,0.2)',borderRadius:10,padding:'12px 20px',fontSize:14,fontWeight:500,cursor:'pointer',width:'100%'};
+const plbl:React.CSSProperties={display:'block',fontSize:10,fontWeight:700,color:'rgba(255,255,255,0.4)',letterSpacing:1.5,textTransform:'uppercase',marginBottom:6};
+const pinp:React.CSSProperties={width:'100%',background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.12)',borderRadius:10,padding:'10px 14px',fontSize:13,color:'#fff',outline:'none',boxSizing:'border-box'};
