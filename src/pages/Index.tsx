@@ -3,6 +3,7 @@ import{useNavigate}from'react-router-dom';
 import{useAuth}from'@/contexts/AuthContext';
 import AuthDialog from'@/components/auth/AuthDialog';
 import{supabase}from'@/integrations/supabase/client';
+import iaBg from'@/assets/ia-homepage-bg.png';
 
 type Section='auth'|'news'|'pricing'|'about'|'contact'|null;
 
@@ -143,8 +144,6 @@ export default function Index(){
     }
   };
 
-  const CSS_BG=`url("${`/ia-homepage-bg.png`}")`;
-
   return(
     <>
       <style>{`
@@ -153,94 +152,27 @@ export default function Index(){
         body{overflow:hidden}
         .ia-root{width:100vw;height:100vh;display:flex;font-family:'Inter',sans-serif;overflow:hidden}
         .ia-left{flex:1;position:relative;overflow:hidden;min-width:0}
-        .ia-bg{
-          position:absolute;inset:0;
-          background-image:var(--ia-bg);
-          background-size:cover;
-          background-position:center center;
-          background-repeat:no-repeat;
-        }
-        .ia-hero{
-          position:absolute;
-          top:50%;left:0;
-          transform:translateY(-60%);
-          padding:0 52px;
-        }
-        .ia-title{
-          font-family:'Playfair Display',Georgia,serif;
-          font-size:clamp(64px,8vw,108px);
-          font-weight:900;
-          line-height:0.88;
-          letter-spacing:-1px;
-          color:#3b4da0;
-        }
+        .ia-bg{position:absolute;inset:0;background-size:cover;background-position:center center;background-repeat:no-repeat;}
+        .ia-hero{position:absolute;top:50%;left:0;transform:translateY(-60%);padding:0 52px;}
+        .ia-title{font-family:'Playfair Display',Georgia,serif;font-size:clamp(64px,8vw,108px);font-weight:900;line-height:0.88;letter-spacing:-1px;color:#3b4da0;}
         .ia-title span{display:block}
-        .ia-diag{
-          display:inline-block;
-          margin-top:20px;
-          border:2px solid rgba(59,77,160,0.45);
-          border-radius:40px;
-          padding:10px 26px;
-          font-family:'Inter',sans-serif;
-          font-size:clamp(13px,1.4vw,18px);
-          font-weight:600;
-          color:#3b4da0;
-          background:rgba(255,255,255,0.2);
-          backdrop-filter:blur(3px);
-          -webkit-backdrop-filter:blur(3px);
-        }
-        .ia-right{
-          width:390px;
-          flex-shrink:0;
-          background:#e8e9ea;
-          display:flex;
-          flex-direction:row;
-          transition:width 0.3s cubic-bezier(0.4,0,0.2,1);
-          overflow:hidden;
-        }
+        .ia-diag{display:inline-block;margin-top:20px;border:2px solid rgba(59,77,160,0.45);border-radius:40px;padding:10px 26px;font-family:'Inter',sans-serif;font-size:clamp(13px,1.4vw,18px);font-weight:600;color:#3b4da0;background:rgba(255,255,255,0.2);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);}
+        .ia-right{width:390px;flex-shrink:0;background:#e8e9ea;display:flex;flex-direction:row;transition:width 0.3s cubic-bezier(0.4,0,0.2,1);overflow:hidden;}
         .ia-right.expanded{width:690px}
-        .ia-menu{
-          width:390px;
-          flex-shrink:0;
-          display:flex;
-          flex-direction:column;
-          justify-content:center;
-          gap:16px;
-          padding:0 36px;
-        }
-        .ia-item{
-          display:flex;
-          align-items:center;
-          gap:12px;
-          padding:14px 20px;
-          border-radius:40px;
-          background:#fff;
-          border:1px solid rgba(0,0,0,0.08);
-          cursor:pointer;
-          transition:all .15s;
-          box-shadow:0 1px 4px rgba(0,0,0,0.06);
-          font-family:'Inter',sans-serif;
-          width:100%;
-          text-align:left;
-        }
+        .ia-menu{width:390px;flex-shrink:0;display:flex;flex-direction:column;justify-content:center;gap:16px;padding:0 36px;}
+        .ia-item{display:flex;align-items:center;gap:12px;padding:14px 20px;border-radius:40px;background:#fff;border:1px solid rgba(0,0,0,0.08);cursor:pointer;transition:all .15s;box-shadow:0 1px 4px rgba(0,0,0,0.06);font-family:'Inter',sans-serif;width:100%;text-align:left;}
         .ia-item:hover{background:#f5f5fa;border-color:rgba(59,77,160,0.3)}
         .ia-item.active{background:#eef0fa;border-color:rgba(59,77,160,0.5);box-shadow:0 0 0 2px rgba(59,77,160,0.12)}
         .ia-star{width:20px;height:20px;flex-shrink:0}
         .ia-label{flex:1;font-size:14px;font-weight:600;color:#2d2d4e;letter-spacing:0.1px}
-        .ia-panel{
-          flex:1;
-          overflow-y:auto;
-          padding:44px 32px;
-          border-left:1px solid rgba(0,0,0,0.08);
-          background:#f0f1f5;
-        }
+        .ia-panel{flex:1;overflow-y:auto;padding:44px 32px;border-left:1px solid rgba(0,0,0,0.08);background:#f0f1f5;}
         .ia-panel::-webkit-scrollbar{width:4px}
         .ia-panel::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.12);border-radius:2px}
       `}</style>
 
       <div className="ia-root">
         <div className="ia-left">
-          <div className="ia-bg" style={{'--ia-bg':CSS_BG} as React.CSSProperties}/>
+          <div className="ia-bg" style={{backgroundImage:`url(${iaBg})`}}/>
           <div className="ia-hero">
             <div className="ia-title">
               <span>Intera</span>
