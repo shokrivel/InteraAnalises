@@ -1,9 +1,9 @@
+import'./ia-bg.css';
 import{useState}from'react';
 import{useNavigate}from'react-router-dom';
 import{useAuth}from'@/contexts/AuthContext';
 import AuthDialog from'@/components/auth/AuthDialog';
 import{supabase}from'@/integrations/supabase/client';
-import iaBg from'@/assets/ia-homepage-bg.png';
 
 type Section='auth'|'news'|'pricing'|'about'|'contact'|null;
 
@@ -172,7 +172,7 @@ export default function Index(){
 
       <div className="ia-root">
         <div className="ia-left">
-          <div className="ia-bg" style={{backgroundImage:`url(${iaBg})`}}/>
+          <div className="ia-bg"/>
           <div className="ia-hero">
             <div className="ia-title">
               <span>Intera</span>
