@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import AuthDialog from '@/components/auth/AuthDialog';
 import { supabase } from '@/integrations/supabase/client';
+// @ts-ignore
+import iaBgUrl from './ia-homepage-bg.png';
 
 type Section = 'auth' | 'news' | 'pricing' | 'about' | 'contact' | null;
 
@@ -12,9 +14,9 @@ const NEWS = [
   { date: 'Mar 2026', tag: 'Parceria', title: 'InteraAnalises + InteraSaude', body: 'Integracao completa com o ecossistema InteraSaude para acompanhamento longitudinal.' },
 ];
 const PLANS = [
-  { name: 'Gratuito',      price: 'R$ 0',     period: '/mes', features: ['3 analises por mes', 'Indicacao de especialista'], cta: 'Comecar gratis', hi: false },
-  { name: 'Profissional',  price: 'R$ 29,90', period: '/mes', features: ['Analises ilimitadas', 'Todos os perfis clinicos', 'Relatorio PDF'], cta: 'Assinar agora', hi: true },
-  { name: 'Clinica',       price: 'R$ 99,90', period: '/mes', features: ['Multiplos usuarios', 'API de integracao', 'SLA 99,9%'], cta: 'Falar com vendas', hi: false },
+  { name: 'Gratuito',     price: 'R$ 0',     period: '/mes', features: ['3 analises por mes', 'Indicacao de especialista'], cta: 'Comecar gratis', hi: false },
+  { name: 'Profissional', price: 'R$ 29,90', period: '/mes', features: ['Analises ilimitadas', 'Todos os perfis clinicos', 'Relatorio PDF'], cta: 'Assinar agora', hi: true },
+  { name: 'Clinica',      price: 'R$ 99,90', period: '/mes', features: ['Multiplos usuarios', 'API de integracao', 'SLA 99,9%'], cta: 'Falar com vendas', hi: false },
 ];
 const TEAM = [
   { name: 'Dr. Igor Souza',    role: 'Fundador & Biomedico' },
@@ -142,112 +144,44 @@ export default function Index() {
   };
 
   return (
-    <div id="ia-root" style={{
-      position: 'fixed', inset: 0,
-      display: 'flex', overflow: 'hidden',
-      fontFamily: "'Inter', sans-serif",
-      background: '#e8e9ea',
-    }}>
+    <div style={S.root}>
 
-      {/* ===== LADO ESQUERDO — imagem de fundo ===== */}
-      <div style={{ flex: 1, position: 'relative', overflow: 'hidden', minWidth: 0 }}>
-
-        {/* Imagem do Canva — ia-homepage-bg.png em src/pages/ */}
-        <div style={{
-          position: 'absolute', inset: 0,
-          backgroundImage: "url('/src/pages/ia-homepage-bg.png')",
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-        }} />
-
-        {/* Textos hero */}
-        <div style={{
-          position: 'absolute',
-          top: '50%', left: 0,
-          transform: 'translateY(-60%)',
-          padding: '0 52px',
-        }}>
-          <div style={{
-            fontFamily: "'Playfair Display', Georgia, serif",
-            fontSize: 'clamp(64px, 8vw, 108px)',
-            fontWeight: 900,
-            lineHeight: 0.88,
-            letterSpacing: '-1px',
-            color: '#3b4da0',
-            margin: 0,
-          }}>
+      {/* ESQUERDA — imagem do Canva como fundo */}
+      <div style={S.left}>
+        <div style={{ ...S.bg, backgroundImage: `url(${iaBgUrl})` }} />
+        <div style={S.hero}>
+          <div style={S.title}>
             <div>Intera</div>
             <div>Analises</div>
           </div>
-          <div style={{
-            display: 'inline-block',
-            marginTop: 20,
-            border: '2px solid rgba(59,77,160,0.45)',
-            borderRadius: 40,
-            padding: '10px 26px',
-            fontFamily: "'Inter', sans-serif",
-            fontSize: 'clamp(13px, 1.4vw, 18px)',
-            fontWeight: 600,
-            color: '#3b4da0',
-            background: 'rgba(255,255,255,0.2)',
-            backdropFilter: 'blur(3px)',
-          }}>
-            Diagnosticos direcionais
-          </div>
+          <div style={S.pill}>Diagnosticos direcionais</div>
         </div>
       </div>
 
-      {/* ===== LADO DIREITO — menu cinza ===== */}
-      <div style={{
-        width: active ? 690 : 390,
-        flexShrink: 0,
-        background: '#e8e9ea',
-        display: 'flex',
-        flexDirection: 'row',
-        transition: 'width 0.3s cubic-bezier(0.4,0,0.2,1)',
-        overflow: 'hidden',
-      }}>
+      {/* DIREITA — menu cinza + painel */}
+      <div style={{ ...S.right, width: active ? 690 : 390 }}>
 
-        {/* Pills do menu */}
-        <div style={{
-          width: 390,
-          flexShrink: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          gap: 16,
-          padding: '0 36px',
-        }}>
+        {/* 5 pills */}
+        <div style={S.menu}>
           {MENU.map(item => (
             <button
               key={item.id}
               onClick={() => toggle(item.id)}
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                padding: '14px 20px',
-                borderRadius: 40,
+                ...S.item,
                 background: active === item.id ? '#eef0fa' : '#fff',
-                border: active === item.id ? '1px solid rgba(59,77,160,0.5)' : '1px solid rgba(0,0,0,0.08)',
-                boxShadow: active === item.id ? '0 0 0 2px rgba(59,77,160,0.12)' : '0 1px 4px rgba(0,0,0,0.06)',
-                cursor: 'pointer',
-                width: '100%',
-                textAlign: 'left',
-                fontFamily: "'Inter', sans-serif",
-                outline: 'none',
+                border: active === item.id
+                  ? '1px solid rgba(59,77,160,0.5)'
+                  : '1px solid rgba(0,0,0,0.08)',
+                boxShadow: active === item.id
+                  ? '0 0 0 2px rgba(59,77,160,0.12)'
+                  : '0 1px 4px rgba(0,0,0,0.06)',
               }}
             >
-              {/* Estrela laranja */}
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
                 <path d="M12 2C10.5 7 7 10.5 2 12c5 1.5 8.5 5 10 10 1.5-5 5-8.5 10-10-5-1.5-8.5-5-10-10z" fill="#FF8A65" />
               </svg>
-              {/* Label */}
-              <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: '#2d2d4e', letterSpacing: '0.1px' }}>
-                {item.label}
-              </span>
-              {/* Seta > */}
+              <span style={S.label}>{item.label}</span>
               <svg width="7" height="12" viewBox="0 0 7 12" fill="none" style={{ flexShrink: 0 }}>
                 <path d="M1 1l5 5-5 5" stroke={active === item.id ? '#3b4da0' : '#bbb'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
@@ -255,15 +189,9 @@ export default function Index() {
           ))}
         </div>
 
-        {/* Painel de conteudo */}
+        {/* Conteudo */}
         {active && (
-          <div style={{
-            flex: 1,
-            overflowY: 'auto',
-            padding: '44px 32px',
-            borderLeft: '1px solid rgba(0,0,0,0.08)',
-            background: '#f0f1f5',
-          }}>
+          <div style={S.panel}>
             {renderContent()}
           </div>
         )}
@@ -274,7 +202,22 @@ export default function Index() {
   );
 }
 
-const ptitle: React.CSSProperties = { fontSize: 18, fontWeight: 700, color: '#2d2d4e', marginBottom: 8, margin: '0 0 8px 0' };
+// Todos os estilos como constantes — zero CSS externo, zero conflito
+const S = {
+  root:  { position: 'fixed' as const, inset: 0, display: 'flex', overflow: 'hidden', fontFamily: "'Inter',sans-serif", background: '#e8e9ea' },
+  left:  { flex: 1, position: 'relative' as const, overflow: 'hidden', minWidth: 0 },
+  bg:    { position: 'absolute' as const, inset: 0, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' },
+  hero:  { position: 'absolute' as const, top: '50%', left: 0, transform: 'translateY(-60%)', padding: '0 52px' },
+  title: { fontFamily: "'Playfair Display',Georgia,serif", fontSize: 'clamp(64px,8vw,108px)', fontWeight: 900, lineHeight: 0.88, letterSpacing: '-1px', color: '#3b4da0' },
+  pill:  { display: 'inline-block', marginTop: 20, border: '2px solid rgba(59,77,160,0.45)', borderRadius: 40, padding: '10px 26px', fontSize: 'clamp(13px,1.4vw,18px)', fontWeight: 600, color: '#3b4da0', background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(3px)' },
+  right: { flexShrink: 0, background: '#e8e9ea', display: 'flex', flexDirection: 'row' as const, transition: 'width 0.3s cubic-bezier(0.4,0,0.2,1)', overflow: 'hidden' },
+  menu:  { width: 390, flexShrink: 0, display: 'flex', flexDirection: 'column' as const, justifyContent: 'center', gap: 16, padding: '0 36px' },
+  item:  { display: 'flex', alignItems: 'center', gap: 12, padding: '14px 20px', borderRadius: 40, cursor: 'pointer', width: '100%', textAlign: 'left' as const, fontFamily: "'Inter',sans-serif", outline: 'none' },
+  label: { flex: 1, fontSize: 14, fontWeight: 600, color: '#2d2d4e', letterSpacing: '0.1px' },
+  panel: { flex: 1, overflowY: 'auto' as const, padding: '44px 32px', borderLeft: '1px solid rgba(0,0,0,0.08)', background: '#f0f1f5' },
+};
+
+const ptitle: React.CSSProperties = { fontSize: 18, fontWeight: 700, color: '#2d2d4e', margin: '0 0 8px' };
 const psub: React.CSSProperties   = { fontSize: 13, color: '#555', lineHeight: 1.65 };
 const btnP: React.CSSProperties   = { background: '#3b4da0', color: '#fff', border: 'none', borderRadius: 10, padding: '12px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer', width: '100%' };
 const btnO: React.CSSProperties   = { background: 'transparent', color: '#3b4da0', border: '1.5px solid #3b4da0', borderRadius: 10, padding: '12px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer', width: '100%' };
