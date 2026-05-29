@@ -67,7 +67,7 @@ export default function Index() {
       );
       case 'news': return (
         <div style={{ maxWidth: 300 }}>
-          <h2 style={ptitle}>Noticias & Updates</h2>
+          <h2 style={ptitle}>Noticias e Updates</h2>
           <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
             {NEWS.map((n, i) => (
               <div key={i} style={{ borderLeft: '3px solid #3b4da0', paddingLeft: 14 }}>
@@ -84,7 +84,7 @@ export default function Index() {
       );
       case 'pricing': return (
         <div style={{ maxWidth: 300 }}>
-          <h2 style={ptitle}>Planos & Assinatura</h2>
+          <h2 style={ptitle}>Planos e Assinatura</h2>
           <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
             {PLANS.map((pl, i) => (
               <div key={i} style={{ border: pl.hi ? '1.5px solid #3b4da0' : '1px solid #d0d0e0', borderRadius: 12, padding: '12px 14px', background: pl.hi ? 'rgba(59,77,160,0.06)' : '#fff', position: 'relative' }}>
@@ -105,7 +105,7 @@ export default function Index() {
       case 'about': return (
         <div style={{ maxWidth: 300 }}>
           <h2 style={ptitle}>Quem somos?</h2>
-          <p style={{ ...psub, marginBottom: 16 }}>Somos uma startup brasileira de healthtech que desenvolve IA especializada em analises laboratoriais - Parasitologia, Bioquimica e Hematologia.</p>
+          <p style={{ ...psub, marginBottom: 16 }}>Somos uma startup brasileira de healthtech que desenvolve IA especializada em analises laboratoriais.</p>
           {TEAM.map((t, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(59,77,160,0.05)', borderRadius: 10, padding: '10px 12px', marginBottom: 8 }}>
               <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(59,77,160,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#3b4da0', flexShrink: 0 }}>{t.name.split(' ').map((w: string) => w[0]).slice(0, 2).join('')}</div>
@@ -119,9 +119,7 @@ export default function Index() {
           <h2 style={ptitle}>Contato</h2>
           {sent ? (
             <div style={{ background: 'rgba(59,77,160,0.08)', border: '1px solid #3b4da0', borderRadius: 10, padding: 20, marginTop: 16, textAlign: 'center' }}>
-              <div style={{ fontSize: 28, marginBottom: 8 }}>OK</div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: '#3b4da0' }}>Mensagem enviada!</div>
-              <div style={{ fontSize: 12, color: '#888', marginTop: 4 }}>Retornaremos em ate 24h.</div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: '#3b4da0', marginTop: 8 }}>Mensagem enviada! Retornaremos em ate 24h.</div>
             </div>
           ) : (
             <form onSubmit={sendContact} style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -138,40 +136,183 @@ export default function Index() {
               <button type="submit" disabled={sending} style={{ ...btnP, opacity: sending ? .7 : 1 }}>{sending ? 'Enviando...' : 'Enviar'}</button>
             </form>
           )}
-          <div style={{ marginTop: 14, fontSize: 11, color: '#888', lineHeight: 1.8 }}>contato@interaanalises.com.br</div>
+          <div style={{ marginTop: 14, fontSize: 11, color: '#888' }}>contato@interaanalises.com.br</div>
         </div>
       );
       default: return null;
     }
   };
 
+  // Estilos scoped — todos com !important para sobrescrever Tailwind base reset
+  const rootStyle: React.CSSProperties = {
+    position: 'fixed',
+    inset: 0,
+    width: '100vw',
+    height: '100vh',
+    display: 'flex',
+    fontFamily: "'Inter', sans-serif",
+    overflow: 'hidden',
+    zIndex: 0,
+  };
+
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Inter:wght@400;500;600;700&display=swap');
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        body { overflow: hidden; }
-        .ia-root { width: 100vw; height: 100vh; display: flex; font-family: 'Inter', sans-serif; overflow: hidden; position: fixed; top: 0; left: 0; }
-        .ia-left { flex: 1; position: relative; overflow: hidden; min-width: 0; }
-        .ia-bg { position: absolute; inset: 0; background-size: cover; background-position: center center; background-repeat: no-repeat; }
-        .ia-hero { position: absolute; top: 50%; left: 0; transform: translateY(-60%); padding: 0 52px; }
-        .ia-title { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(64px, 8vw, 108px); font-weight: 900; line-height: 0.88; letter-spacing: -1px; color: #3b4da0; }
-        .ia-title span { display: block; }
-        .ia-diag { display: inline-block; margin-top: 20px; border: 2px solid rgba(59,77,160,0.45); border-radius: 40px; padding: 10px 26px; font-family: 'Inter', sans-serif; font-size: clamp(13px, 1.4vw, 18px); font-weight: 600; color: #3b4da0; background: rgba(255,255,255,0.2); backdrop-filter: blur(3px); }
-        .ia-right { width: 390px; flex-shrink: 0; background: #e8e9ea; display: flex; flex-direction: row; transition: width 0.3s cubic-bezier(0.4,0,0.2,1); overflow: hidden; }
-        .ia-right.expanded { width: 690px; }
-        .ia-menu { width: 390px; flex-shrink: 0; display: flex; flex-direction: column; justify-content: center; gap: 16px; padding: 0 36px; }
-        .ia-item { display: flex; align-items: center; gap: 12px; padding: 14px 20px; border-radius: 40px; background: #fff; border: 1px solid rgba(0,0,0,0.08); cursor: pointer; transition: all .15s; box-shadow: 0 1px 4px rgba(0,0,0,0.06); font-family: 'Inter', sans-serif; width: 100%; text-align: left; }
-        .ia-item:hover { background: #f5f5fa; border-color: rgba(59,77,160,0.3); }
-        .ia-item.active { background: #eef0fa; border-color: rgba(59,77,160,0.5); box-shadow: 0 0 0 2px rgba(59,77,160,0.12); }
-        .ia-star { width: 20px; height: 20px; flex-shrink: 0; }
-        .ia-label { flex: 1; font-size: 14px; font-weight: 600; color: #2d2d4e; letter-spacing: 0.1px; }
-        .ia-panel { flex: 1; overflow-y: auto; padding: 44px 32px; border-left: 1px solid rgba(0,0,0,0.08); background: #f0f1f5; }
-        .ia-panel::-webkit-scrollbar { width: 4px; }
-        .ia-panel::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 2px; }
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Inter:wght@400;500;600;700&display=swap');
+
+        /* Neutraliza Tailwind base reset APENAS para esta pagina */
+        body:has(#ia-homepage) {
+          overflow: hidden !important;
+          margin: 0 !important;
+          padding: 0 !important;
+        }
+
+        #ia-homepage * {
+          box-sizing: border-box !important;
+        }
+
+        /* Layout raiz */
+        #ia-homepage {
+          position: fixed !important;
+          inset: 0 !important;
+          display: flex !important;
+          overflow: hidden !important;
+          background: #e8e9ea !important;
+        }
+
+        /* Lado esquerdo - foto */
+        #ia-homepage .ia-left {
+          flex: 1 !important;
+          position: relative !important;
+          overflow: hidden !important;
+          min-width: 0 !important;
+        }
+
+        #ia-homepage .ia-bg {
+          position: absolute !important;
+          inset: 0 !important;
+          background-size: cover !important;
+          background-position: center center !important;
+          background-repeat: no-repeat !important;
+        }
+
+        /* Hero text */
+        #ia-homepage .ia-hero {
+          position: absolute !important;
+          top: 50% !important;
+          left: 0 !important;
+          transform: translateY(-60%) !important;
+          padding: 0 52px !important;
+        }
+
+        #ia-homepage .ia-title {
+          font-family: 'Playfair Display', Georgia, serif !important;
+          font-size: clamp(64px, 8vw, 108px) !important;
+          font-weight: 900 !important;
+          line-height: 0.88 !important;
+          letter-spacing: -1px !important;
+          color: #3b4da0 !important;
+          margin: 0 !important;
+          padding: 0 !important;
+        }
+
+        #ia-homepage .ia-title span {
+          display: block !important;
+        }
+
+        #ia-homepage .ia-diag {
+          display: inline-block !important;
+          margin-top: 20px !important;
+          border: 2px solid rgba(59,77,160,0.45) !important;
+          border-radius: 40px !important;
+          padding: 10px 26px !important;
+          font-family: 'Inter', sans-serif !important;
+          font-size: clamp(13px, 1.4vw, 18px) !important;
+          font-weight: 600 !important;
+          color: #3b4da0 !important;
+          background: rgba(255,255,255,0.2) !important;
+          backdrop-filter: blur(3px) !important;
+        }
+
+        /* Lado direito - menu */
+        #ia-homepage .ia-right {
+          width: 390px !important;
+          flex-shrink: 0 !important;
+          background: #e8e9ea !important;
+          display: flex !important;
+          flex-direction: row !important;
+          transition: width 0.3s cubic-bezier(0.4,0,0.2,1) !important;
+          overflow: hidden !important;
+        }
+
+        #ia-homepage .ia-right.expanded {
+          width: 690px !important;
+        }
+
+        #ia-homepage .ia-menu {
+          width: 390px !important;
+          flex-shrink: 0 !important;
+          display: flex !important;
+          flex-direction: column !important;
+          justify-content: center !important;
+          gap: 16px !important;
+          padding: 0 36px !important;
+        }
+
+        /* Pills do menu */
+        #ia-homepage .ia-item {
+          display: flex !important;
+          align-items: center !important;
+          gap: 12px !important;
+          padding: 14px 20px !important;
+          border-radius: 40px !important;
+          background: #fff !important;
+          border: 1px solid rgba(0,0,0,0.08) !important;
+          cursor: pointer !important;
+          transition: all .15s !important;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.06) !important;
+          font-family: 'Inter', sans-serif !important;
+          width: 100% !important;
+          text-align: left !important;
+          text-decoration: none !important;
+          outline: none !important;
+        }
+
+        #ia-homepage .ia-item:hover {
+          background: #f5f5fa !important;
+          border-color: rgba(59,77,160,0.3) !important;
+        }
+
+        #ia-homepage .ia-item.active {
+          background: #eef0fa !important;
+          border-color: rgba(59,77,160,0.5) !important;
+          box-shadow: 0 0 0 2px rgba(59,77,160,0.12) !important;
+        }
+
+        #ia-homepage .ia-label {
+          flex: 1 !important;
+          font-size: 14px !important;
+          font-weight: 600 !important;
+          color: #2d2d4e !important;
+          letter-spacing: 0.1px !important;
+          font-family: 'Inter', sans-serif !important;
+        }
+
+        /* Painel expansivel */
+        #ia-homepage .ia-panel {
+          flex: 1 !important;
+          overflow-y: auto !important;
+          padding: 44px 32px !important;
+          border-left: 1px solid rgba(0,0,0,0.08) !important;
+          background: #f0f1f5 !important;
+        }
+
+        #ia-homepage .ia-panel::-webkit-scrollbar { width: 4px; }
+        #ia-homepage .ia-panel::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 2px; }
       `}</style>
 
-      <div className="ia-root">
+      <div id="ia-homepage">
+        {/* Esquerda - foto */}
         <div className="ia-left">
           <div className="ia-bg" />
           <div className="ia-hero">
@@ -183,6 +324,7 @@ export default function Index() {
           </div>
         </div>
 
+        {/* Direita - menu */}
         <div className={`ia-right${active ? ' expanded' : ''}`}>
           <div className="ia-menu">
             {MENU.map(item => (
@@ -191,7 +333,7 @@ export default function Index() {
                 className={`ia-item${active === item.id ? ' active' : ''}`}
                 onClick={() => toggle(item.id)}
               >
-                <svg className="ia-star" viewBox="0 0 24 24" fill="none">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
                   <path d="M12 2C10.5 7 7 10.5 2 12c5 1.5 8.5 5 10 10 1.5-5 5-8.5 10-10-5-1.5-8.5-5-10-10z" fill="#FF8A65" />
                 </svg>
                 <span className="ia-label">{item.label}</span>
@@ -215,7 +357,7 @@ export default function Index() {
   );
 }
 
-const ptitle: React.CSSProperties = { fontSize: 18, fontWeight: 700, color: '#2d2d4e', marginBottom: 8, letterSpacing: '-0.2px' };
+const ptitle: React.CSSProperties = { fontSize: 18, fontWeight: 700, color: '#2d2d4e', marginBottom: 8 };
 const psub: React.CSSProperties = { fontSize: 13, color: '#555', lineHeight: 1.65 };
 const btnP: React.CSSProperties = { background: '#3b4da0', color: '#fff', border: 'none', borderRadius: 10, padding: '12px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer', width: '100%' };
 const btnO: React.CSSProperties = { background: 'transparent', color: '#3b4da0', border: '1.5px solid #3b4da0', borderRadius: 10, padding: '12px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer', width: '100%' };
