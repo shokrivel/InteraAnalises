@@ -8,7 +8,8 @@ export function InteraAnalisesLogo({
   size?: 'sm' | 'md' | 'lg';
   onClick?: () => void;
 }) {
-  const widths = { sm: 160, md: 280, lg: 360 };
+  // sm = nav header (altura ~32px) | md = 280px largura | lg = maior
+  const widths = { sm: 180, md: 280, lg: 360 };
 
   return (
     <img
