@@ -7,9 +7,9 @@ export function InteraAnalisesLogo({
   size?: 'sm' | 'md' | 'lg';
   onClick?: () => void;
 }) {
-  // A logo tem aspect ratio ~3:1 (1024x345)
-  // Definimos a LARGURA para que seja legível, não a altura
-  const widths = { sm: 160, md: 200, lg: 260 };
+  // Logo original: ~1057x344px (aspect ratio ~3:1)
+  // 280px de largura conforme solicitado
+  const widths = { sm: 160, md: 280, lg: 360 };
 
   return (
     <img
