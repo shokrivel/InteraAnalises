@@ -1,4 +1,4 @@
-import logoSvg from '@/assets/interasaude-logo.svg';
+import logoSvg from '@/assets/InteraAnalisesLogo.svg';
 
 export function InteraAnalisesLogo({
   size = 'md',
