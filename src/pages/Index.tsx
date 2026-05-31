@@ -6,18 +6,21 @@ import { supabase } from '@/integrations/supabase/client';
 
 type Panel = 'auth' | 'news' | 'newsletter' | 'about' | 'contact' | null;
 
-const BLUE = '#3b4da0';
-const DARK = '#2d2d4e';
-const GRAY = '#e8e9ea';
-const STAR = '#FF8A65';
+// === Paleta da logo InteraAnalises ===
+const TEAL       = '#00BDB0'; // fita/pincelada
+const TEAL_DARK  = '#008F89'; // hover
+const TEAL_LIGHT = '#E0F7F6'; // bg suave
+const SLATE      = '#3D4A52'; // texto escuro
+const GRAY_BG    = '#e8e9ea'; // fundo direito (mantido do design)
+const STAR       = '#00BDB0'; // estrela usando teal
 
 const T = {
-  ptitle:    { fontSize:18, fontWeight:700, color:DARK, margin:'0 0 8px' } as React.CSSProperties,
-  psub:      { fontSize:13, color:'#666', lineHeight:1.65, margin:0 } as React.CSSProperties,
-  plbl:      { display:'block', fontSize:9, fontWeight:700, color:'#999', letterSpacing:1.5, textTransform:'uppercase' as const, marginBottom:5 },
-  pinp:      { width:'100%', background:'#fff', border:'1px solid #ddd', borderRadius:8, padding:'9px 12px', fontSize:13, color:DARK, outline:'none', fontFamily:"'Inter',sans-serif" } as React.CSSProperties,
-  btnFill:   { background:BLUE, color:'#fff', border:'none', borderRadius:10, padding:'11px 18px', fontSize:13, fontWeight:600, cursor:'pointer', width:'100%', fontFamily:"'Inter',sans-serif" } as React.CSSProperties,
-  btnOutline:{ background:'transparent', color:BLUE, border:`1.5px solid ${BLUE}`, borderRadius:10, padding:'11px 18px', fontSize:13, fontWeight:600, cursor:'pointer', width:'100%', fontFamily:"'Inter',sans-serif" } as React.CSSProperties,
+  ptitle:     { fontSize:18, fontWeight:700, color:SLATE, margin:'0 0 8px' } as React.CSSProperties,
+  psub:       { fontSize:13, color:'#6b7280', lineHeight:1.65, margin:0 } as React.CSSProperties,
+  plbl:       { display:'block', fontSize:9, fontWeight:700, color:'#8C9BAA', letterSpacing:1.5, textTransform:'uppercase' as const, marginBottom:5 },
+  pinp:       { width:'100%', background:'#fff', border:'1px solid #d1d9de', borderRadius:8, padding:'9px 12px', fontSize:13, color:SLATE, outline:'none', fontFamily:"'Inter',sans-serif" } as React.CSSProperties,
+  btnFill:    { background:TEAL, color:'#fff', border:'none', borderRadius:10, padding:'11px 18px', fontSize:13, fontWeight:600, cursor:'pointer', width:'100%', fontFamily:"'Inter',sans-serif" } as React.CSSProperties,
+  btnOutline: { background:'transparent', color:TEAL_DARK, border:`1.5px solid ${TEAL}`, borderRadius:10, padding:'11px 18px', fontSize:13, fontWeight:600, cursor:'pointer', width:'100%', fontFamily:"'Inter',sans-serif" } as React.CSSProperties,
 };
 
 const MENU: Array<{ id: Panel; label: string }> = [
@@ -41,7 +44,6 @@ export default function Index() {
   const [contactSending, setContactSending] = useState(false);
 
   if (!loading && user) { navigate('/dashboard'); return null; }
-
   const toggle = (p: Panel) => setOpen(prev => prev === p ? null : p);
 
   const subscribe = async (e: React.FormEvent) => {
@@ -86,10 +88,10 @@ export default function Index() {
           <h2 style={T.ptitle}>Assine nossa newsletter</h2>
           <p style={T.psub}>Receba novidades e conteudos exclusivos no seu e-mail.</p>
           {subDone ? (
-            <div style={{ marginTop:20, background:'rgba(59,77,160,0.08)', border:`1px solid ${BLUE}`, borderRadius:12, padding:18, textAlign:'center' }}>
-              <div style={{ fontSize:24, color:BLUE }}>&#10003;</div>
-              <div style={{ fontSize:14, fontWeight:600, color:BLUE, marginTop:6 }}>Inscricao confirmada!</div>
-              <div style={{ fontSize:12, color:'#888', marginTop:4 }}>Obrigado por assinar!</div>
+            <div style={{ marginTop:20, background:TEAL_LIGHT, border:`1px solid ${TEAL}`, borderRadius:12, padding:18, textAlign:'center' }}>
+              <div style={{ fontSize:24, color:TEAL }}>&#10003;</div>
+              <div style={{ fontSize:14, fontWeight:600, color:TEAL_DARK, marginTop:6 }}>Inscricao confirmada!</div>
+              <div style={{ fontSize:12, color:'#6b7280', marginTop:4 }}>Obrigado por assinar!</div>
             </div>
           ) : (
             <form onSubmit={subscribe} style={{ marginTop:20, display:'flex', flexDirection:'column', gap:10 }}>
@@ -98,7 +100,7 @@ export default function Index() {
               <button type="submit" disabled={subLoading} style={{ ...T.btnFill, opacity:subLoading?.7:1 }}>
                 {subLoading ? 'Aguarde...' : 'Quero receber novidades'}
               </button>
-              <p style={{ fontSize:11, color:'#aaa', margin:0 }}>Sem spam. Cancele quando quiser.</p>
+              <p style={{ fontSize:11, color:'#8C9BAA', margin:0 }}>Sem spam. Cancele quando quiser.</p>
             </form>
           )}
         </div>
@@ -110,8 +112,8 @@ export default function Index() {
             O InteraAnalises e uma plataforma brasileira de saude digital que usa inteligencia artificial
             para auxiliar na interpretacao de exames laboratoriais e direcionar pacientes ao especialista correto.
           </p>
-          <div style={{ background:'rgba(59,77,160,0.06)', borderRadius:12, padding:'14px 16px', fontSize:13, color:DARK, lineHeight:1.7 }}>
-            <div style={{ fontWeight:700, marginBottom:6, color:BLUE }}>Nossa missao</div>
+          <div style={{ background:TEAL_LIGHT, borderRadius:12, padding:'14px 16px', fontSize:13, color:SLATE, lineHeight:1.7, border:`1px solid ${TEAL}33` }}>
+            <div style={{ fontWeight:700, marginBottom:6, color:TEAL_DARK }}>Nossa missao</div>
             Tornar o diagnostico medico mais acessivel, preciso e centrado no paciente.
           </div>
         </div>
@@ -121,9 +123,9 @@ export default function Index() {
           <h2 style={T.ptitle}>Contato</h2>
           <p style={T.psub}>Fale com nossa equipe. Respondemos em ate 24h em dias uteis.</p>
           {contactDone ? (
-            <div style={{ marginTop:20, background:'rgba(59,77,160,0.08)', border:`1px solid ${BLUE}`, borderRadius:12, padding:18, textAlign:'center' }}>
-              <div style={{ fontSize:24, color:BLUE }}>&#10003;</div>
-              <div style={{ fontSize:14, fontWeight:600, color:BLUE, marginTop:6 }}>Mensagem enviada!</div>
+            <div style={{ marginTop:20, background:TEAL_LIGHT, border:`1px solid ${TEAL}`, borderRadius:12, padding:18, textAlign:'center' }}>
+              <div style={{ fontSize:24, color:TEAL }}>&#10003;</div>
+              <div style={{ fontSize:14, fontWeight:600, color:TEAL_DARK, marginTop:6 }}>Mensagem enviada!</div>
             </div>
           ) : (
             <form onSubmit={sendContact} style={{ marginTop:18, display:'flex', flexDirection:'column', gap:10 }}>
@@ -138,7 +140,7 @@ export default function Index() {
               </button>
             </form>
           )}
-          <div style={{ marginTop:16, fontSize:12, color:'#999' }}>contato@interaanalises.com.br</div>
+          <div style={{ marginTop:16, fontSize:12, color:'#8C9BAA' }}>contato@interaanalises.com.br</div>
         </div>
       );
       default: return null;
@@ -148,35 +150,30 @@ export default function Index() {
   return (
     <div style={{ position:'fixed', inset:0, display:'flex', overflow:'hidden', fontFamily:"'Inter',sans-serif" }}>
 
-      {/* ═══ ESQUERDA ═══ */}
+      {/* ESQUERDA */}
       <div style={{ flex:1, position:'relative', overflow:'hidden', background:'#c8d8e8' }}>
-
-        {/* Fundo: quando ia-homepage-bg.png existir no repositorio,
-            adicionar: import iaBg from './ia-homepage-bg.png'
-            e substituir o background abaixo por: backgroundImage:`url(${iaBg})`
-            Enquanto o arquivo nao existe, exibe gradiente neutro. */}
         <div style={{
           position:'absolute', inset:0,
-          background:'linear-gradient(135deg, #b8cfe0 0%, #d0e4f0 40%, #e8f0f8 100%)',
+          background:'linear-gradient(135deg, #b8d4e8 0%, #cce4f0 40%, #e0f7f6 100%)',
         }}/>
-
-        {/* Textos hero — posicao fiel ao Canva */}
         <div style={{ position:'absolute', top:'38%', left:'18%', transform:'translateY(-50%)' }}>
-          <div style={{
-            fontFamily:"'Playfair Display', Georgia, serif",
-            fontSize:'clamp(56px,7.5vw,100px)',
-            fontWeight:900, lineHeight:0.9,
-            color:BLUE, letterSpacing:'-1px',
-          }}>
-            <div>Intera</div>
-            <div style={{ color:'#5562c4' }}>Analises</div>
-          </div>
+          {/* Logo PNG substituindo o texto */}
+          <img
+            src="/src/assets/InteraAnalisesLogo.png"
+            alt="InteraAnalises"
+            style={{ width: 340, height:'auto', display:'block', filter:'drop-shadow(0 4px 16px rgba(0,189,176,0.18))' }}
+            onError={e => {
+              // fallback: texto se a imagem nao carregar
+              const t = e.currentTarget;
+              t.style.display = 'none';
+            }}
+          />
           <div style={{
             marginTop:22, display:'inline-block',
-            border:'2px solid rgba(59,77,160,0.5)',
+            border:`2px solid ${TEAL}88`,
             borderRadius:40, padding:'9px 24px',
             fontSize:'clamp(12px,1.3vw,17px)',
-            fontWeight:600, color:BLUE,
+            fontWeight:600, color:TEAL_DARK,
             background:'rgba(255,255,255,0.35)',
             backdropFilter:'blur(4px)',
           }}>
@@ -185,33 +182,33 @@ export default function Index() {
         </div>
       </div>
 
-      {/* ═══ DIREITA — cinza, 5 pills ═══ */}
+      {/* DIREITA */}
       <div style={{
         width: open ? 680 : 370,
-        flexShrink:0, background:GRAY,
+        flexShrink:0, background:GRAY_BG,
         display:'flex', overflow:'hidden',
         transition:'width 0.32s cubic-bezier(0.4,0,0.2,1)',
       }}>
-
         {/* Pills */}
         <div style={{ width:370, flexShrink:0, display:'flex', flexDirection:'column', justifyContent:'center', gap:14, padding:'0 32px' }}>
           {MENU.map(item => (
             <button key={item.id} onClick={() => toggle(item.id)} style={{
               display:'flex', alignItems:'center', gap:12,
               padding:'13px 18px', borderRadius:50,
-              background: open===item.id ? '#eef0fa' : '#ffffff',
-              border: open===item.id ? `1.5px solid ${BLUE}` : '1px solid rgba(0,0,0,0.1)',
-              boxShadow: open===item.id ? `0 0 0 3px rgba(59,77,160,0.1)` : '0 1px 3px rgba(0,0,0,0.07)',
+              background: open===item.id ? TEAL_LIGHT : '#ffffff',
+              border: open===item.id ? `1.5px solid ${TEAL}` : '1px solid rgba(0,0,0,0.1)',
+              boxShadow: open===item.id ? `0 0 0 3px ${TEAL}22` : '0 1px 3px rgba(0,0,0,0.07)',
               cursor:'pointer', width:'100%',
               fontFamily:"'Inter',sans-serif",
               outline:'none', textAlign:'left', transition:'all 0.15s',
             }}>
+              {/* Estrela teal */}
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ flexShrink:0 }}>
                 <path d="M12 2C10.5 7 7 10.5 2 12c5 1.5 8.5 5 10 10 1.5-5 5-8.5 10-10-5-1.5-8.5-5-10-10z" fill={STAR}/>
               </svg>
-              <span style={{ flex:1, fontSize:14, fontWeight:600, color:DARK, letterSpacing:'0.1px' }}>{item.label}</span>
+              <span style={{ flex:1, fontSize:14, fontWeight:600, color:SLATE, letterSpacing:'0.1px' }}>{item.label}</span>
               <svg width="7" height="11" viewBox="0 0 7 12" fill="none" style={{ flexShrink:0 }}>
-                <path d="M1 1l5 5-5 5" stroke={open===item.id ? BLUE : '#bbb'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M1 1l5 5-5 5" stroke={open===item.id ? TEAL : '#bbb'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </button>
           ))}
@@ -219,7 +216,7 @@ export default function Index() {
 
         {/* Painel */}
         {open && (
-          <div style={{ flex:1, overflowY:'auto', padding:'48px 28px', borderLeft:'1px solid rgba(0,0,0,0.07)', background:'#f2f3f7' }}>
+          <div style={{ flex:1, overflowY:'auto', padding:'48px 28px', borderLeft:'1px solid rgba(0,0,0,0.07)', background:'#f5fafa' }}>
             {panel()}
           </div>
         )}

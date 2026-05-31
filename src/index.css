@@ -6,34 +6,45 @@
 
 @layer base {
   :root {
+    /* === Cores da logo InteraAnalises === */
+    /* Teal primario (fita/pincelada da logo) */
+    --teal:        #00BDB0;
+    --teal-dark:   #008F89;
+    --teal-light:  #E0F7F6;
+    /* Cinza escuro (texto "analises") */
+    --slate:       #3D4A52;
+    /* Cinza medio (texto "intera") */
+    --slate-mid:   #8C9BAA;
+
+    /* Tailwind/shadcn tokens remapeados para o esquema da logo */
     --background: 0 0% 100%;
-    --foreground: 220 14% 8%;
+    --foreground: 202 16% 28%;      /* #3D4A52 */
     --card: 0 0% 100%;
-    --card-foreground: 220 14% 8%;
+    --card-foreground: 202 16% 28%;
     --popover: 0 0% 100%;
-    --popover-foreground: 220 14% 8%;
-    --primary: 164 83% 27%;
+    --popover-foreground: 202 16% 28%;
+    --primary: 178 100% 37%;        /* #00BDB0 */
     --primary-foreground: 0 0% 100%;
-    --secondary: 164 40% 95%;
-    --secondary-foreground: 164 83% 20%;
-    --muted: 220 9% 96%;
-    --muted-foreground: 220 9% 46%;
-    --accent: 164 40% 95%;
-    --accent-foreground: 164 83% 20%;
+    --secondary: 178 100% 95%;      /* #E0F7F6 */
+    --secondary-foreground: 178 100% 28%;
+    --muted: 200 14% 96%;
+    --muted-foreground: 202 12% 55%;
+    --accent: 178 100% 95%;
+    --accent-foreground: 178 100% 28%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 164 83% 27%;
+    --border: 200 14% 90%;
+    --input: 200 14% 90%;
+    --ring: 178 100% 37%;           /* teal */
     --radius: 0.5rem;
     --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 220 14% 8%;
-    --sidebar-primary: 164 83% 27%;
+    --sidebar-foreground: 202 16% 28%;
+    --sidebar-primary: 178 100% 37%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 164 40% 95%;
-    --sidebar-accent-foreground: 164 83% 20%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 164 83% 27%;
+    --sidebar-accent: 178 100% 95%;
+    --sidebar-accent-foreground: 178 100% 28%;
+    --sidebar-border: 200 14% 90%;
+    --sidebar-ring: 178 100% 37%;
   }
 }
 
