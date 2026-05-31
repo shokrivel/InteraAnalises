@@ -1,4 +1,5 @@
-import logoSvg from '@/assets/InteraAnalisesLogo.svg';
+// @ts-ignore
+import logoPng from '@/assets/InteraAnalisesLogo.png';
 
 export function InteraAnalisesLogo({
   size = 'md',
@@ -7,13 +8,11 @@ export function InteraAnalisesLogo({
   size?: 'sm' | 'md' | 'lg';
   onClick?: () => void;
 }) {
-  // Logo original: ~1057x344px (aspect ratio ~3:1)
-  // 280px de largura conforme solicitado
   const widths = { sm: 160, md: 280, lg: 360 };
 
   return (
     <img
-      src={logoSvg}
+      src={logoPng}
       alt="InteraAnalises"
       style={{
         width: widths[size],
