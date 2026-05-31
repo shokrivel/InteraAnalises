@@ -1,4 +1,4 @@
-import logoSvg from '@/assets/InteraAnalisesLogo.svg';
+import logoSvg from '@/assets/interasaude-logo.svg';
 
 export function InteraAnalisesLogo({
   size = 'md',
@@ -8,15 +8,13 @@ export function InteraAnalisesLogo({
   onClick?: () => void;
 }) {
   const heights = { sm: 28, md: 36, lg: 48 };
-  const h = heights[size];
 
   return (
     <img
       src={logoSvg}
       alt="InteraAnalises"
-      height={h}
       style={{
-        height: h,
+        height: heights[size],
         width: 'auto',
         display: 'block',
         cursor: onClick ? 'pointer' : 'default',
