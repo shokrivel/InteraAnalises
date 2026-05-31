@@ -7,15 +7,17 @@ export function InteraAnalisesLogo({
   size?: 'sm' | 'md' | 'lg';
   onClick?: () => void;
 }) {
-  const heights = { sm: 28, md: 36, lg: 48 };
+  // A logo tem aspect ratio ~3:1 (1024x345)
+  // Definimos a LARGURA para que seja legível, não a altura
+  const widths = { sm: 160, md: 200, lg: 260 };
 
   return (
     <img
       src={logoSvg}
       alt="InteraAnalises"
       style={{
-        height: heights[size],
-        width: 'auto',
+        width: widths[size],
+        height: 'auto',
         display: 'block',
         cursor: onClick ? 'pointer' : 'default',
         userSelect: 'none',
