@@ -145,44 +145,29 @@ export default function Index() {
   return (
     <div style={{ position:'fixed', inset:0, display:'flex', overflow:'hidden', fontFamily:"'Inter',sans-serif" }}>
 
-      {/* ESQUERDA — fundo gradiente teal */}
+      {/* ESQUERDA */}
       <div style={{ flex:1, position:'relative', overflow:'hidden' }}>
         <div style={{ position:'absolute', inset:0, background:'linear-gradient(135deg, #b8d4e8 0%, #cce4f0 40%, #e0f7f6 100%)' }}/>
-
-        {/* Logo centralizada verticalmente */}
         <div style={{
           position:'absolute',
           top:'50%', left:'50%',
           transform:'translate(-50%, -50%)',
-          display:'flex', flexDirection:'column',
-          alignItems:'center', gap:24,
         }}>
           <img
             src={logoImg}
             alt="InteraAnalises"
             style={{
-              width: 320,
+              width: 800,
+              maxWidth: '90%',
               height: 'auto',
               display: 'block',
-              filter: 'drop-shadow(0 4px 20px rgba(0,189,176,0.25))',
+              filter: 'drop-shadow(0 4px 24px rgba(0,189,176,0.22))',
             }}
           />
-          <div style={{
-            display:'inline-block',
-            border:`2px solid ${TEAL}88`,
-            borderRadius:40, padding:'9px 28px',
-            fontSize:'clamp(13px,1.3vw,17px)',
-            fontWeight:600, color:TEAL_DARK,
-            background:'rgba(255,255,255,0.45)',
-            backdropFilter:'blur(4px)',
-            letterSpacing:'0.3px',
-          }}>
-            Diagnosticos direcionais
-          </div>
         </div>
       </div>
 
-      {/* DIREITA — menu cinza */}
+      {/* DIREITA */}
       <div style={{
         width: open ? 680 : 370,
         flexShrink:0, background:GRAY_BG,
