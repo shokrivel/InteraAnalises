@@ -3,16 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import AuthDialog from '@/components/auth/AuthDialog';
 import { supabase } from '@/integrations/supabase/client';
+// @ts-ignore
+import logoImg from '@/assets/InteraAnalisesLogo.png';
 
 type Panel = 'auth' | 'news' | 'newsletter' | 'about' | 'contact' | null;
 
-// === Paleta da logo InteraAnalises ===
-const TEAL       = '#00BDB0'; // fita/pincelada
-const TEAL_DARK  = '#008F89'; // hover
-const TEAL_LIGHT = '#E0F7F6'; // bg suave
-const SLATE      = '#3D4A52'; // texto escuro
-const GRAY_BG    = '#e8e9ea'; // fundo direito (mantido do design)
-const STAR       = '#00BDB0'; // estrela usando teal
+const TEAL       = '#00BDB0';
+const TEAL_DARK  = '#008F89';
+const TEAL_LIGHT = '#E0F7F6';
+const SLATE      = '#3D4A52';
+const GRAY_BG    = '#e8e9ea';
 
 const T = {
   ptitle:     { fontSize:18, fontWeight:700, color:SLATE, margin:'0 0 8px' } as React.CSSProperties,
@@ -78,9 +78,7 @@ export default function Index() {
         <div>
           <h2 style={T.ptitle}>Noticias e updates</h2>
           <p style={T.psub}>Fique por dentro das novidades da plataforma e da medicina diagnostica.</p>
-          <button style={{ ...T.btnFill, marginTop:22 }} onClick={() => navigate('/noticias')}>
-            Ver todas as noticias
-          </button>
+          <button style={{ ...T.btnFill, marginTop:22 }} onClick={() => navigate('/noticias')}>Ver todas as noticias</button>
         </div>
       );
       case 'newsletter': return (
@@ -96,7 +94,7 @@ export default function Index() {
           ) : (
             <form onSubmit={subscribe} style={{ marginTop:20, display:'flex', flexDirection:'column', gap:10 }}>
               <label style={T.plbl}>Seu e-mail</label>
-              <input type="email" required placeholder="voce@email.com" value={email} onChange={e => setEmail(e.target.value)} style={T.pinp} />
+              <input type="email" required placeholder="voce@email.com" value={email} onChange={e => setEmail(e.target.value)} style={T.pinp}/>
               <button type="submit" disabled={subLoading} style={{ ...T.btnFill, opacity:subLoading?.7:1 }}>
                 {subLoading ? 'Aguarde...' : 'Quero receber novidades'}
               </button>
@@ -108,10 +106,7 @@ export default function Index() {
       case 'about': return (
         <div>
           <h2 style={T.ptitle}>Quem somos?</h2>
-          <p style={{ ...T.psub, marginBottom:16 }}>
-            O InteraAnalises e uma plataforma brasileira de saude digital que usa inteligencia artificial
-            para auxiliar na interpretacao de exames laboratoriais e direcionar pacientes ao especialista correto.
-          </p>
+          <p style={{ ...T.psub, marginBottom:16 }}>O InteraAnalises e uma plataforma brasileira de saude digital que usa inteligencia artificial para auxiliar na interpretacao de exames laboratoriais e direcionar pacientes ao especialista correto.</p>
           <div style={{ background:TEAL_LIGHT, borderRadius:12, padding:'14px 16px', fontSize:13, color:SLATE, lineHeight:1.7, border:`1px solid ${TEAL}33` }}>
             <div style={{ fontWeight:700, marginBottom:6, color:TEAL_DARK }}>Nossa missao</div>
             Tornar o diagnostico medico mais acessivel, preciso e centrado no paciente.
@@ -150,46 +145,50 @@ export default function Index() {
   return (
     <div style={{ position:'fixed', inset:0, display:'flex', overflow:'hidden', fontFamily:"'Inter',sans-serif" }}>
 
-      {/* ESQUERDA */}
-      <div style={{ flex:1, position:'relative', overflow:'hidden', background:'#c8d8e8' }}>
+      {/* ESQUERDA — fundo gradiente teal */}
+      <div style={{ flex:1, position:'relative', overflow:'hidden' }}>
+        <div style={{ position:'absolute', inset:0, background:'linear-gradient(135deg, #b8d4e8 0%, #cce4f0 40%, #e0f7f6 100%)' }}/>
+
+        {/* Logo centralizada verticalmente */}
         <div style={{
-          position:'absolute', inset:0,
-          background:'linear-gradient(135deg, #b8d4e8 0%, #cce4f0 40%, #e0f7f6 100%)',
-        }}/>
-        <div style={{ position:'absolute', top:'38%', left:'18%', transform:'translateY(-50%)' }}>
-          {/* Logo PNG substituindo o texto */}
+          position:'absolute',
+          top:'50%', left:'50%',
+          transform:'translate(-50%, -50%)',
+          display:'flex', flexDirection:'column',
+          alignItems:'center', gap:24,
+        }}>
           <img
-            src="/src/assets/InteraAnalisesLogo.png"
+            src={logoImg}
             alt="InteraAnalises"
-            style={{ width: 340, height:'auto', display:'block', filter:'drop-shadow(0 4px 16px rgba(0,189,176,0.18))' }}
-            onError={e => {
-              // fallback: texto se a imagem nao carregar
-              const t = e.currentTarget;
-              t.style.display = 'none';
+            style={{
+              width: 320,
+              height: 'auto',
+              display: 'block',
+              filter: 'drop-shadow(0 4px 20px rgba(0,189,176,0.25))',
             }}
           />
           <div style={{
-            marginTop:22, display:'inline-block',
+            display:'inline-block',
             border:`2px solid ${TEAL}88`,
-            borderRadius:40, padding:'9px 24px',
-            fontSize:'clamp(12px,1.3vw,17px)',
+            borderRadius:40, padding:'9px 28px',
+            fontSize:'clamp(13px,1.3vw,17px)',
             fontWeight:600, color:TEAL_DARK,
-            background:'rgba(255,255,255,0.35)',
+            background:'rgba(255,255,255,0.45)',
             backdropFilter:'blur(4px)',
+            letterSpacing:'0.3px',
           }}>
             Diagnosticos direcionais
           </div>
         </div>
       </div>
 
-      {/* DIREITA */}
+      {/* DIREITA — menu cinza */}
       <div style={{
         width: open ? 680 : 370,
         flexShrink:0, background:GRAY_BG,
         display:'flex', overflow:'hidden',
         transition:'width 0.32s cubic-bezier(0.4,0,0.2,1)',
       }}>
-        {/* Pills */}
         <div style={{ width:370, flexShrink:0, display:'flex', flexDirection:'column', justifyContent:'center', gap:14, padding:'0 32px' }}>
           {MENU.map(item => (
             <button key={item.id} onClick={() => toggle(item.id)} style={{
@@ -202,9 +201,8 @@ export default function Index() {
               fontFamily:"'Inter',sans-serif",
               outline:'none', textAlign:'left', transition:'all 0.15s',
             }}>
-              {/* Estrela teal */}
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ flexShrink:0 }}>
-                <path d="M12 2C10.5 7 7 10.5 2 12c5 1.5 8.5 5 10 10 1.5-5 5-8.5 10-10-5-1.5-8.5-5-10-10z" fill={STAR}/>
+                <path d="M12 2C10.5 7 7 10.5 2 12c5 1.5 8.5 5 10 10 1.5-5 5-8.5 10-10-5-1.5-8.5-5-10-10z" fill={TEAL}/>
               </svg>
               <span style={{ flex:1, fontSize:14, fontWeight:600, color:SLATE, letterSpacing:'0.1px' }}>{item.label}</span>
               <svg width="7" height="11" viewBox="0 0 7 12" fill="none" style={{ flexShrink:0 }}>
@@ -214,7 +212,6 @@ export default function Index() {
           ))}
         </div>
 
-        {/* Painel */}
         {open && (
           <div style={{ flex:1, overflowY:'auto', padding:'48px 28px', borderLeft:'1px solid rgba(0,0,0,0.07)', background:'#f5fafa' }}>
             {panel()}
