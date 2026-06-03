@@ -6,26 +6,20 @@
 
 @layer base {
   :root {
-    /* === Cores da logo InteraAnalises === */
-    /* Teal primario (fita/pincelada da logo) */
     --teal:        #00BDB0;
     --teal-dark:   #008F89;
     --teal-light:  #E0F7F6;
-    /* Cinza escuro (texto "analises") */
     --slate:       #3D4A52;
-    /* Cinza medio (texto "intera") */
     --slate-mid:   #8C9BAA;
-
-    /* Tailwind/shadcn tokens remapeados para o esquema da logo */
     --background: 0 0% 100%;
-    --foreground: 202 16% 28%;      /* #3D4A52 */
+    --foreground: 202 16% 28%;
     --card: 0 0% 100%;
     --card-foreground: 202 16% 28%;
     --popover: 0 0% 100%;
     --popover-foreground: 202 16% 28%;
-    --primary: 178 100% 37%;        /* #00BDB0 */
+    --primary: 178 100% 37%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 178 100% 95%;      /* #E0F7F6 */
+    --secondary: 178 100% 95%;
     --secondary-foreground: 178 100% 28%;
     --muted: 200 14% 96%;
     --muted-foreground: 202 12% 55%;
@@ -35,7 +29,7 @@
     --destructive-foreground: 0 0% 100%;
     --border: 200 14% 90%;
     --input: 200 14% 90%;
-    --ring: 178 100% 37%;           /* teal */
+    --ring: 178 100% 37%;
     --radius: 0.5rem;
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 202 16% 28%;
@@ -49,15 +43,170 @@
 }
 
 @layer base {
-  * { @apply border-border; }
+  * { @apply border-border; box-sizing: border-box; }
   body {
     @apply bg-background text-foreground;
     font-family: 'Inter', sans-serif;
     font-weight: 400;
     line-height: 1.6;
+    overflow-x: hidden;
   }
 }
 
+/* ── Homepage layout ─────────────────────────────────────── */
+
+/* Desktop: lado a lado */
+.home-root {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+  font-family: 'Inter', sans-serif;
+}
+
+.home-left {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.home-right {
+  flex-shrink: 0;
+  background: #e8e9ea;
+  display: flex;
+  overflow: hidden;
+  transition: width 0.32s cubic-bezier(0.4,0,0.2,1);
+}
+
+.home-right--collapsed { width: 370px; }
+.home-right--expanded  { width: 680px; }
+
+.home-pills {
+  width: 370px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 14px;
+  padding: 0 32px;
+}
+
+.home-panel {
+  flex: 1;
+  overflow-y: auto;
+  padding: 48px 28px;
+  border-left: 1px solid rgba(0,0,0,0.07);
+  background: #f5fafa;
+}
+
+.home-logo {
+  width: 800px;
+  max-width: 90%;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 4px 24px rgba(0,189,176,0.22));
+}
+
+/* Tablet (≤ 900px): empilha vertical */
+@media (max-width: 900px) {
+  .home-root {
+    position: static;
+    min-height: 100vh;
+    flex-direction: column;
+    overflow: auto;
+  }
+
+  .home-left {
+    flex: none;
+    height: 44vw;
+    min-height: 220px;
+    max-height: 380px;
+  }
+
+  .home-right {
+    flex-shrink: 0;
+    width: 100% !important;
+    flex-direction: column;
+  }
+
+  .home-right--expanded { width: 100% !important; }
+
+  .home-pills {
+    width: 100%;
+    padding: 20px 20px 0;
+    justify-content: flex-start;
+    gap: 10px;
+  }
+
+  .home-panel {
+    padding: 24px 20px 40px;
+    border-left: none;
+    border-top: 1px solid rgba(0,0,0,0.07);
+  }
+
+  .home-logo {
+    width: clamp(220px, 70vw, 500px);
+  }
+}
+
+/* Mobile (≤ 520px) */
+@media (max-width: 520px) {
+  .home-left {
+    height: 52vw;
+    max-height: 260px;
+  }
+
+  .home-pills {
+    padding: 16px 16px 0;
+    gap: 8px;
+  }
+
+  .home-panel {
+    padding: 20px 16px 32px;
+  }
+
+  .home-logo {
+    width: clamp(180px, 80vw, 320px);
+  }
+}
+
+/* ── Nav header responsivo ───────────────────────────────── */
+.nav-header {
+  background: #fff;
+  border-bottom: 1px solid rgba(0,189,176,0.2);
+  padding: 0 24px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+@media (max-width: 520px) {
+  .nav-header {
+    padding: 0 14px;
+    height: 56px;
+  }
+}
+
+/* ── Cards grid responsivo ───────────────────────────────── */
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+@media (max-width: 600px) {
+  .cards-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Utilitários ─────────────────────────────────────────── */
 .fade-up {
   opacity: 0;
   transform: translateY(20px);

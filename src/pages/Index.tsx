@@ -12,11 +12,10 @@ const TEAL       = '#00BDB0';
 const TEAL_DARK  = '#008F89';
 const TEAL_LIGHT = '#E0F7F6';
 const SLATE      = '#3D4A52';
-const GRAY_BG    = '#e8e9ea';
 
 const T = {
-  ptitle:     { fontSize:18, fontWeight:700, color:SLATE, margin:'0 0 8px' } as React.CSSProperties,
-  psub:       { fontSize:13, color:'#6b7280', lineHeight:1.65, margin:0 } as React.CSSProperties,
+  ptitle:     { fontSize:'clamp(15px,2vw,18px)', fontWeight:700, color:SLATE, margin:'0 0 8px' } as React.CSSProperties,
+  psub:       { fontSize:'clamp(12px,1.5vw,13px)', color:'#6b7280', lineHeight:1.65, margin:0 } as React.CSSProperties,
   plbl:       { display:'block', fontSize:9, fontWeight:700, color:'#8C9BAA', letterSpacing:1.5, textTransform:'uppercase' as const, marginBottom:5 },
   pinp:       { width:'100%', background:'#fff', border:'1px solid #d1d9de', borderRadius:8, padding:'9px 12px', fontSize:13, color:SLATE, outline:'none', fontFamily:"'Inter',sans-serif" } as React.CSSProperties,
   btnFill:    { background:TEAL, color:'#fff', border:'none', borderRadius:10, padding:'11px 18px', fontSize:13, fontWeight:600, cursor:'pointer', width:'100%', fontFamily:"'Inter',sans-serif" } as React.CSSProperties,
@@ -24,11 +23,11 @@ const T = {
 };
 
 const MENU: Array<{ id: Panel; label: string }> = [
-  { id: 'auth',       label: 'Entrar/Cadastre-se' },
-  { id: 'news',       label: 'Noticias e updates'  },
-  { id: 'newsletter', label: 'Assinatura'           },
-  { id: 'about',      label: 'Quem somos?'          },
-  { id: 'contact',    label: 'Contato'              },
+  { id: 'auth',       label: 'Entrar / Cadastre-se' },
+  { id: 'news',       label: 'Noticias e updates'    },
+  { id: 'newsletter', label: 'Assinatura'             },
+  { id: 'about',      label: 'Quem somos?'            },
+  { id: 'contact',    label: 'Contato'                },
 ];
 
 export default function Index() {
@@ -56,7 +55,9 @@ export default function Index() {
   const sendContact = async (e: React.FormEvent) => {
     e.preventDefault();
     setContactSending(true);
-    await supabase.from('contact_messages').insert({ name:contactForm.name, email:contactForm.email, message:contactForm.msg });
+    await supabase.from('contact_messages').insert({
+      name: contactForm.name, email: contactForm.email, message: contactForm.msg,
+    });
     setContactSending(false); setContactDone(true);
     setContactForm({ name:'', email:'', msg:'' });
     setTimeout(() => setContactDone(false), 5000);
@@ -95,7 +96,7 @@ export default function Index() {
             <form onSubmit={subscribe} style={{ marginTop:20, display:'flex', flexDirection:'column', gap:10 }}>
               <label style={T.plbl}>Seu e-mail</label>
               <input type="email" required placeholder="voce@email.com" value={email} onChange={e => setEmail(e.target.value)} style={T.pinp}/>
-              <button type="submit" disabled={subLoading} style={{ ...T.btnFill, opacity:subLoading?.7:1 }}>
+              <button type="submit" disabled={subLoading} style={{ ...T.btnFill, opacity: subLoading ? 0.7 : 1 }}>
                 {subLoading ? 'Aguarde...' : 'Quero receber novidades'}
               </button>
               <p style={{ fontSize:11, color:'#8C9BAA', margin:0 }}>Sem spam. Cancele quando quiser.</p>
@@ -130,7 +131,7 @@ export default function Index() {
                 <label style={T.plbl}>Mensagem</label>
                 <textarea required rows={4} value={contactForm.msg} onChange={e => setContactForm(p => ({...p,msg:e.target.value}))} style={{ ...T.pinp, resize:'none', height:88 }}/>
               </div>
-              <button type="submit" disabled={contactSending} style={{ ...T.btnFill, opacity:contactSending?.7:1 }}>
+              <button type="submit" disabled={contactSending} style={{ ...T.btnFill, opacity: contactSending ? 0.7 : 1 }}>
                 {contactSending ? 'Enviando...' : 'Enviar mensagem'}
               </button>
             </form>
@@ -143,53 +144,40 @@ export default function Index() {
   };
 
   return (
-    <div style={{ position:'fixed', inset:0, display:'flex', overflow:'hidden', fontFamily:"'Inter',sans-serif" }}>
+    <div className={`home-root`}>
 
-      {/* ESQUERDA */}
-      <div style={{ flex:1, position:'relative', overflow:'hidden' }}>
+      {/* ESQUERDA — logo centralizada */}
+      <div className="home-left">
         <div style={{ position:'absolute', inset:0, background:'linear-gradient(135deg, #b8d4e8 0%, #cce4f0 40%, #e0f7f6 100%)' }}/>
-        <div style={{
-          position:'absolute',
-          top:'50%', left:'50%',
-          transform:'translate(-50%, -50%)',
-        }}>
-          <img
-            src={logoImg}
-            alt="InteraAnalises"
-            style={{
-              width: 800,
-              maxWidth: '90%',
-              height: 'auto',
-              display: 'block',
-              filter: 'drop-shadow(0 4px 24px rgba(0,189,176,0.22))',
-            }}
-          />
+        <div style={{ position:'absolute', top:'50%', left:'50%', transform:'translate(-50%,-50%)' }}>
+          <img src={logoImg} alt="InteraAnalises" className="home-logo" />
         </div>
       </div>
 
-      {/* DIREITA */}
-      <div style={{
-        width: open ? 680 : 370,
-        flexShrink:0, background:GRAY_BG,
-        display:'flex', overflow:'hidden',
-        transition:'width 0.32s cubic-bezier(0.4,0,0.2,1)',
-      }}>
-        <div style={{ width:370, flexShrink:0, display:'flex', flexDirection:'column', justifyContent:'center', gap:14, padding:'0 32px' }}>
+      {/* DIREITA — menu */}
+      <div className={`home-right ${open ? 'home-right--expanded' : 'home-right--collapsed'}`}>
+
+        {/* Pills */}
+        <div className="home-pills">
           {MENU.map(item => (
-            <button key={item.id} onClick={() => toggle(item.id)} style={{
-              display:'flex', alignItems:'center', gap:12,
-              padding:'13px 18px', borderRadius:50,
-              background: open===item.id ? TEAL_LIGHT : '#ffffff',
-              border: open===item.id ? `1.5px solid ${TEAL}` : '1px solid rgba(0,0,0,0.1)',
-              boxShadow: open===item.id ? `0 0 0 3px ${TEAL}22` : '0 1px 3px rgba(0,0,0,0.07)',
-              cursor:'pointer', width:'100%',
-              fontFamily:"'Inter',sans-serif",
-              outline:'none', textAlign:'left', transition:'all 0.15s',
-            }}>
+            <button
+              key={item.id}
+              onClick={() => toggle(item.id)}
+              style={{
+                display:'flex', alignItems:'center', gap:12,
+                padding:'13px 18px', borderRadius:50,
+                background: open===item.id ? TEAL_LIGHT : '#ffffff',
+                border: open===item.id ? `1.5px solid ${TEAL}` : '1px solid rgba(0,0,0,0.1)',
+                boxShadow: open===item.id ? `0 0 0 3px ${TEAL}22` : '0 1px 3px rgba(0,0,0,0.07)',
+                cursor:'pointer', width:'100%',
+                fontFamily:"'Inter',sans-serif",
+                outline:'none', textAlign:'left', transition:'all 0.15s',
+              }}
+            >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ flexShrink:0 }}>
                 <path d="M12 2C10.5 7 7 10.5 2 12c5 1.5 8.5 5 10 10 1.5-5 5-8.5 10-10-5-1.5-8.5-5-10-10z" fill={TEAL}/>
               </svg>
-              <span style={{ flex:1, fontSize:14, fontWeight:600, color:SLATE, letterSpacing:'0.1px' }}>{item.label}</span>
+              <span style={{ flex:1, fontSize:'clamp(12px,1.5vw,14px)', fontWeight:600, color:SLATE }}>{item.label}</span>
               <svg width="7" height="11" viewBox="0 0 7 12" fill="none" style={{ flexShrink:0 }}>
                 <path d="M1 1l5 5-5 5" stroke={open===item.id ? TEAL : '#bbb'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
@@ -197,10 +185,9 @@ export default function Index() {
           ))}
         </div>
 
+        {/* Painel expandido */}
         {open && (
-          <div style={{ flex:1, overflowY:'auto', padding:'48px 28px', borderLeft:'1px solid rgba(0,0,0,0.07)', background:'#f5fafa' }}>
-            {panel()}
-          </div>
+          <div className="home-panel">{panel()}</div>
         )}
       </div>
 
