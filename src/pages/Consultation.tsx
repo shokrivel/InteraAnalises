@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Send, CheckCircle2, FlaskConical } from 'lucide-react';
+import { ArrowLeft, Send, CheckCircle2 } from 'lucide-react';
 import { InteraAnalisesLogo } from '@/components/InteraAnalisesLogo';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
@@ -43,20 +43,50 @@ const Consultation = () => {
   }, [user, profileLoading]);
 
   const onChange = (name: string, value: any) => {
-    setAnswers(p => ({ ...p, [name]: value }));
+    const newAnswers = { ...answers, [name]: value };
+    setAnswers(newAnswers);
+
     const hasVal = value !== undefined && value !== '' && value !== false && value !== null && !(Array.isArray(value) && value.length === 0);
+
     if (hasVal) {
       const idx = fields.findIndex(f => f.field_name === name);
+
+      // Avança para o próximo campo normalmente
       if (idx >= 0 && idx + 1 < fields.length && idx + 1 >= visible) {
         setVisible(idx + 2);
         setTimeout(() => refs.current[fields[idx + 1].field_name]?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 120);
+      }
+
+      // Quando todos os campos obrigatórios estiverem preenchidos,
+      // revelar TODOS os campos restantes (exames, anexos, etc.)
+      const requiredAllFilled = fields
+        .filter(f => isFieldRequired(f))
+        .every(f => {
+          const v = f.field_name === name ? value : newAnswers[f.field_name];
+          return v && (typeof v !== 'string' || v.trim()) && (!Array.isArray(v) || v.length > 0);
+        });
+
+      if (requiredAllFilled) {
+        setVisible(fields.length);
+        const firstEmpty = fields.find(f => {
+          const v = newAnswers[f.field_name];
+          return !v || (typeof v === 'string' && !v.trim()) || (Array.isArray(v) && !v.length);
+        });
+        if (firstEmpty) {
+          setTimeout(() => refs.current[firstEmpty.field_name]?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 200);
+        }
       }
     }
   };
 
   const validate = () => {
-    const missing = fields.filter(f => isFieldRequired(f)).filter(f => { const v = answers[f.field_name]; return !v || (typeof v === 'string' && !v.trim()) || (Array.isArray(v) && !v.length); });
-    if (missing.length) { toast({ title: 'Campos obrigatórios', description: `Preencha: ${missing.map(f => f.field_label).join(', ')}`, variant: 'destructive' }); return false; }
+    const missing = fields
+      .filter(f => isFieldRequired(f))
+      .filter(f => { const v = answers[f.field_name]; return !v || (typeof v === 'string' && !v.trim()) || (Array.isArray(v) && !v.length); });
+    if (missing.length) {
+      toast({ title: 'Campos obrigatórios', description: `Preencha: ${missing.map(f => f.field_label).join(', ')}`, variant: 'destructive' });
+      return false;
+    }
     return true;
   };
 
@@ -79,12 +109,16 @@ const Consultation = () => {
 
   const progress = fields.length ? Math.min((visible / fields.length) * 100, 95) : 0;
   const stepIdx = Math.floor((visible / fields.length) * (STEPS.length - 1));
-  const allRequiredDone = fields.filter(f => isFieldRequired(f)).every(f => { const v = answers[f.field_name]; return v && (typeof v !== 'string' || v.trim()) && (!Array.isArray(v) || v.length); });
+
+  // Botão só ativa quando TODOS os campos foram exibidos E obrigatórios preenchidos
+  const allFieldsVisible = visible >= fields.length;
+  const allRequiredDone = allFieldsVisible && fields
+    .filter(f => isFieldRequired(f))
+    .every(f => { const v = answers[f.field_name]; return v && (typeof v !== 'string' || v.trim()) && (!Array.isArray(v) || v.length > 0); });
 
   return (
     <div style={{ minHeight: '100vh', background: '#f9fafb', fontFamily: "'Inter',sans-serif" }}>
 
-      {/* HEADER */}
       <header style={{ background: '#fff', borderBottom: '1px solid #e5e7eb', padding: '0 24px', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 50 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <button onClick={() => navigate('/dashboard')} style={backBtn}><ArrowLeft size={16} /></button>
@@ -95,18 +129,14 @@ const Consultation = () => {
         </span>
       </header>
 
-      {/* PROGRESS BAR */}
       <div style={{ height: 3, background: '#e5e7eb' }}>
         <div style={{ height: '100%', background: '#0d7a5f', width: `${progress}%`, transition: 'width .4s ease' }} />
       </div>
 
       <div style={{ maxWidth: 680, margin: '0 auto', padding: '32px 20px 80px' }}>
-
-        {/* Title */}
         <div style={{ marginBottom: 28 }}>
           <h1 style={{ fontWeight: 700, fontSize: 22, color: '#111827', marginBottom: 6, letterSpacing: '-0.3px' }}>Nova Consulta</h1>
           <p style={{ fontSize: 14, color: '#6b7280' }}>Responda as perguntas. Novos campos aparecem conforme você avança.</p>
-          {/* Steps */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 16 }}>
             {STEPS.map((s, i) => (
               <div key={s} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -122,7 +152,6 @@ const Consultation = () => {
           </div>
         </div>
 
-        {/* Fields */}
         {fields.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 40 }}>
             <p style={{ color: '#6b7280' }}>Nenhum campo configurado para seu perfil.</p>
@@ -143,6 +172,7 @@ const Consultation = () => {
                 );
               })}
             </div>
+
             <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
               <button type="button" onClick={() => navigate('/dashboard')} style={{ ...btnOutline, flex: 1 }}>Cancelar</button>
               <button type="submit" disabled={submitting || !allRequiredDone} style={{ ...btnPrimary, flex: 1, opacity: submitting || !allRequiredDone ? 0.5 : 1, justifyContent: 'center', display: 'flex', alignItems: 'center', gap: 8 }}>
